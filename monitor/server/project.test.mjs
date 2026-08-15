@@ -1,0 +1,105 @@
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { after, describe, it } from 'node:test'
+
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'qorlith-proj-'))
+const projects = path.join(tmp, 'projects')
+const legacyPlans = path.join(tmp, 'studio_plans')
+const legacyBoards = path.join(tmp, 'episode-plans')
+fs.mkdirSync(projects, { recursive: true })
+fs.mkdirSync(legacyPlans, { recursive: true })
+fs.mkdirSync(path.join(legacyBoards, 'old_board'), { recursive: true })
+
+process.env.QORLITH_PROJECTS = projects
+process.env.QORLITH_EPISODE_DATA = projects
+process.env.QORLITH_LEGACY_PLANS = legacyPlans
+process.env.QORLITH_LEGACY_BOARDS = legacyBoards
+process.env.QORLITH_MIGRATE = '1'
+
+const {
+  createStudioProject,
+  loadProjectRecord,
+  migrateProject,
+  planRecordPath,
+  projectDir,
+  saveProjectRecord,
+} = await import('./project.mjs')
+const { approvePlan } = await import('./studioPlanner.mjs')
+const { listEpisodePlans } = await import('./episodePlan.mjs')
+
+describe('project folder', () => {
+  after(() => {
+    try {
+      fs.rmSync(tmp, { recursive: true, force: true })
+    } catch {
+      /* ignore */
+    }
+  })
+
+  it('create writes plan.json and a board manifest in one folder', () => {
+    const { project, record } = createStudioProject({ title: 'Night Chase', prompt: 'two adults, alley' })
+    assert.equal(project.id, 'night_chase')
+    assert.ok(fs.existsSync(planRecordPath(project.id)))
+    assert.ok(fs.existsSync(path.join(projectDir(project.id), 'manifest.json')))
+    assert.ok(fs.existsSync(path.join(projectDir(project.id), 'plan.md')))
+    const loaded = loadProjectRecord(project.id)
+    assert.equal(loaded.userPrompt, 'two adults, alley')
+    assert.equal(loaded.plan.title, 'Night Chase')
+    assert.equal(record.projectId, 'night_chase')
+  })
+
+  it('approve seeds a board from plan clips', () => {
+    process.env.QORLITH_DATA = path.join(tmp, 'data')
+    process.env.COMFY_OUTPUT = path.join(tmp, 'comfy')
+    const { project } = createStudioProject({ title: 'Board Seed' })
+    const rec = loadProjectRecord(project.id)
+    rec.plan = {
+      ...rec.plan,
+      clips: [
+        { id: 'C01', title: 'Open', durationSec: 6 },
+        { id: 'C02', title: 'Close', durationSec: 6 },
+      ],
+    }
+    saveProjectRecord(rec)
+    approvePlan(project.id, { startProduction: true })
+    const boards = listEpisodePlans()
+    const board = boards.find((b) => b.id === project.id)
+    assert.ok(board, 'approve should create a board')
+    assert.equal(board.sceneCount, 2)
+    const man = JSON.parse(fs.readFileSync(path.join(projectDir(project.id), 'manifest.json'), 'utf8'))
+    assert.equal(man.scenes.length, 2)
+    assert.equal(man.scenes[0].id, 'C01')
+  })
+
+  it('does not reuse an existing project id', () => {
+    const a = createStudioProject({ title: 'Twin Alley' })
+    const b = createStudioProject({ title: 'Twin Alley' })
+    assert.equal(a.project.id, 'twin_alley')
+    assert.equal(b.project.id, 'twin_alley_2')
+  })
+
+  it('migrates a legacy studio_plans json into the project folder', () => {
+    fs.writeFileSync(
+      path.join(legacyPlans, 'old_film.json'),
+      JSON.stringify({
+        projectId: 'old_film',
+        status: 'draft',
+        plan: { projectId: 'old_film', title: 'Old Film', clips: [{ id: 'S01' }] },
+      }),
+      'utf8',
+    )
+    fs.writeFileSync(
+      path.join(legacyBoards, 'old_board', 'manifest.json'),
+      JSON.stringify({ id: 'old_board', title: 'Old Board', scenes: [{ id: 'S01', title: 'Open' }] }),
+      'utf8',
+    )
+    migrateProject('old_film')
+    assert.ok(fs.existsSync(planRecordPath('old_film')))
+    const rec = loadProjectRecord('old_film')
+    assert.equal(rec.plan.title, 'Old Film')
+    migrateProject('old_board')
+    assert.ok(fs.existsSync(path.join(projectDir('old_board'), 'manifest.json')))
+  })
+})

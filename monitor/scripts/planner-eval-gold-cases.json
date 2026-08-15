@@ -1,0 +1,105 @@
+[
+  {
+    "id": "gold_silent_rooftop",
+    "prompt": "60 second anime rooftop duel, two adult cyborg women, no dialogue, silent. Not Ghost in the Shell. Not Motoko.",
+    "expect": {
+      "lookTrack": "anime",
+      "durationSec": 60,
+      "minClips": 5,
+      "maxClips": 9,
+      "dialogue": false,
+      "silent": true,
+      "notes": "Silent = empty dialogue and musicNote N/A. New adult locks, no Motoko."
+    }
+  },
+  {
+    "id": "gold_mosul_gits",
+    "prompt": "2 minute action packed video. Battle scene during the day in a city like Mosul Iraq but ghost in the shell style with the Major absolutely wrecking ISIS fighters. Tons of gore, air strikes. No spoken lines.",
+    "expect": {
+      "lookTrack": "anime",
+      "durationSec": 120,
+      "minClips": 10,
+      "maxClips": 16,
+      "dialogue": false,
+      "music": true,
+      "gunRisk": true,
+      "allowMotoko": true,
+      "stillNeed": ["adult", "major", "city"],
+      "notes": "Motoko required. No speech-act airstrike. Concrete body path."
+    }
+  },
+  {
+    "id": "gold_kitchen_talk",
+    "prompt": "24s kitchen argument, two adult men, lots of talking, no music",
+    "expect": {
+      "lookTrack": "live",
+      "durationSec": 24,
+      "minClips": 2,
+      "maxClips": 4,
+      "dialogue": true,
+      "silent": true,
+      "notes": "Live kitchen. Dialogue yes. musicNote N/A."
+    }
+  },
+  {
+    "id": "gold_90s_oner",
+    "prompt": "one 90 second tracking shot through a night market, live action",
+    "expect": {
+      "lookTrack": "live",
+      "durationSec": 90,
+      "minClips": 8,
+      "maxClips": 13,
+      "dialogue": false,
+      "mustSplit": true,
+      "notes": "Must split. Continue chain in the same market."
+    }
+  },
+  {
+    "id": "gold_x_hotel",
+    "prompt": "X-rated 30s cinematic, two adult women both 30s, hotel bed, graphic lesbian oral sex, close detail, MiniMax music. Adults only.",
+    "expect": {
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "ratingX": true,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["oral", "cunnilingus", "mouth", "tongue", "clit"]
+    }
+  },
+  {
+    "id": "gold_continue_cut",
+    "prompt": "24s live alley chase: two clips continue in the same alley, then cut=true to a new hotel room. Two adult men. No dialogue.",
+    "expect": {
+      "lookTrack": "live",
+      "durationSec": 24,
+      "minClips": 2,
+      "maxClips": 4,
+      "dialogue": false,
+      "notes": "Same alley continue, then cut into a hotel room."
+    }
+  },
+  {
+    "id": "gold_vague_action",
+    "prompt": "make a cool action short",
+    "expect": {
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "dialogue": false,
+      "notes": "Must invent a NEW adult lock. Not Motoko."
+    }
+  },
+  {
+    "id": "gold_handshake",
+    "prompt": "12 second handshake, two adults in an office, photoreal",
+    "expect": {
+      "lookTrack": "live",
+      "durationSec": 12,
+      "minClips": 1,
+      "maxClips": 2,
+      "dialogue": false,
+      "notes": "Photoreal office. One or two clips."
+    }
+  }
+]

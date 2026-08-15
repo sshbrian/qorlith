@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+QORLITH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export QORLITH_ROOT
+# shellcheck disable=SC1091
+source "${QORLITH_ROOT}/bin/load-env"
+
+cd "${QORLITH_ROOT}/monitor"
+if [[ ! -d node_modules ]]; then
+  echo "node_modules missing — run: cd ${QORLITH_ROOT}/monitor && npm ci" >&2
+  exit 1
+fi
+
+CFG="${QORLITH_ROOT}/monitor/data/config.json"
+EX="${QORLITH_ROOT}/monitor/data/config.example.json"
+if [[ ! -f "${CFG}" && -f "${EX}" ]]; then
+  cp "${EX}" "${CFG}"
+fi
+
+# Ports from qorlith.yaml unless the environment already set them.
+eval "$(
+  cd "${QORLITH_ROOT}" && node --input-type=module -e '
+    import { loadStudio } from "./monitor/server/studioConfig.mjs"
+    const s = loadStudio()
+    console.log("YAML_API_PORT=" + (s.monitor?.api_port || 3921))
+    console.log("YAML_WEB_PORT=" + (s.monitor?.web_port || 5173))
+  '
+)"
+export QORLITH_PORT="${QORLITH_PORT:-${YAML_API_PORT:-3921}}"
+export QORLITH_WEB_PORT="${QORLITH_WEB_PORT:-${YAML_WEB_PORT:-5173}}"
+exec npm run dev

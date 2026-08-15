@@ -1,0 +1,25 @@
+# Shared by start-monitor and brain. Sources studio.env, then Hugging Face.
+# Token file default: ~/.hf-token/token (or ~/.hf-token if that is a file).
+# shellcheck shell=bash
+
+if [[ -n "${QORLITH_ROOT:-}" && -f "${QORLITH_ROOT}/studio.env" ]]; then
+  # shellcheck disable=SC1091
+  set -a && source "${QORLITH_ROOT}/studio.env" && set +a
+fi
+
+if [[ -z "${HF_TOKEN:-}" && -z "${HUGGING_FACE_HUB_TOKEN:-}" ]]; then
+  _hf="${HF_TOKEN_FILE:-}"
+  if [[ -z "${_hf}" ]]; then
+    if [[ -f "${HOME}/.hf-token/token" ]]; then
+      _hf="${HOME}/.hf-token/token"
+    elif [[ -f "${HOME}/.hf-token" ]]; then
+      _hf="${HOME}/.hf-token"
+    fi
+  fi
+  if [[ -n "${_hf}" && -f "${_hf}" ]]; then
+    HF_TOKEN="$(tr -d ' \t\r\n' < "${_hf}")"
+    export HF_TOKEN
+    export HUGGING_FACE_HUB_TOKEN="${HF_TOKEN}"
+  fi
+  unset _hf
+fi

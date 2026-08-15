@@ -1,0 +1,263 @@
+[
+  {
+    "id": "ui_example_found_footage",
+    "prompt": "30 second rated-R found-footage action short, real_movie look.\nHandheld camcorder, two adult characters, radio dialogue, MiniMax music.\nEnd on a chase and a last radio line.",
+    "expect": {
+      "lookTrack": "live",
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "dialogue": true,
+      "music": true,
+      "gunRisk": false,
+      "stillNeed": ["handheld", "radio", "adult"],
+      "notes": "Studio UI placeholder. Live camcorder, two adults, radio lines, chase tag."
+    }
+  },
+  {
+    "id": "gits_mosul_2min",
+    "prompt": "2 minute action packed video. Battle scene during the day in a city like Mosul Iraq but ghost in the shell style with the Major absolutely wrecking ISIS fighters. Tons of gore, air strikes.",
+    "expect": {
+      "lookTrack": "anime",
+      "durationSec": 120,
+      "minClips": 10,
+      "maxClips": 16,
+      "dialogue": false,
+      "music": true,
+      "gunRisk": true,
+      "stillNeed": ["adult", "major", "city"],
+      "notes": "User-style messy GitS combat. ~10×12s. Anime. Adults, fictional combat."
+    }
+  },
+  {
+    "id": "thriller_15",
+    "prompt": "15 second R thriller, one line of dialogue, MiniMax music.",
+    "expect": {
+      "lookTrack": null,
+      "durationSec": 15,
+      "minClips": 2,
+      "maxClips": 3,
+      "dialogue": true,
+      "music": true,
+      "notes": "Guide worked example. 2×~7.5s. Invent a concrete look if unspecified."
+    }
+  },
+  {
+    "id": "vague_action",
+    "prompt": "make a cool action short",
+    "expect": {
+      "lookTrack": null,
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "dialogue": false,
+      "music": true,
+      "notes": "Vague. Must assume 30s/R and invent a logline + visual lock. No one 30s clip."
+    }
+  },
+  {
+    "id": "anime_rooftop_duel_silent",
+    "prompt": "60 second anime rooftop duel, two adult cyborg women, no dialogue, silent.",
+    "expect": {
+      "lookTrack": "anime",
+      "durationSec": 60,
+      "minClips": 5,
+      "maxClips": 9,
+      "dialogue": false,
+      "silent": true,
+      "notes": "Silent = empty dialogue and musicNote N/A. Two locked adult looks."
+    }
+  },
+  {
+    "id": "neon_mv_20",
+    "prompt": "20 second music video, neon rain, adult dancer, chorus hit at the end, MiniMax score.",
+    "expect": {
+      "lookTrack": null,
+      "durationSec": 20,
+      "minClips": 2,
+      "maxClips": 4,
+      "dialogue": false,
+      "music": true,
+      "notes": "Music video: palette must name instruments. Last clip is the chorus hit."
+    }
+  },
+  {
+    "id": "found_footage_horror_45",
+    "prompt": "45 second found footage horror, one adult woman, hidden cam, something in the hallway.",
+    "expect": {
+      "lookTrack": "live",
+      "durationSec": 45,
+      "minClips": 4,
+      "maxClips": 7,
+      "dialogue": false,
+      "music": true,
+      "notes": "Live hidden-cam. Still = room+woman+cam angle. Motion = breathe/pan, not a new set."
+    }
+  },
+  {
+    "id": "forbidden_90s_oners",
+    "prompt": "one 90 second tracking shot through a night market, live action",
+    "expect": {
+      "lookTrack": "live",
+      "durationSec": 90,
+      "minClips": 8,
+      "maxClips": 13,
+      "dialogue": false,
+      "mustSplit": true,
+      "notes": "Must NOT emit one 90s clip. Split into ~8s tracking beats that concat as a oner feel."
+    }
+  },
+  {
+    "id": "handshake_12_photo",
+    "prompt": "12 second handshake, two adults in an office, photoreal",
+    "expect": {
+      "lookTrack": "live",
+      "durationSec": 12,
+      "minClips": 1,
+      "maxClips": 2,
+      "dialogue": false,
+      "notes": "Short photoreal. One or two clips. Still is the handshake frame, motion is the hands meeting."
+    }
+  },
+  {
+    "id": "rain_kiss_r30",
+    "prompt": "R romance, 30s, rain kiss, two adult women, soft score",
+    "expect": {
+      "lookTrack": null,
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "dialogue": false,
+      "music": true,
+      "sexy": true,
+      "notes": "Adults. Music must still name instruments, not just 'soft'."
+    }
+  },
+  {
+    "id": "motoko_radio_breach",
+    "prompt": "Ghost in the Shell 24 second Motoko radio check then breach, Japanese line 任務完了",
+    "expect": {
+      "lookTrack": "anime",
+      "durationSec": 24,
+      "minClips": 2,
+      "maxClips": 4,
+      "dialogue": true,
+      "wantJapanese": true,
+      "notes": "Preserve 任務完了 inside <d>[Japanese] …</d>. Anime. Voice lock frozen."
+    }
+  },
+  {
+    "id": "pg_cat_fence",
+    "prompt": "family-friendly 20s cat walking on a fence at sunset, no people",
+    "expect": {
+      "lookTrack": null,
+      "durationSec": 20,
+      "minClips": 2,
+      "maxClips": 4,
+      "dialogue": false,
+      "ratingFamily": true,
+      "notes": "No sexy, no guns, no people. Still is the cat on the fence. Motion is the walk."
+    }
+  },
+  {
+    "id": "x_hotel_30",
+    "prompt": "X-rated 30s adult couple in a hotel, cinematic, both adults mid-30s",
+    "expect": {
+      "lookTrack": null,
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "ratingX": true,
+      "sexy": true,
+      "notes": "Rating X honest. Adults only. stillBrief is a frozen frame, not a sex paragraph of motion."
+    }
+  },
+  {
+    "id": "heist_40_live",
+    "prompt": "heist, 40 seconds, plan flash then vault then escape, live",
+    "expect": {
+      "lookTrack": "live",
+      "durationSec": 40,
+      "minClips": 4,
+      "maxClips": 6,
+      "dialogue": false,
+      "notes": "Beat template: plan → entry → grab → escape. Continuity jacket/location."
+    }
+  },
+  {
+    "id": "window_hold_8_anime",
+    "prompt": "8 second still-ish hold of an adult woman at a window, slight curtain move, anime",
+    "expect": {
+      "lookTrack": "anime",
+      "durationSec": 8,
+      "minClips": 1,
+      "maxClips": 1,
+      "dialogue": false,
+      "notes": "Single 8s clip. Motion is curtain + tiny camera, not a new scene."
+    }
+  },
+  {
+    "id": "mall_walk_2min_photo",
+    "prompt": "2 min silent documentary-style walk through abandoned mall, photoreal handheld",
+    "expect": {
+      "lookTrack": "live",
+      "durationSec": 120,
+      "minClips": 10,
+      "maxClips": 16,
+      "dialogue": false,
+      "silent": true,
+      "mustSplit": true,
+      "notes": "Silent photoreal. ~15 clips. Each still a new mall beat, motion is handheld walk."
+    }
+  },
+  {
+    "id": "cyber_bike_30",
+    "prompt": "30s cyberpunk bike chase, anime, one shout GO, heavy drums",
+    "expect": {
+      "lookTrack": "anime",
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "dialogue": true,
+      "music": true,
+      "notes": "Dialogue has GO. musicNote must mention drums, not 'epic'."
+    }
+  },
+  {
+    "id": "vague_soldier",
+    "prompt": "make me a movie about a soldier",
+    "expect": {
+      "lookTrack": null,
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "notes": "Vague. Invent adult soldier lock + 30s R defaults. No teen soldier."
+    }
+  },
+  {
+    "id": "kitchen_argument_24",
+    "prompt": "24s kitchen argument, two adult men, lots of talking, no music",
+    "expect": {
+      "lookTrack": null,
+      "durationSec": 24,
+      "minClips": 2,
+      "maxClips": 4,
+      "dialogue": true,
+      "silent": true,
+      "notes": "Dialogue-heavy. musicNote N/A. Two frozen adult male looks + voices."
+    }
+  },
+  {
+    "id": "gits_rooftop_16",
+    "prompt": "GitS style 16s, Major on a rooftop at night, thermoptic camouflage flicker, then she jumps",
+    "expect": {
+      "lookTrack": "anime",
+      "durationSec": 16,
+      "minClips": 2,
+      "maxClips": 3,
+      "dialogue": false,
+      "stillNeed": ["rooftop", "adult"],
+      "notes": "Still = night rooftop pose. Motion = flicker then jump. Do not put the jump in stillBrief."
+    }
+  }
+]

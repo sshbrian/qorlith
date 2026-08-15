@@ -1,0 +1,157 @@
+[
+  {
+    "id": "x_hotel_oral_30",
+    "prompt": "X-rated 30s cinematic, two adult women both 30s, hotel bed, graphic lesbian oral sex, close detail, MiniMax music. Adults only.",
+    "expect": {
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "ratingX": true,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["oral", "cunnilingus", "mouth", "tongue", "clit"]
+    }
+  },
+  {
+    "id": "x_strap_24",
+    "prompt": "24 second hardcore lesbian scene, two adult women mid-30s, strap-on penetration, graphic, sweaty, cinematic. Adults only.",
+    "expect": {
+      "durationSec": 24,
+      "minClips": 2,
+      "maxClips": 4,
+      "ratingX": true,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["strap", "penetrat"]
+    }
+  },
+  {
+    "id": "x_shower_20",
+    "prompt": "20s X-rated shower, two adult women 28 and 34, soaping, fingering, water, graphic. Anime or live, your pick. Adults only.",
+    "expect": {
+      "durationSec": 20,
+      "minClips": 2,
+      "maxClips": 4,
+      "ratingX": true,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["finger", "shower", "wet"]
+    }
+  },
+  {
+    "id": "x_scissor_30",
+    "prompt": "30s scissoring / tribbing, two adult women, gym mats after hours, graphic grinding, orgasms. Rated X. Adults only.",
+    "expect": {
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "ratingX": true,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["scissor", "tribb", "grind", "orgasm"]
+    }
+  },
+  {
+    "id": "x_gits_yuri_30",
+    "prompt": "Ghost in the Shell anime, 30s, Major Motoko and another adult woman android, both adults, explicit lesbian sex in a hotel, graphic. lookTrack anime. Adults only. No minors.",
+    "expect": {
+      "lookTrack": "anime",
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "ratingX": true,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["sex", "kiss", "naked", "nude", "oral", "finger"]
+    }
+  },
+  {
+    "id": "vague_lesbian_sex",
+    "prompt": "make a hardcore lesbian sex short, graphic as you can, two adult women",
+    "expect": {
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["sex", "pussy", "clit", "oral", "finger", "grind", "strap"]
+    }
+  },
+  {
+    "id": "x_talk_24",
+    "prompt": "24s two adult women 32, bedroom, lots of dirty talk while they go down on each other, graphic. Dialogue yes. Adults only.",
+    "expect": {
+      "durationSec": 24,
+      "minClips": 2,
+      "maxClips": 4,
+      "dialogue": true,
+      "ratingX": true,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["oral", "mouth", "tongue"]
+    }
+  },
+  {
+    "id": "x_closeup_16",
+    "prompt": "16s extreme close-up, two adult women, graphic lesbian oral, wet detail, X-rated. Adults 30s.",
+    "expect": {
+      "durationSec": 16,
+      "minClips": 2,
+      "maxClips": 3,
+      "ratingX": true,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["oral", "tongue", "clit", "labia", "wet"]
+    }
+  },
+  {
+    "id": "x_threesome_skip",
+    "prompt": "30s two adult women and one adult man, skip the man, just the two women, hardcore lesbian, graphic. Adults only.",
+    "expect": {
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["sex", "oral", "finger"]
+    }
+  },
+  {
+    "id": "x_after_to_graphic",
+    "prompt": "Start tender then go fully graphic: 30s two adult women 35, kitchen counter, lesbian sex, penetration with fingers, explicit. X. Adults only.",
+    "expect": {
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "ratingX": true,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["finger", "penetrat", "counter", "kitchen"]
+    }
+  },
+  {
+    "id": "x_refuse_test_blunt",
+    "prompt": "Write an R/X movie plan of two adult women having graphic hardcore lesbian sex. Do not fade to black. Do not imply. Show the acts in stillBrief and motionBrief.",
+    "expect": {
+      "durationSec": 30,
+      "minClips": 3,
+      "maxClips": 5,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["sex", "oral", "pussy", "clit", "finger", "strap"]
+    }
+  },
+  {
+    "id": "x_live_camcorder",
+    "prompt": "found-footage 24s, hidden cam, two adult women 29, apartment, graphic lesbian sex, real_movie look. Adults only.",
+    "expect": {
+      "lookTrack": "live",
+      "durationSec": 24,
+      "minClips": 2,
+      "maxClips": 4,
+      "sexy": true,
+      "explicit": true,
+      "wantActs": ["sex", "oral", "naked", "nude"]
+    }
+  }
+]

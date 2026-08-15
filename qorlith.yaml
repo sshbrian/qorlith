@@ -1,0 +1,80 @@
+# Qorlith studio stack
+# The only file that should name models, LoRAs, graphs, or prompt recipes.
+
+comfy:
+  url: http://127.0.0.1:8188
+  root: ""
+  output: ""
+
+monitor:
+  api_port: 3921
+  web_port: 5173
+
+planner:
+  url: http://127.0.0.1:1234/v1
+  model: ""             # exact LM Studio key (set in qorlith.local.yaml)
+  prefer: []            # name substrings if model is empty; first match wins
+  temperature: 0.35
+  max_tokens: 4096
+  context_length: 8192
+  timeout_ms: 180000
+  gpu: max              # LM Studio load flag: max | 0 | off
+  auto_manage: true     # start LMS + load planner.model
+  unload_before: true
+  unload_after: true    # free VRAM for Comfy after a plan
+  identifier: qorlith-planner
+  system: ""            # extra system instructions
+  style: ""             # house style for still/motion briefs
+
+stills:
+  engine: sdxl
+  checkpoint: ""
+  clip_skip: -2
+  quality: standard          # draft | standard | hero — Brain default
+  loras: []
+  # - file: style.safetensors
+  #   strength: 0.75
+  #   trigger: my_style
+  controlnet:
+    openpose: ""
+    canny: ""
+  upscale: ""                # 4x upscale filename (set in qorlith.local.yaml)
+  detailer:
+    enabled: false
+    face: ""                 # ultralytics bbox filename, e.g. bbox/face_yolov8m.pt
+    hand: ""
+    denoise: 0.32
+    guide_size: 512
+  ipadapter:
+    enabled: false
+    model: ""                # IPAdapter SDXL face file (set in qorlith.local.yaml)
+    clip_vision: ""
+    weight: 0.5
+    weight_type: linear
+  sampler:
+    name: euler_ancestral
+    scheduler: normal
+    steps: 30
+    cfg: 6.0
+  prompts:
+    prefix: ""
+    suffix: ""
+    negative: ""
+    protect_tokens: []
+
+video:
+  engine: minimax_h3
+  workflow: ""
+  megapixels: 0.6
+  duration_sec: 12        # default take length when a clip omits durationSec
+  duration_min: 6
+  duration_max: 12        # per-take cap at 0.6 MP — scenes may be shorter
+  prompts:
+    motion_prefix: ""
+    negative: ""
+    music_default: N/A
+
+train:
+  output_roots: []     # Kohya output folders (config.json used if empty)
+  log_roots: []
+  active_window_minutes: 15
