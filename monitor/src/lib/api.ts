@@ -647,6 +647,7 @@ export const api = {
       ok: boolean
       projectId: string
       title: string
+      videoMode?: 'stills' | 't2v' | string
       comfyUrl: string
       clips: {
         id: string

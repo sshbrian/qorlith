@@ -612,12 +612,8 @@ def collect_disk_media(cfg: BrainConfig, state: BrainState) -> BrainState:
     """Disk is the clip-level checkpointer. Drop stale paths and refill from Comfy output."""
     look = str(state.get("look_track") or "live")
     project_id = str(state.get("project_id") or "")
-    stills = dict(state.get("still_paths") or {})
     t2v = normalize_video_mode(state.get("video_mode")) == "t2v"
-    if t2v:
-        stills = {
-            k: v for k, v in stills.items() if v and not str(v).replace("\\", "/").endswith("_from_prev.png")
-        }
+    stills = {} if t2v else dict(state.get("still_paths") or {})
     videos = {k: v for k, v in (state.get("video_paths") or {}).items() if media_ok(v, kind="video")}
     looks = [look]
     alt = "live" if look == "anime" else "anime"
@@ -628,14 +624,15 @@ def collect_disk_media(cfg: BrainConfig, state: BrainState) -> BrainState:
         if not cid:
             continue
         key = str(cid)
-        if not stills.get(key):
-            for track in looks:
-                found = find_clip_output(cfg, track, project_id, key, "still", 0)
-                if found:
-                    stills[key] = found
-                    break
-        if stills.get(key) and not t2v:
-            copy_still_to_board(cfg, project_id, key, stills[key])
+        if not t2v:
+            if not stills.get(key):
+                for track in looks:
+                    found = find_clip_output(cfg, track, project_id, key, "still", 0)
+                    if found:
+                        stills[key] = found
+                        break
+            if stills.get(key):
+                copy_still_to_board(cfg, project_id, key, stills[key])
         local = project_clip_video(cfg, project_id, key)
         if media_ok(local, kind="video"):
             videos[key] = str(local)

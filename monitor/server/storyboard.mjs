@@ -111,6 +111,7 @@ function sidecar(mediaPath) {
 export function listProjectWorkflows(projectId) {
   const rec = loadProjectRecord(projectId)
   const brain = loadBrain(projectId)
+  const t2v = rec?.plan?.videoMode === 't2v' || brain?.videoMode === 't2v'
   const planClips = rec?.plan?.clips || []
   const brainClips = brain?.clips || []
   const byId = new Map(brainClips.map((c) => [c.id, c]))
@@ -118,7 +119,7 @@ export function listProjectWorkflows(projectId) {
   const comfyUrl = String(studio.comfy?.url || 'http://127.0.0.1:8188').replace(/\/$/, '')
   const clips = (planClips.length ? planClips : brainClips).map((c) => {
     const live = byId.get(c.id) || {}
-    const still = live.still || live.pick || null
+    const still = t2v ? null : live.still || live.pick || null
     const video = live.video || null
     return {
       id: c.id,
@@ -126,13 +127,14 @@ export function listProjectWorkflows(projectId) {
       durationSec: c.durationSec ?? live.durationSec ?? null,
       still,
       video,
-      stillWorkflow: sidecar(still),
+      stillWorkflow: t2v ? { workflowPath: null, apiPath: null } : sidecar(still),
       videoWorkflow: sidecar(video),
     }
   })
   return {
     projectId,
     title: rec?.plan?.title || brain?.title || projectId,
+    videoMode: t2v ? 't2v' : 'stills',
     comfyUrl,
     clips,
   }

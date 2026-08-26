@@ -37,6 +37,7 @@ export function WorkflowModal({
   const [title, setTitle] = useState('')
   const [comfyUrl, setComfyUrl] = useState('http://127.0.0.1:8188')
   const [clips, setClips] = useState<ClipWf[]>([])
+  const [t2v, setT2v] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -55,6 +56,7 @@ export function WorkflowModal({
         setTitle(r.title || projectId)
         setComfyUrl(r.comfyUrl || 'http://127.0.0.1:8188')
         setClips(r.clips || [])
+        setT2v(r.videoMode === 't2v')
       })
       .catch((e) => {
         if (alive) setErr(e)
@@ -64,7 +66,8 @@ export function WorkflowModal({
     }
   }, [projectId])
 
-  const heading = kind === 'still' ? 'Pictures · Comfy stills' : 'Motion · Comfy video'
+  const heading =
+    kind === 'still' ? 'Pictures · Comfy stills' : t2v ? 'MiniMax · clips' : 'Motion · Comfy video'
   const ready = clips.filter((c) => (kind === 'still' ? c.stillWorkflow.apiPath : c.videoWorkflow.apiPath))
 
   return (
@@ -78,7 +81,9 @@ export function WorkflowModal({
             <div className="text-[11px] uppercase tracking-[0.18em] text-cyan/80">{heading}</div>
             <h2 className="mt-1 text-[22px] font-semibold tracking-tight truncate">{title}</h2>
             <p className="mt-1.5 text-[13px] text-ghost leading-relaxed">
-              Each clip keeps the exact API graph that Comfy ran. Open it on the canvas, or download the JSON.
+              {t2v
+                ? 'Each clip keeps the MiniMax graph Comfy ran. Open it on the canvas, or download the JSON.'
+                : 'Each clip keeps the exact API graph that Comfy ran. Open it on the canvas, or download the JSON.'}
             </p>
           </div>
           <button type="button" onClick={onClose} className="text-[15px] text-cyan hover:text-cyan-dim shrink-0 pt-1">

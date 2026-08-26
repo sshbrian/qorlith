@@ -896,6 +896,36 @@ def test_collect_disk_media_fills_missing_paths(tmp_path: Path):
     assert copied.read_bytes() == clip.read_bytes()
 
 
+def test_collect_disk_media_t2v_drops_leftover_stills(tmp_path: Path):
+    from brain.config import BrainConfig
+
+    out = tmp_path / "comfy" / "output"
+    stills = out / "qorlith" / "live" / "harbor" / "stills"
+    stills.mkdir(parents=True)
+    painted = stills / "S01_00001_.png"
+    painted.write_bytes(b"p" * 60_000)
+    cfg = BrainConfig(
+        root=tmp_path,
+        monitor_url="http://127.0.0.1:3921",
+        comfy_url="http://127.0.0.1:8188",
+        planner_url="http://127.0.0.1:1234/v1",
+        checkpoint_path=tmp_path / "ck.sqlite",
+        comfy_output=out,
+    )
+    merged = collect_disk_media(
+        cfg,
+        empty_state(
+            project_id="harbor",
+            video_mode="t2v",
+            clips=[{"id": "S01"}],
+            still_paths={"S01": "/old/S01.png"},
+        ),
+    )
+    assert merged["still_paths"] == {}
+    board = cfg.project_dir / "harbor" / "board"
+    assert not board.exists() or not any(board.rglob("*.png"))
+
+
 def test_copy_video_to_project_keeps_a_local_mp4(tmp_path: Path):
     from brain.config import BrainConfig
     from brain.graph import copy_video_to_project, project_clip_video
