@@ -13,6 +13,7 @@ import {
   areaFromPath,
   canonicalStage,
   projectPath,
+  PROMPT_PLACEHOLDER,
   VIDEO_MODE_HINT,
   clearLastProject,
   readLastProject,
@@ -548,7 +549,7 @@ function LayoutBody({
                     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void makeMovieFromOverlay()
                   }}
                   rows={5}
-                  placeholder="20 second rooftop fight, rain, no talking."
+                  placeholder={PROMPT_PLACEHOLDER}
                   className="field resize-y min-h-[128px]"
                 />
               </label>

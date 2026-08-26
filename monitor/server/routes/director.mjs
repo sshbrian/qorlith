@@ -414,7 +414,7 @@ export function mountDirector(app) {
       const t2v = Boolean(req.body?.t2v || req.body?.plan?.t2v || req.body?.videoMode === 't2v')
       if (!sourceImage && !t2v) {
         fail(400, 'missing_source', 'sourceImage required', {
-          hint: 'Generate a still first, paste a start-still path, or send t2v: true.',
+          hint: 'Paint a still first, pass a first-frame path, or send t2v: true.',
         })
       }
       if (!instruction && !req.body?.plan && !req.body?.dryRun) {
@@ -475,7 +475,7 @@ export function mountDirector(app) {
       const t2v = Boolean(req.body?.t2v || req.body?.plan?.t2v || req.body?.videoMode === 't2v')
       if (!sourceImage && !t2v) {
         fail(400, 'missing_source', 'sourceImage required', {
-          hint: 'Generate a still first, paste a start-still path, or send t2v: true.',
+          hint: 'Paint a still first, pass a first-frame path, or send t2v: true.',
         })
       }
       if (!req.body?.plan) {

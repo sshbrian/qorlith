@@ -135,6 +135,8 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /label="Still"/)
     assert.match(t, /Scene/)
     assert.match(t, /clipJoinNote/)
+    assert.match(t, /Open Make to make the film/)
+    assert.doesNotMatch(t, /paint the stills/)
     assert.doesNotMatch(t, /\{videoMode === 't2v' \? null/)
   })
 
@@ -181,6 +183,7 @@ describe('UI contract — stages, not tools', () => {
     assert.match(page('StudioHome.tsx'), /VIDEO_MODE_HINT/)
     assert.match(page('StudioPlanner.tsx'), /VIDEO_MODE_HINT/)
     assert.match(read(path.join(src, 'components', 'Layout.tsx')), /VIDEO_MODE_HINT/)
+    assert.match(read(path.join(src, 'components', 'Layout.tsx')), /PROMPT_PLACEHOLDER/)
   })
 
   it('Plan uses ArchiveProjectDialog', () => {

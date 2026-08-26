@@ -1565,7 +1565,12 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
             pick = (state.get("picks") or {}).get(cid)
             still = pick if pick and Path(str(pick)).is_file() else stills.get(cid)
             if not still and (clip.get("cut") or not prev_video):
-                raise BrainError(400, "missing_still", f"No still for {cid}", "Run stills first.", state=progress)
+                hint = (
+                    "Render the previous clip first, or mark this take as a cut."
+                    if _is_t2v(state)
+                    else "Run stills first."
+                )
+                raise BrainError(400, "missing_still", f"No first frame for {cid}", hint, state=progress)
             t2v = _is_t2v(state)
             frame_dest = continue_frame_path(studio.cfg, project_id, cid, t2v=t2v)
             source, source_kind = resolve_video_source(

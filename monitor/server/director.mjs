@@ -1040,8 +1040,8 @@ export async function runVideoPipeline(args) {
   const sourceImage = String(args.sourceImage || '').trim()
   const t2v = Boolean(args.t2v) && !sourceImage
   if (!sourceImage && !t2v) {
-    fail(400, 'missing_source', 'sourceImage required (path to start still)', {
-      hint: 'Generate a still first, paste a start-still path, or set t2v: true.',
+    fail(400, 'missing_source', 'sourceImage required (path to the first frame)', {
+      hint: 'Paint a still first, pass a first-frame path, or set t2v: true.',
     })
   }
 

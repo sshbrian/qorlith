@@ -290,10 +290,7 @@ export function StudioPlanner() {
     try {
       const r = await api.studioPlanApprove(record.projectId, { startProduction: true })
       setApproveMsg(
-        r.message ||
-          (videoMode === 't2v'
-            ? 'Plan locked. Open Make to make the film.'
-            : 'Plan locked. Open Make to paint the stills.'),
+        r.message || 'Plan locked. Open Make to make the film.',
       )
       // reload record
       const again = await api.studioPlanGet(record.projectId)

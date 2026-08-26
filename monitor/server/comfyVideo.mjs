@@ -373,8 +373,8 @@ export function stageInputImage(sourceAbs, comfyRoot) {
   const root = requireComfyRoot(comfyRoot)
   const src = path.resolve(sourceAbs)
   if (!fs.existsSync(src)) {
-    fail(400, 'missing_source_still', `Source still not found: ${src}`, {
-      hint: 'Generate a still in Make, or paste an existing image path.',
+    fail(400, 'missing_source_still', `First frame not found: ${src}`, {
+      hint: 'Paint a still in Make, or finish the previous clip so a last frame exists.',
     })
   }
   const inputDir = path.join(root, 'input')
