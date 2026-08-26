@@ -24,7 +24,7 @@ const NODE_KINDS = [
 const COPY = {
   video: {
     title: 'Animating the clip',
-    hint: 'Video is slower than a still. You can leave this page — it keeps going.',
+    hint: 'This clip takes a few minutes. You can leave this page — it keeps going.',
   },
   still: {
     title: 'Painting the still',
@@ -305,8 +305,9 @@ export function decorateProgressForBrain(view, brain) {
   const out = { ...view }
   const place = `${idx + 1} of ${clips.length}`
   if (videoPhase) {
+    const t2v = brain.videoMode === 't2v'
     out.kind = view.kind === 'wait' ? 'wait' : 'video'
-    out.title = `Animating ${clip.title || clip.id}`
+    out.title = t2v ? `Making ${clip.title || clip.id}` : `Animating ${clip.title || clip.id}`
     out.hint = 'This clip takes a few minutes. You can leave — it keeps going.'
   } else {
     out.kind = view.kind === 'wait' ? 'wait' : 'still'

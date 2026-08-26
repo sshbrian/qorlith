@@ -75,6 +75,19 @@ describe('comfy progress', () => {
     )
     assert.equal(view.title, 'Animating Rainy Pursuit')
     assert.match(view.line, /2 of 2/)
+    const t2v = decorateProgressForBrain(
+      { active: true, kind: 'video', title: 'Animating the clip', line: 'Frame 4 of 168', hint: 'x' },
+      {
+        step: 'video',
+        status: 'video',
+        videoMode: 't2v',
+        currentClip: 'S01',
+        clips: [{ id: 'S01', title: 'Open' }],
+      },
+    )
+    assert.equal(t2v.title, 'Making Open')
+    assert.doesNotMatch(t2v.title, /Animat/i)
+    assert.doesNotMatch(t2v.hint, /still/i)
   })
 
   it('uses progress_state running node', () => {
