@@ -281,6 +281,8 @@ describe('produce.mjs', () => {
     assert.equal(over.progress.done, 1)
     assert.ok(String(over.statusLine).includes('Test Pipe') || String(over.statusLine).includes('C0'))
     assert.ok(over.progress.percent > 0)
+    assert.ok(over.friends.some((f) => f.name === 'All media' && f.blurb === 'library'))
+    assert.ok(!over.friends.some((f) => f.name === 'Gallery'))
   })
 
   it('unknown pipeline returns null', () => {

@@ -538,7 +538,7 @@ export function Gallery() {
             type="search"
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
-            placeholder="Search stills and clips"
+            placeholder="Search the library"
             className="field flex-1 min-w-[200px] text-[15px]"
           />
           <select

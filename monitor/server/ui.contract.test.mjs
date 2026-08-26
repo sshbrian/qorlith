@@ -132,6 +132,8 @@ describe('UI contract — stages, not tools', () => {
     assert.doesNotMatch(t, /sendToBoard/)
     assert.doesNotMatch(t, /not a start still/)
     assert.match(t, /Nothing in the library yet/)
+    assert.match(t, /Search the library/)
+    assert.doesNotMatch(t, /Search stills and clips/)
     assert.doesNotMatch(t, /No pictures yet/)
     assert.match(t, /New renders save a small notes file/)
   })

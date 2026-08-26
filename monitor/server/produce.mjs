@@ -633,7 +633,7 @@ export function floorOverlayFromProduce(detail, baseFloor) {
   const friends = [
     { name: detail.name, blurb: `${detail.done}/${detail.total}` },
     { name: 'ComfyUI', blurb: detail.active ? 'busy GPU' : 'standby' },
-    { name: 'Gallery', blurb: 'media' },
+    { name: 'All media', blurb: 'library' },
     { name: 'Board', blurb: 'review' },
   ]
 
