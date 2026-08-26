@@ -9,7 +9,7 @@ import {
   type StudioPlanClip,
   type StudioPlanRecord,
 } from '../lib/api'
-import { clipJoinNote, PROMPT_PLACEHOLDER, PROMPT_STARTERS } from '../lib/studio'
+import { clipJoinNote, PROMPT_PLACEHOLDER, PROMPT_STARTERS, VIDEO_MODE_HINT } from '../lib/studio'
 
 function ClipCard({
   clip,
@@ -361,7 +361,7 @@ export function StudioPlanner() {
         </div>
         <VideoModeToggle value={videoMode} onChange={setVideoMode} />
         <p className="text-[12px] text-ghost">
-          {videoMode === 't2v' ? 'Goes straight to MiniMax. No painted still.' : 'Paints a still, then animates it.'}
+          {VIDEO_MODE_HINT[videoMode]}
         </p>
         {health && !health.ok && health.planner?.provider === 'local' ? (
           <span className="text-[13px] text-amber">

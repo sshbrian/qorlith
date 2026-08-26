@@ -13,6 +13,7 @@ import {
   areaFromPath,
   canonicalStage,
   projectPath,
+  VIDEO_MODE_HINT,
   clearLastProject,
   readLastProject,
   readRailCollapsed,
@@ -553,9 +554,7 @@ function LayoutBody({
               </label>
               <VideoModeToggle value={newVideoMode} onChange={setNewVideoMode} />
               <p className="text-[12px] text-ghost">
-                {newVideoMode === 't2v'
-                  ? 'Goes straight to MiniMax. No painted still.'
-                  : 'Paints a still, then animates it.'}
+                {VIDEO_MODE_HINT[newVideoMode]}
               </p>
               <label className="block space-y-1.5">
                 <span className="text-[13px] text-ghost">Title (optional)</span>

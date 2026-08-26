@@ -3,6 +3,11 @@ export const RAIL_COLLAPSED_KEY = 'qorlith.studio.railCollapsed'
 
 export const PROMPT_PLACEHOLDER = 'Example: 20 second rooftop fight, rain, no talking.'
 
+export const VIDEO_MODE_HINT = {
+  t2v: 'Goes straight to MiniMax. No painted still.',
+  stills: 'Paints a still, then makes the clip.',
+} as const
+
 export const PROMPT_STARTERS = [
   { label: '12 seconds', text: '12 second rooftop fight in the rain, silent, no talking.' },
   { label: '20 second chase', text: '20 second neon alley chase, rain, no talking.' },

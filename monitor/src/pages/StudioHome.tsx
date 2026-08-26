@@ -6,7 +6,7 @@ import { PosterCard } from '../components/PosterCard'
 import { VideoModeToggle, type VideoMode } from '../components/VideoModeToggle'
 import { useStudioSession } from '../components/StudioSession'
 import { api } from '../lib/api'
-import { canonicalStage, projectPath, PROMPT_PLACEHOLDER, PROMPT_STARTERS } from '../lib/studio'
+import { canonicalStage, projectPath, PROMPT_PLACEHOLDER, PROMPT_STARTERS, VIDEO_MODE_HINT } from '../lib/studio'
 
 export function StudioHome() {
   const { projects, projectsReady, refreshProjects } = useStudioSession()
@@ -76,9 +76,7 @@ export function StudioHome() {
         </div>
         <VideoModeToggle value={videoMode} onChange={setVideoMode} />
         <p className="text-[12px] text-ghost text-center">
-          {videoMode === 't2v'
-            ? 'Goes straight to MiniMax. No painted still.'
-            : 'Paints a still, then animates it.'}
+          {VIDEO_MODE_HINT[videoMode]}
         </p>
         <FailNote error={err} />
         <button
