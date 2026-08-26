@@ -242,5 +242,24 @@ describe('brain status view', () => {
     assert.equal(over.progress.currentShot, 'S02')
     assert.equal(over.progress.phase, 'motion')
     assert.match(over.statusLine, /Animating|Running|video/i)
+    assert.ok(over.friends.some((f) => f.name === 'Board'))
+  })
+
+  it('floor overlay skips Board on Straight to video', () => {
+    const view = viewBrain(
+      {
+        projectId: 'harbor',
+        title: 'Harbor',
+        status: 'video',
+        step: 'video',
+        videoMode: 't2v',
+        clips: [{ id: 'S01' }],
+      },
+      'harbor',
+    )
+    view.running = true
+    const over = floorOverlayFromBrain(view, { statusLine: 'Idle', mood: 'idle', progress: {} })
+    assert.ok(!over.friends.some((f) => f.name === 'Board'))
+    assert.ok(over.friends.some((f) => f.name === 'Watch'))
   })
 })

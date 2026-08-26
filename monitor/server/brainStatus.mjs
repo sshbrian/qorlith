@@ -383,7 +383,7 @@ export function floorOverlayFromBrain(brain, baseFloor) {
     friends: [
       { name: brain.title || brain.projectId, blurb: total ? `${done}/${total}` : 'story' },
       { name: 'Comfy', blurb: running ? 'busy' : 'ready' },
-      { name: 'Board', blurb: 'picks' },
+      ...(brain.videoMode === 't2v' ? [] : [{ name: 'Board', blurb: 'picks' }]),
       { name: 'Watch', blurb: brain.master ? 'film ready' : 'waiting' },
     ],
     progress: {
