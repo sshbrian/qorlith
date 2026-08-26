@@ -195,7 +195,9 @@ export function Brain() {
           <div className="play-mark" aria-hidden>
             ▶
           </div>
-          <p className="page-lead mt-5 text-center">Nothing is rendering yet.</p>
+          <p className="page-lead mt-5 text-center">
+            {clips.length ? 'The film is not made yet.' : 'Nothing is rendering yet.'}
+          </p>
           <button
             type="button"
             disabled={!canStart}
