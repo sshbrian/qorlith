@@ -113,6 +113,13 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /archived.*only/)
   })
 
+  it('Home and Plan share the same prompt chips', () => {
+    const studio = read(path.join(src, 'lib', 'studio.ts'))
+    assert.match(studio, /PROMPT_STARTERS/)
+    assert.match(page('StudioHome.tsx'), /PROMPT_STARTERS/)
+    assert.match(page('StudioPlanner.tsx'), /PROMPT_STARTERS/)
+  })
+
   it('Plan uses ArchiveProjectDialog', () => {
     assert.match(
       read(path.join(src, 'components', 'ArchiveProjectDialog.tsx')),
