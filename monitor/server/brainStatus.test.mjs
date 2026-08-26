@@ -9,6 +9,7 @@ import {
   idleBrain,
   killBrainPid,
   markBrainStopped,
+  resolveBrainStopAfter,
   statusLabel,
   stopBrain,
   viewBrain,
@@ -20,6 +21,13 @@ describe('brain status view', () => {
     assert.equal(idle.started, false)
     assert.equal(idle.steps.length, 7)
     assert.ok(idle.steps.every((s) => s.state === 'idle'))
+  })
+
+  it('Straight to video never stops after stills', () => {
+    assert.equal(resolveBrainStopAfter('stills', 't2v'), 'film')
+    assert.equal(resolveBrainStopAfter('film', 't2v'), 'film')
+    assert.equal(resolveBrainStopAfter('plan', 't2v'), 'plan')
+    assert.equal(resolveBrainStopAfter('stills', 'stills'), 'stills')
   })
 
   it('idle t2v graph skips pictures', () => {

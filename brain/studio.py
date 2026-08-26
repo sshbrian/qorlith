@@ -126,11 +126,11 @@ class Studio:
                 time.sleep(delay)
         raise last or BrainError(409, "comfy_busy", "Comfy already has work in the queue")
 
-    def create_project(self, title: str, prompt: str = "") -> dict[str, Any]:
-        return self._post(
-            f"{self.cfg.monitor_url}/api/studio/projects",
-            {"title": title, "prompt": prompt},
-        )
+    def create_project(self, title: str, prompt: str = "", video_mode: str | None = None) -> dict[str, Any]:
+        body: dict[str, Any] = {"title": title, "prompt": prompt}
+        if video_mode:
+            body["videoMode"] = video_mode
+        return self._post(f"{self.cfg.monitor_url}/api/studio/projects", body)
 
     def get_plan(self, project_id: str) -> dict[str, Any] | None:
         r = self.http.get(f"{self.cfg.monitor_url}/api/studio/plans/{project_id}")
@@ -140,10 +140,18 @@ class Studio:
             _raise_http(r, "plan get failed")
         return r.json()
 
-    def generate_plan(self, prompt: str, project_id: str | None = None, dry_run: bool = False) -> dict[str, Any]:
+    def generate_plan(
+        self,
+        prompt: str,
+        project_id: str | None = None,
+        dry_run: bool = False,
+        video_mode: str | None = None,
+    ) -> dict[str, Any]:
         body: dict[str, Any] = {"prompt": prompt, "dryRun": dry_run}
         if project_id:
             body["projectId"] = project_id
+        if video_mode:
+            body["videoMode"] = video_mode
         return self._post(f"{self.cfg.monitor_url}/api/studio/plan", body)
 
     def board(self, project_id: str) -> dict[str, Any]:

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { clipDurationBounds, mergePlanner, loadStudio } from './studioConfig.mjs'
+import { clipDurationBounds, mergePlanner, loadStudio, preferT2v } from './studioConfig.mjs'
 import { directorConfigFromApp } from './director.mjs'
 
 describe('planner yaml', () => {
@@ -55,5 +55,12 @@ describe('planner yaml', () => {
     assert.equal(b.continueMin, 10)
     assert.ok(b.fallback >= 6)
     assert.ok(b.min >= 4)
+  })
+
+  it('preferT2v does not let a stills default demote a saved plan', () => {
+    assert.equal(preferT2v('stills', 't2v'), 't2v')
+    assert.equal(preferT2v('t2v', 'stills'), 't2v')
+    assert.equal(preferT2v('stills', 'stills'), 'stills')
+    assert.equal(preferT2v(undefined, 'straight'), 't2v')
   })
 })

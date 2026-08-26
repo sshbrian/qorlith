@@ -70,13 +70,18 @@ const Filmstrip = memo(function Filmstrip({
 export function Brain() {
   const { projectId } = useParams()
   const navigate = useNavigate()
-  const { brain, loading, busy, err, start, resume, stop } = useStudioSession()
-  const fallback = useMemo(() => idleBrainReport(projectId || ''), [projectId])
+  const { brain, current, loading, busy, err, start, resume, stop } = useStudioSession()
+  const t2v = brain?.videoMode === 't2v' || current?.videoMode === 't2v'
+  const fallback = useMemo(
+    () => idleBrainReport(projectId || '', { videoMode: t2v ? 't2v' : 'stills' }),
+    [projectId, t2v],
+  )
   const [sheet, setSheet] = useState<null | 'story' | 'stills' | 'video'>(null)
   const [more, setMore] = useState(false)
   const sentWatch = useRef(false)
   const sawLive = useRef(false)
-  const report = brain && (brain.started || (brain.clips && brain.clips.length)) ? brain : fallback
+  const raw = brain && (brain.started || (brain.clips && brain.clips.length)) ? brain : fallback
+  const report = t2v && raw.videoMode !== 't2v' ? { ...raw, videoMode: 't2v' } : raw
   const running = runIsLive(report)
   const hasMaster = Boolean(report.master)
 
@@ -100,7 +105,6 @@ export function Brain() {
   }
 
   const clips = report.clips || []
-  const t2v = report.videoMode === 't2v'
   const openNode = (id: string) => {
     if (id === 'plan') setSheet('story')
     else if (id === 'stills') {

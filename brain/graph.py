@@ -999,9 +999,11 @@ def node_plan(studio: Studio, state: BrainState) -> BrainState:
     existing = studio.get_plan(project_id) if project_id else None
     record = (existing or {}).get("record") if existing else None
     plan = (record or {}).get("plan") if record else None
+    if not prompt:
+        prompt = str((record or {}).get("userPrompt") or "").strip()
+    mode = normalize_video_mode((plan or {}).get("videoMode") or state.get("video_mode"))
     if plan and plan.get("clips"):
         write_report(studio.cfg, {**state, "step": "plan"}, phase="plan_reuse")
-        mode = normalize_video_mode(plan.get("videoMode") or state.get("video_mode"))
         nxt = "video" if mode == "t2v" else "stills"
         return {
             **state,
@@ -1026,20 +1028,22 @@ def node_plan(studio: Studio, state: BrainState) -> BrainState:
         )
 
     if not project_id:
-        created = studio.create_project(state.get("title") or "Untitled project", prompt)
+        created = studio.create_project(state.get("title") or "Untitled project", prompt, video_mode=mode)
         project_id = (created.get("project") or created).get("id") or ""
         if not project_id:
             raise BrainError(502, "create_failed", "Monitor did not return a project id", "Check POST /api/studio/projects.")
 
     write_report(studio.cfg, {**state, "project_id": project_id, "step": "plan"}, phase="plan_llm")
-    result = studio.generate_plan(prompt, project_id=project_id, dry_run=bool(state.get("dry_run")))
+    result = studio.generate_plan(
+        prompt, project_id=project_id, dry_run=bool(state.get("dry_run")), video_mode=mode
+    )
     plan = result.get("plan") or (result.get("record") or {}).get("plan") or {}
     clips = list(plan.get("clips") or [])
     if not clips:
         raise BrainError(502, "empty_plan", "Planner returned no clips", "Generate again, or use --dry-run.")
     pid = plan.get("projectId") or project_id
     write_report(studio.cfg, {**state, "project_id": pid, "step": "plan"}, phase="plan_save")
-    mode = normalize_video_mode(plan.get("videoMode") or state.get("video_mode"))
+    mode = normalize_video_mode(plan.get("videoMode") or mode)
     nxt = "video" if mode == "t2v" else "stills"
     return {
         **state,

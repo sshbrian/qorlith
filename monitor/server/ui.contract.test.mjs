@@ -143,6 +143,8 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /videoMode === 't2v'/)
     assert.match(t, /Straight to video, then the film/)
     assert.match(t, /The film is not made yet/)
+    assert.match(t, /current\?\.videoMode === 't2v'/)
+    assert.match(read(path.join(src, 'components', 'StudioSession.tsx')), /current\?\.videoMode === 't2v'/)
     assert.match(t, /t2v \? null/)
     assert.match(t, /more && !t2v/)
     assert.match(t, /Pictures only/)

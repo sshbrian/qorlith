@@ -93,5 +93,7 @@ describe('studio session fingerprints', () => {
     assert.equal(idle.status, 'idle')
     assert.equal(idle.clips.length, 0)
     assert.equal(idle.running, false)
+    assert.equal(idle.videoMode, 'stills')
+    assert.equal(idleBrainReport('roof', { videoMode: 't2v' }).videoMode, 't2v')
   })
 })

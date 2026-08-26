@@ -183,6 +183,13 @@ describe('Qorlith API integration (synthetic Kohya pipes)', () => {
     assert.equal(t2vDraft.body.record?.plan?.videoMode, 't2v')
     const t2vBoard = await getJson(port, `/api/episode-plans/${t2vDraft.body.project.id}`)
     assert.ok(t2vBoard.status === 404 || (t2vBoard.body.scenes || []).length === 0)
+    const plannedT2v = await postJson(port, '/api/studio/plan', {
+      prompt: 'rooftop rain',
+      dryRun: true,
+      projectId: t2vDraft.body.project.id,
+    })
+    assert.equal(plannedT2v.status, 200)
+    assert.equal(plannedT2v.body.record?.plan?.videoMode, 't2v')
 
     const planned = await postJson(port, '/api/studio/plan', {
       prompt: 'two adults, alley chase',

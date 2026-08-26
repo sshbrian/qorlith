@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { fail } from './errors.mjs'
 import { loadProjectRecord, projectDir, projectsRoot } from './project.mjs'
 import { decorateProgressForBrain, getComfyProgress } from './comfyProgress.mjs'
-import { loadStudio, normalizeVideoMode } from './studioConfig.mjs'
+import { loadStudio, normalizeVideoMode, preferT2v } from './studioConfig.mjs'
 
 function stillQualityFromYaml() {
   const q = String(loadStudio().stills?.quality || 'standard').toLowerCase()
@@ -193,6 +193,13 @@ export function stopBrain(id) {
   return { ok: true, pid, killed: result.killed, brain: loadBrain(id) }
 }
 
+export function resolveBrainStopAfter(stopAfter, videoMode) {
+  if (stopAfter === 'plan') return 'plan'
+  if (preferT2v(videoMode) === 't2v') return 'film'
+  if (stopAfter === 'film' || stopAfter === '' || stopAfter === 'finish') return 'film'
+  return stopAfter || 'stills'
+}
+
 export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk = false, autoPick = false, videoMode } = {}) {
   if (!fs.existsSync(BRAIN_BIN)) {
     fail(500, 'brain_missing', 'bin/brain is not installed', {
@@ -204,9 +211,10 @@ export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk 
       hint: 'Wait for the current run, or check the Brain page.',
     })
   }
-  const film = stopAfter === 'film' || stopAfter === '' || stopAfter === 'finish'
   const rec = loadProjectRecord(id)
-  const mode = normalizeVideoMode(videoMode || rec?.plan?.videoMode)
+  const mode = preferT2v(videoMode, rec?.plan?.videoMode)
+  const halt = resolveBrainStopAfter(stopAfter, mode)
+  const film = halt === 'film'
   const args = resume
     ? ['resume', '--thread', id, ...(reviewOk ? ['--review-ok'] : [])]
     : [
@@ -214,7 +222,7 @@ export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk 
         '--project',
         id,
         '--stop-after',
-        film ? 'film' : stopAfter || 'stills',
+        halt,
         '--quality',
         stillQualityFromYaml(),
         ...((autoPick || film || mode === 't2v') ? ['--auto-pick'] : []),

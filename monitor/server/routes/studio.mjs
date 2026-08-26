@@ -289,7 +289,13 @@ export function mountStudio(app) {
       const dryRun = Boolean(req.body?.dryRun)
       const pinnedId = String(req.body?.projectId || '').trim()
       const imported = req.body?.plan && typeof req.body.plan === 'object' ? req.body.plan : null
-      const videoMode = req.body?.videoMode || imported?.videoMode
+      let existing = pinnedId ? loadProjectRecord(pinnedId) : null
+      if (pinnedId && !existing) {
+        fail(404, 'project_not_found', 'project not found', {
+          hint: 'Create the project from the left rail +, then generate again.',
+        })
+      }
+      const videoMode = req.body?.videoMode || imported?.videoMode || existing?.plan?.videoMode
       const result = await generateMoviePlan({
         userPrompt: prompt,
         dryRun,
@@ -299,14 +305,7 @@ export function mountStudio(app) {
       })
       const now = new Date().toISOString()
       let projectId = result.plan.projectId
-      let existing = null
       if (pinnedId) {
-        existing = loadProjectRecord(pinnedId)
-        if (!existing) {
-          fail(404, 'project_not_found', 'project not found', {
-            hint: 'Create the project from the left rail +, then generate again.',
-          })
-        }
         projectId = existing.projectId
         result.plan.projectId = projectId
       } else {
@@ -388,7 +387,7 @@ export function mountStudio(app) {
         dryRun,
         appConfig: cfg,
         plan: imported,
-        videoMode: req.body?.videoMode || imported?.videoMode,
+        videoMode: req.body?.videoMode || imported?.videoMode || existing?.plan?.videoMode,
       })
       const now = new Date().toISOString()
       const projectId = existing.projectId

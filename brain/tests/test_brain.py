@@ -96,16 +96,17 @@ class FakeStudio:
         rec = self.plans.get(project_id)
         return {"record": rec} if rec else None
 
-    def create_project(self, title, prompt=""):
-        self.calls.append(("create", title))
+    def create_project(self, title, prompt="", video_mode=None):
+        self.calls.append(("create", title, video_mode))
         return {"project": {"id": "harbor"}}
 
-    def generate_plan(self, prompt, project_id=None, dry_run=False):
-        self.calls.append(("plan", prompt, project_id, dry_run))
+    def generate_plan(self, prompt, project_id=None, dry_run=False, video_mode=None):
+        self.calls.append(("plan", prompt, project_id, dry_run, video_mode))
         plan = {
             "projectId": project_id or "harbor",
             "title": "Harbor",
             "lookTrack": "anime",
+            "videoMode": video_mode or "stills",
             "clips": [
                 {
                     "id": "S01",
@@ -191,7 +192,20 @@ def test_plan_creates_project_and_clips():
     assert out["project_id"] == "harbor"
     assert out["look_track"] == "anime"
     assert len(out["clips"]) == 2
-    assert ("plan", "30s anime night", "harbor", False) in s.calls
+    assert ("plan", "30s anime night", "harbor", False, "stills") in s.calls
+
+
+def test_plan_generate_keeps_saved_t2v_and_user_prompt():
+    s = FakeStudio()
+    s.plans["roof"] = {
+        "userPrompt": "rooftop rain, no talking",
+        "plan": {"projectId": "roof", "videoMode": "t2v", "clips": []},
+    }
+    out = node_plan(s, empty_state(project_id="roof"))
+    assert ("plan", "rooftop rain, no talking", "roof", False, "t2v") in s.calls
+    assert out["video_mode"] == "t2v"
+    assert out["status"] == "video"
+    assert out["auto_pick"] is True
 
 
 def test_stills_skip_when_comfy_busy():

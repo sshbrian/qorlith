@@ -67,7 +67,7 @@ export function projectsFingerprint(list: StudioProject[] | null | undefined): s
     .join(';')
 }
 
-export function idleBrainReport(projectId: string): BrainReport {
+export function idleBrainReport(projectId: string, extra: { videoMode?: string } = {}): BrainReport {
   return {
     projectId,
     status: 'idle',
@@ -76,5 +76,6 @@ export function idleBrainReport(projectId: string): BrainReport {
     clips: [],
     started: false,
     running: false,
+    videoMode: extra.videoMode === 't2v' ? 't2v' : 'stills',
   }
 }

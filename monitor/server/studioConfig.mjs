@@ -161,6 +161,14 @@ export function normalizeVideoMode(raw) {
   return 'stills'
 }
 
+/** t2v if any source is t2v. Used so a stills client default cannot demote a saved plan. */
+export function preferT2v(...raw) {
+  for (const r of raw) {
+    if (normalizeVideoMode(r) === 't2v') return 't2v'
+  }
+  return 'stills'
+}
+
 export function clipDurationBounds() {
   const v = loadStudio().video || {}
   const fallback = Number(v.duration_sec)

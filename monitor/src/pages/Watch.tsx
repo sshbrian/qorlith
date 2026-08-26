@@ -150,7 +150,7 @@ export function Watch() {
   const { current } = useStudioProjects()
   const { comfy } = useStudioLive()
   const clips = brain?.clips || []
-  const t2v = brain?.videoMode === 't2v'
+  const t2v = brain?.videoMode === 't2v' || current?.videoMode === 't2v'
   const posterStill = clips.find((c) => c.still)?.still
   const posterVideo = clips.find((c) => c.video)?.video
   const sceneClips = clips.filter((c) => c.id)

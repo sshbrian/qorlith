@@ -174,6 +174,11 @@ export function StudioSessionProvider({
     }
   }, [projectId, applyBrain])
 
+  const current = useMemo(
+    () => projects.find((p) => p.id === projectId) || null,
+    [projects, projectId],
+  )
+
   const start = useCallback(
     async (stopAfter: 'plan' | 'stills' | 'film' = 'stills') => {
       if (!projectId) return
@@ -183,7 +188,7 @@ export function StudioSessionProvider({
         const r = await api.brainStart(projectId, {
           stopAfter,
           oneClick: stopAfter === 'film',
-          videoMode: brain?.videoMode === 't2v' ? 't2v' : 'stills',
+          videoMode: brain?.videoMode === 't2v' || current?.videoMode === 't2v' ? 't2v' : 'stills',
         })
         applyBrain(r.brain)
         await refreshProjects()
@@ -193,7 +198,7 @@ export function StudioSessionProvider({
         setBusy(false)
       }
     },
-    [projectId, applyBrain, refreshProjects, brain?.videoMode],
+    [projectId, applyBrain, refreshProjects, brain?.videoMode, current?.videoMode],
   )
 
   const resume = useCallback(async () => {
@@ -225,11 +230,6 @@ export function StudioSessionProvider({
       setBusy(false)
     }
   }, [projectId, applyBrain, refreshProjects])
-
-  const current = useMemo(
-    () => projects.find((p) => p.id === projectId) || null,
-    [projects, projectId],
-  )
 
   const value = useMemo<StudioSessionValue>(
     () => ({
