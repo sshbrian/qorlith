@@ -234,6 +234,7 @@ describe('brain graph — decorateGraph', () => {
     assert.ok(nodeX('video', 't2v') < nodeX('video'))
     assert.ok(nodeX('end', 't2v') < nodeX('end'))
     assert.equal(view.nodes.find((n) => n.id === 'video')?.blurb, 'Prompt to MiniMax')
+    assert.equal(view.nodes.find((n) => n.id === 'video')?.label, 'Clips')
   })
 })
 

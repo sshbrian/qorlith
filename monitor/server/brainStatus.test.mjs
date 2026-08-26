@@ -37,6 +37,7 @@ describe('brain status view', () => {
       idle.steps.map((s) => s.id),
       ['health', 'plan', 'video', 'free', 'finish'],
     )
+    assert.equal(idle.steps.find((s) => s.id === 'video')?.label, 'Clips')
     const view = viewBrain(
       {
         projectId: 'harbor',

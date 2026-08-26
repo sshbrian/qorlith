@@ -31,7 +31,9 @@ const T2V_SKIP_STEPS = new Set(['stills', 'face_qa'])
 
 function pipelineSteps(videoMode) {
   if (normalizeVideoMode(videoMode) === 't2v') {
-    return BRAIN_STEPS.filter((s) => !T2V_SKIP_STEPS.has(s.id))
+    return BRAIN_STEPS.filter((s) => !T2V_SKIP_STEPS.has(s.id)).map((s) =>
+      s.id === 'video' ? { ...s, label: 'Clips' } : s,
+    )
   }
   return BRAIN_STEPS
 }

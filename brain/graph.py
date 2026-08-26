@@ -175,7 +175,12 @@ STATUS_STEP = {
 
 def pipeline_steps(video_mode: Any = None) -> tuple[tuple[str, str], ...]:
     if normalize_video_mode(video_mode) == "t2v":
-        return tuple(item for item in STEPS if item[0] not in T2V_SKIP_STEPS)
+        out = []
+        for sid, label in STEPS:
+            if sid in T2V_SKIP_STEPS:
+                continue
+            out.append(("video", "Clips") if sid == "video" else (sid, label))
+        return tuple(out)
     return STEPS
 
 
@@ -282,11 +287,14 @@ def graph_view(
 ) -> dict[str, Any]:
     by_id = {s["id"]: s for s in steps}
     begun = any(s.get("state") in {"done", "active", "fail"} for s in steps)
-    skip = T2V_SKIP_STEPS if normalize_video_mode(video_mode) == "t2v" else frozenset()
+    t2v = normalize_video_mode(video_mode) == "t2v"
+    skip = T2V_SKIP_STEPS if t2v else frozenset()
     nodes = []
     for sid, label, blurb in GRAPH_NODE_META:
         if sid in skip:
             continue
+        if t2v and sid == "video":
+            label, blurb = "Clips", "Prompt to MiniMax"
         if sid == "start":
             state = "done" if begun else "idle"
         elif sid == "end":

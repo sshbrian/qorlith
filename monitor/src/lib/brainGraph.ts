@@ -303,7 +303,8 @@ export function decorateGraph(
 
   const nodes: GraphNodeView[] = metas.map((meta) => {
     const blurb = t2v && meta.id === 'video' ? 'Prompt to MiniMax' : meta.blurb
-    const base = { id: meta.id, label: meta.label, blurb }
+    const label = t2v && meta.id === 'video' ? 'Clips' : meta.label
+    const base = { id: meta.id, label, blurb }
     if (raw?.nodes?.length) {
       const hit = raw.nodes.find((n) => n.id === meta.id)
       if (hit) return { ...base, state: hit.state || 'idle' }

@@ -744,6 +744,7 @@ def test_step_states_mark_current_and_done():
 def test_step_states_t2v_skips_pictures():
     steps = step_states("video", "video", video_mode="t2v")
     assert [s["id"] for s in steps] == ["health", "plan", "video", "free", "finish"]
+    assert steps[2]["label"] == "Clips"
     assert steps[2]["state"] == "active"
     report = public_report(
         empty_state(project_id="harbor", status="video", step="video", video_mode="t2v")
