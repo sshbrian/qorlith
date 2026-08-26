@@ -825,7 +825,7 @@ export async function runDirectorPipeline(args) {
 }
 
 // ---------------------------------------------------------------------------
-// Video (MiniMax H3 I2VA) — motion / dialogue / music from free text + start still
+// Video (MiniMax H3) — I2VA from a first frame, or T2VA when t2v and no still
 // ---------------------------------------------------------------------------
 
 /** @typedef {{
@@ -860,17 +860,29 @@ function inferVideoLook(text, rawLook) {
   return ''
 }
 
-export function buildVideoSystemPrompt() {
+export function buildVideoSystemPrompt({ t2v = false, continueFromPrior = false } = {}) {
   const studio = loadStudio()
   const dur = Number(studio.video.duration_sec) || 12
-  return `You are Qorlith Video Director for MiniMax H3 image-to-video-audio.
-Convert free-form intent into a STRICT JSON plan. The start still IS frame 0. The app wraps I2VA + style + identity lock. You write only what CHANGES.
+  const openT2v = t2v && !continueFromPrior
+  const intro = openT2v
+    ? `You are Qorlith Video Director for MiniMax H3 text-to-video-audio.
+Convert free-form intent into a STRICT JSON plan. No start still is painted. motion is the FULL MiniMax scene.`
+    : `You are Qorlith Video Director for MiniMax H3 image-to-video-audio.
+Convert free-form intent into a STRICT JSON plan. The start still IS frame 0. The app wraps I2VA + style + identity lock. You write only what CHANGES.`
+  const motionRule = openT2v
+    ? `3. motion is a medium-wide T2VA scene. Open with "a medium-wide shot frames LOCATION." Then who, action, camera. Include the lead's appearance. Do not write Picture 1 or [Shot 1].
+4. Camera as prose: push in / pull out / pan / truck / tilt / tracking / static / shake slightly, plus optional "with small amplitude" / "at slow speed".`
+    : `3. motion is camera + body action only. Do not rename models or LoRAs. Do not write [Shot 1].
+4. Camera as prose: push in / pull out / pan / truck / tilt / tracking / static / shake slightly, plus optional "with small amplitude" / "at slow speed".`
+  const motionSchema = openT2v
+    ? 'medium-wide T2VA scene (who, place, action, camera)'
+    : 'camera + body action only'
+  return `${intro}
 
 RULES:
 1. Output ONLY one JSON object. No markdown fences.
 2. Adult characters only. Never minors.
-3. motion is camera + body action only. Do not rename models or LoRAs. Do not write [Shot 1].
-4. Camera as prose: push in / pull out / pan / truck / tilt / tracking / static / shake slightly, plus optional "with small amplitude" / "at slow speed".
+${motionRule}
 5. dialogue is spoken lines with H3 markup, or empty:
    the adult with a dry mid voice (S1) says: <d>[English] Copy.</d>
    Inside <d>: [English] or [Japanese] then the exact words. No quotes.
@@ -885,7 +897,7 @@ RULES:
 
 JSON SCHEMA:
 {
-  "motion": "camera + body action only",
+  "motion": "${motionSchema}",
   "dialogue": "H3 spoken line or empty",
   "soundscape": "diegetic sentences or N/A",
   "music": "instruments + tempo + dynamics, or N/A",
@@ -960,12 +972,18 @@ export function dryRunVideoPlan(instruction = 'subtle idle motion') {
   )
 }
 
-export async function generateVideoPlan({ instruction, directorCfg }) {
+export async function generateVideoPlan({
+  instruction,
+  directorCfg,
+  t2v = false,
+  continueFromPrior = false,
+} = {}) {
   const cfg = directorCfg || DEFAULT_DIRECTOR_CFG
   const userText = String(instruction || '').trim()
+  const openT2v = Boolean(t2v) && !continueFromPrior
   if (!userText) {
     fail(400, 'missing_instruction', 'instruction required', {
-      hint: 'Describe the motion, then generate.',
+      hint: openT2v ? 'Describe the scene, then generate.' : 'Describe the motion, then generate.',
     })
   }
 
@@ -974,10 +992,12 @@ export async function generateVideoPlan({ instruction, directorCfg }) {
     temperature: cfg.temperature ?? 0.35,
     max_tokens: cfg.maxTokens ?? 2048,
     messages: [
-      { role: 'system', content: buildVideoSystemPrompt() },
+      { role: 'system', content: buildVideoSystemPrompt({ t2v, continueFromPrior }) },
       {
         role: 'user',
-        content: `Motion intent for I2VA (start image already set). Do not write [Shot 1].\n${userText}\n\nReturn the JSON video plan now.`,
+        content: openT2v
+          ? `Straight to video MiniMax T2VA (no painted still). Do not write Picture 1 or [Shot 1].\n${userText}\n\nReturn the JSON video plan now.`
+          : `Motion intent for I2VA (start image already set). Do not write [Shot 1].\n${userText}\n\nReturn the JSON video plan now.`,
       },
     ],
   }
@@ -1026,7 +1046,7 @@ export async function generateVideoPlan({ instruction, directorCfg }) {
 }
 
 /**
- * Full video pipeline: load LLM → motion plan → unload → MiniMax H3 from source still.
+ * Full video pipeline: load LLM → clip plan → unload → MiniMax H3 (I2VA or T2VA).
  */
 export async function runVideoPipeline(args) {
   const onProgress = args.onProgress || (() => {})
@@ -1068,6 +1088,8 @@ export async function runVideoPipeline(args) {
       planResult = await generateVideoPlan({
         instruction: args.instruction,
         directorCfg: cfg,
+        t2v,
+        continueFromPrior: Boolean(args.continueFromPrior),
       })
       track({ stage: 'plan_ready', detail: `${planResult.plan.durationSec}s` })
     }

@@ -374,6 +374,8 @@ export function mountDirector(app) {
     wrap(async (req, res) => {
       const instruction = req.body?.instruction
       const dryRun = Boolean(req.body?.dryRun)
+      const t2v = Boolean(req.body?.t2v || req.body?.videoMode === 't2v')
+      const continueFromPrior = Boolean(req.body?.continueFromPrior)
       const cfg = loadConfig()
       const d = directorConfigFromApp()
 
@@ -388,7 +390,12 @@ export function mountDirector(app) {
           prepared = await preparePlanModel(d)
           d.apiModel = prepared.apiModel
         }
-        const result = await generateVideoPlan({ instruction, directorCfg: d })
+        const result = await generateVideoPlan({
+          instruction,
+          directorCfg: d,
+          t2v,
+          continueFromPrior,
+        })
         res.json({
           ok: true,
           dryRun: false,

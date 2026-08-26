@@ -170,5 +170,17 @@ describe('director video plan', () => {
     assert.match(p, /lookTrack/)
     assert.match(p, /Do not write \[Shot 1\]/)
     assert.match(p, /named instruments/)
+    assert.match(p, /The start still IS frame 0/)
+  })
+
+  it('Straight to video director prompt is T2VA, not a start still', () => {
+    const p = buildVideoSystemPrompt({ t2v: true })
+    assert.match(p, /text-to-video-audio/)
+    assert.match(p, /medium-wide shot frames/)
+    assert.doesNotMatch(p, /The start still IS frame 0/)
+    assert.doesNotMatch(p, /camera \+ body action only/)
+    const cont = buildVideoSystemPrompt({ t2v: true, continueFromPrior: true })
+    assert.match(cont, /The start still IS frame 0/)
+    assert.match(cont, /camera \+ body action only/)
   })
 })
