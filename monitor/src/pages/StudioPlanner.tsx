@@ -11,6 +11,12 @@ import {
 
 const PROMPT_PLACEHOLDER = `Example: 20 second rooftop fight, rain, no talking.`
 
+const STARTERS = [
+  { label: '12 seconds', text: '12 second rooftop fight in the rain, silent, no talking.' },
+  { label: '20 second chase', text: '20 second neon alley chase, rain, no talking.' },
+  { label: '32 second raid', text: '32 second night raid through a server floor, gunfire, no talking.' },
+]
+
 function ClipCard({
   clip,
   selected,
@@ -329,6 +335,13 @@ export function StudioPlanner() {
           placeholder={PROMPT_PLACEHOLDER}
           className="field resize-y min-h-[140px]"
         />
+        <div className="flex flex-wrap gap-2">
+          {STARTERS.map((s) => (
+            <button key={s.label} type="button" className="chip" onClick={() => setPrompt(s.text)}>
+              {s.label}
+            </button>
+          ))}
+        </div>
         {health && !health.ok && health.planner?.provider === 'local' ? (
           <span className="text-[13px] text-amber">
             Local writer is offline — paste a plan under More, or start LM Studio.

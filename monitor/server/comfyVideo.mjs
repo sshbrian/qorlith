@@ -81,11 +81,23 @@ export function hasAirlockLanguage(text) {
 export const AIRLOCK_LANDING =
   'End in a stable arrangement with about two seconds spare after any speech. Keep the same location unless the motion names a new one.'
 
+export const STILL_ONSET =
+  'Hold <Picture 1> for about one second with no new motion.'
+
+function capSoundscapeSentences(text) {
+  const bits = String(text || '')
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  if (bits.length <= 4) return text
+  return bits.slice(0, 4).join(' ')
+}
+
 /** Official overall_soundscape is 1–4 sentences. Tag lists become one sentence. Empty → N/A. */
 export function expandSoundscape(raw) {
   const s = String(raw || '').trim()
   if (!s || /^n\/a$/i.test(s)) return 'N/A'
-  if (/[.!?]$/.test(s) || s.split(/\s+/).length >= 12) return s
+  if (/[.!?]$/.test(s) || s.split(/\s+/).length >= 12) return capSoundscapeSentences(s)
   const parts = s
     .split(',')
     .map((p) => p.trim())
@@ -94,6 +106,13 @@ export function expandSoundscape(raw) {
   if (parts.length === 1) return /[.!?]$/.test(parts[0]) ? parts[0] : `${parts[0]}.`
   if (parts.length === 2) return `${parts[0]}, and ${parts[1]}.`
   return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}.`
+}
+
+function appendMotion(body, motion, alreadyAirlock) {
+  const m = stripShotLabel(String(motion || '')).trim()
+  if (!m) return body
+  if (alreadyAirlock || /^(then\b|the camera\b)/i.test(m)) return `${body} ${m}`
+  return `${body} Then ${m}`
 }
 
 export function composeH3Prompt(job = {}) {
@@ -106,13 +125,14 @@ export function composeH3Prompt(job = {}) {
   const lock = subjectLock(job)
   const alreadyAirlock = hasAirlockLanguage(motion)
   let body = `[Shot 1] ${style}, ${lock}`
-  if (motion) body += alreadyAirlock ? ` ${motion}` : ` Then ${motion}`
+  if (!job.continueFromPrior && !alreadyAirlock) body += ` ${STILL_ONSET}`
+  body = appendMotion(body, motion, alreadyAirlock)
   if (job.continueFromPrior && !alreadyAirlock) {
     body += ` ${AIRLOCK_LANDING}`
   }
   if (dialogue) {
     body += job.continueFromPrior ? ` After the opening hold, ${dialogue}` : ` ${dialogue}`
-  } else {
+  } else if (!/lips remain/i.test(body)) {
     body += ' On-screen lips remain completely closed. No spoken words.'
     if (!wantsSinging(job)) body += ' No singing.'
   }

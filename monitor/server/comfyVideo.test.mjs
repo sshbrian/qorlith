@@ -71,6 +71,8 @@ describe('MiniMax H3 video plan', () => {
     const cut = composeH3Prompt({ motion: 'she turns', dialogue: '', music: 'N/A' })
     assert.match(cut, /integrated_multimodal_description/)
     assert.match(cut, /overall_soundscape: N\/A/)
+    assert.match(cut, /Hold <Picture 1> for about one second/)
+    assert.match(cut, /Then she turns/)
     assert.match(cut, /On-screen lips remain completely closed/)
     assert.match(cut, /No singing/)
     assert.doesNotMatch(cut, /Her lips/)
@@ -95,6 +97,7 @@ describe('MiniMax H3 video plan', () => {
     assert.match(cont, /first couple of seconds/)
     assert.match(cont, /about two seconds spare/)
     assert.match(cont, /Then she turns/)
+    assert.doesNotMatch(cont, /Hold <Picture 1> for about one second/)
     assert.doesNotMatch(cont, /last frame of the previous shot/)
     const spokenCont = composeH3Prompt({
       motion: 'she turns',
@@ -129,6 +132,7 @@ describe('MiniMax H3 video plan', () => {
     })
     assert.match(anime, /\[Shot 1\] 2D-animated,/)
     assert.match(anime, /Major Motoko Kusanagi shown in <Picture 1> remains/)
+    assert.doesNotMatch(anime, /Then The camera/)
     assert.match(anime, /non_diegetic_music: sparse taiko/)
     assert.match(anime, /and heavy rain\./)
     assert.match(anime, /No spoken words/)
@@ -146,6 +150,9 @@ describe('MiniMax H3 video plan', () => {
     assert.doesNotMatch(sung, /No singing/)
     assert.equal(stripShotLabel('[Shot 1] she turns'), 'she turns')
     assert.equal(expandSoundscape(''), 'N/A')
+    const long = expandSoundscape('Rain. Wind. A burst. Casings. A distant siren.')
+    assert.match(long, /Rain/)
+    assert.doesNotMatch(long, /siren/)
     assert.match(subjectLock({ characters: [{ name: 'Ava' }] }), /Ava shown/)
   })
 

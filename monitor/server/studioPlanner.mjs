@@ -79,7 +79,8 @@ The app prepends the house quality prefix and LoRA triggers. You write only the 
 
 MOTION BRIEF = MiniMax H3 I2VA motion only
 The start still IS frame 0. The app wraps your text as I2VA + identity lock. You write only what CHANGES.
-- Path: first-frame hold → action onset → continuous development → result/reaction.
+- Path: action onset → continuous development → result/reaction. The app holds the still for about one second, then your motion, then ~2 s settle on continue takes.
+- Do not write the hold or the settle yourself. Do not walk the subject into frame from off-screen — they are already in the still.
 - Camera as prose: motion type + optional amplitude + optional speed.
   Verbs: push in, pull out, pan left/right, truck left/right, tilt up/down, pedestal, arc, tracking, static, POV, shake slightly/strongly, roll.
   Amplitude: with small amplitude / with large amplitude. Speed: at slow speed / at fast speed. Omit medium.

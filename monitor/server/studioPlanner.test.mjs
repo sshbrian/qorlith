@@ -249,6 +249,8 @@ describe('studioPlanner', () => {
   it('CORE_PLANNER_RULES asks for a face-visible first still', () => {
     assert.match(CORE_PLANNER_RULES, /medium-wide/)
     assert.match(CORE_PLANNER_RULES, /face (clearly visible|readable)/)
+    assert.match(CORE_PLANNER_RULES, /Do not write the hold/)
+    assert.match(CORE_PLANNER_RULES, /off-screen/)
   })
 
   it('dryRunMoviePlan has multi clips', () => {
