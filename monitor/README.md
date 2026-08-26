@@ -37,8 +37,8 @@ Config: `qorlith.yaml` (`comfy.output`, `train.output_roots`). `data/config.json
 |-------|---------|
 | `/studio` | Empty studio / last project |
 | `/studio/:id/plan` | Write / approve the story |
-| `/studio/:id/make` | Brain — stills then motion |
-| `/studio/:id/board` | Pick stills |
+| `/studio/:id/make` | Brain — stills then clips |
+| `/studio/:id/board` | Pick stills (skipped on Straight to video) |
 | `/studio/:id/watch` | Play the film |
 | `/media` | All Comfy media |
 | `/train` | Kohya / train status |

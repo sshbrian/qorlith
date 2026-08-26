@@ -2,14 +2,14 @@
 
 Self-hosted stills-first studio for local image and video production.
 
-Plan a multi-clip episode with **any writer** (local LM Studio, Grok / xAI, OpenAI-compatible, or a Grok bot that POSTs plan JSON). Then Brain paints stills and animates clips through ComfyUI. Stills are SDXL. Video is MiniMax H3 with **Comfy Kitchen Attention**. Style lives in the start still and in **`qorlith.yaml`**.
+Plan a multi-clip episode with **any writer** (local LM Studio, Grok / xAI, OpenAI-compatible, or a Grok bot that POSTs plan JSON). Then Brain paints stills and makes clips through ComfyUI. Stills are SDXL. Video is MiniMax H3 with **Comfy Kitchen Attention**. Style lives in the start still and in **`qorlith.yaml`**.
 
 ```
 you / Grok / remote LLM
  └─ Qorlith Monitor     studio UI (monitor/)
      ├─ Plan            write or import the story
      ├─ Make            Brain / LangGraph  (Make movie = one click)
-     ├─ Board           pick stills (skipped on one-click)
+     ├─ Board           pick stills (skipped on one-click and Straight to video)
      └─ Watch           the film
  └─ ComfyUI             renderer (your install)
  └─ Brain               LangGraph (brain/)
@@ -68,7 +68,7 @@ Ports come from `qorlith.yaml` (`monitor.*`).
 
 ## Brain
 
-Stills-first control room. Plan and stills, pause for the board, then video.
+Make control room. Default stills-first: plan, stills, optional board, then clips. **Straight to video** skips stills and the board.
 
 ```bash
 ./bin/brain start --prompt "30s anime night street" --stop-after stills

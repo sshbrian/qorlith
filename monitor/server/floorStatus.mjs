@@ -32,7 +32,7 @@ function defaultStatus() {
     ],
     about: [
       'Local-only activity log for Qorlith.',
-      'Stills first. You pick. Then motion.',
+      'Stills first, or Straight to video. Then clips.',
     ],
     photos: [],
     progress: {
