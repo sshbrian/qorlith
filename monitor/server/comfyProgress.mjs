@@ -35,7 +35,7 @@ const COPY = {
     hint: 'Turning the latent into pixels.',
   },
   encode: {
-    title: 'Reading the start still',
+    title: 'Reading the first frame',
     hint: 'Preparing the first frame.',
   },
   look: {
@@ -59,7 +59,7 @@ const COPY = {
     hint: 'Turning your words into a condition.',
   },
   open: {
-    title: 'Opening the start still',
+    title: 'Opening the first frame',
     hint: 'Feeding the first frame in.',
   },
   canvas: {
