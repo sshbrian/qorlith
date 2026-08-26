@@ -26,6 +26,8 @@ from brain.graph import (
     concat_videos,
     empty_state,
     infer_step,
+    clip_needs_painted_still,
+    painted_stills_complete,
     memory_saver,
     public_report,
     request_stop,
@@ -151,7 +153,8 @@ class FakeStudio:
         return {"ok": True, "jobId": jid}
 
     def queue_video(self, source, plan, **extra):
-        assert source.endswith(".png")
+        if source:
+            assert Path(source).suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".mp4"}
         self.calls.append(("video", source, plan))
         jid = f"vid-{self.next_job}"
         self.next_job += 1
@@ -206,7 +209,10 @@ def test_stills_queue_one_job_per_clip():
         empty_state(
             project_id="harbor",
             look_track="anime",
-            clips=[{"id": "S01", "stillBrief": "rain"}, {"id": "S02", "stillBrief": "roof"}],
+            clips=[
+                {"id": "S01", "stillBrief": "rain"},
+                {"id": "S02", "stillBrief": "roof", "cut": True},
+            ],
         ),
     )
     assert out["status"] == "face_qa"
@@ -381,6 +387,48 @@ def test_video_feeds_last_frame_into_next_clip(tmp_path: Path, monkeypatch):
     assert plans[0]["characters"] == []
 
 
+def test_video_continue_without_a_second_still(tmp_path: Path, monkeypatch):
+    s = FakeStudio()
+    still_a = tmp_path / "a.png"
+    still_a.write_bytes(b"a")
+
+    def fake_extract(_video, dest):
+        p = Path(dest)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(b"last")
+        return p
+
+    monkeypatch.setattr("brain.graph.extract_last_frame", fake_extract)
+    out = node_video(
+        s,
+        empty_state(
+            project_id="harbor",
+            look_track="anime",
+            review_ok=True,
+            clips=[
+                {"id": "S01", "motionBrief": "walk", "durationSec": 12},
+                {"id": "S02", "motionBrief": "keep walking", "durationSec": 10},
+            ],
+            still_paths={"S01": str(still_a)},
+        ),
+    )
+    sources = [c[1] for c in s.calls if c and c[0] == "video"]
+    assert sources[0] == str(still_a)
+    assert sources[1].endswith("S02_from_prev.png")
+    assert out["still_paths"]["S02"].endswith("S02_from_prev.png")
+    assert [c[2]["continueFromPrior"] for c in s.calls if c and c[0] == "video"] == [False, True]
+
+
+def test_clip_needs_painted_still():
+    assert clip_needs_painted_still({"id": "S01"}, 0) is True
+    assert clip_needs_painted_still({"id": "S02"}, 1) is False
+    assert clip_needs_painted_still({"id": "S02", "cut": True}, 1) is True
+    assert painted_stills_complete(
+        [{"id": "S01"}, {"id": "S02"}],
+        {"S01": "/a.png"},
+    )
+
+
 def test_video_passes_look_characters_and_singing():
     s = FakeStudio()
     s.plans["harbor"] = {"plan": {"characters": [{"id": "S1", "name": "Ava"}]}}
@@ -475,7 +523,7 @@ def test_graph_one_click_auto_picks_through_video():
     )
     assert out["status"] == "done"
     assert out["review_ok"] is True
-    assert len(out["still_paths"]) == 2
+    assert len(out["still_paths"]) == 1
     assert len(out["video_paths"]) == 2
 
 
@@ -488,7 +536,7 @@ def test_graph_stops_at_board():
         persist=False,
     )
     assert out["status"] == "face_qa"
-    assert len(out["still_paths"]) == 2
+    assert len(out["still_paths"]) == 1
     assert not out["review_ok"]
 
 
@@ -526,7 +574,8 @@ def test_stills_skip_hero_ipadapter_on_clips():
     assert clip_calls
     assert not clip_calls[0][3]
     assert "medium-wide" in str(clip_calls[0][5])
-    assert len(out["still_paths"]) == 2
+    assert len(out["still_paths"]) == 1
+    assert "S02" not in out["still_paths"]
 
 
 def test_yaml_urls_come_from_file(tmp_path: Path, monkeypatch):
@@ -638,7 +687,14 @@ def test_route_start_jumps_to_current_node():
         clips=[{"id": "S01"}, {"id": "S02"}],
         still_paths={"S01": "/tmp/a.png"},
     )
-    assert infer_step(inferred) == "stills"
+    assert infer_step(inferred) == "face_qa"
+    cut_missing = empty_state(
+        status="stopped",
+        step="",
+        clips=[{"id": "S01"}, {"id": "S02", "cut": True}],
+        still_paths={"S01": "/tmp/a.png"},
+    )
+    assert infer_step(cut_missing) == "stills"
 
 
 def test_resume_does_not_rewalk_health_or_plan():
@@ -657,7 +713,7 @@ def test_resume_does_not_rewalk_health_or_plan():
     assert "monitor_health" not in s.calls
     assert not any(isinstance(c, tuple) and c[0] == "plan" for c in s.calls)
     assert out["status"] == "face_qa"
-    assert len(out["still_paths"]) == 2
+    assert len(out["still_paths"]) == 1
 
 
 def test_graph_spec_matches_compiled_nodes():

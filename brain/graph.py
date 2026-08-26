@@ -408,6 +408,25 @@ def _raise_if_stopped(extra: dict[str, Any] | None = None) -> None:
         )
 
 
+def clip_needs_painted_still(clip: dict[str, Any], index: int) -> bool:
+    """Continue takes start from the previous last frame, not a new txt2img."""
+    if index <= 0:
+        return True
+    return bool(clip.get("cut"))
+
+
+def painted_stills_complete(clips, stills) -> bool:
+    if not clips:
+        return False
+    for i, clip in enumerate(clips):
+        cid = str(clip.get("id") or "")
+        if not cid:
+            continue
+        if clip_needs_painted_still(clip, i) and not (stills or {}).get(cid):
+            return False
+    return True
+
+
 def infer_step(state: BrainState) -> str:
     status = str(state.get("status") or "pending")
     step = str(state.get("step") or "")
@@ -423,8 +442,8 @@ def infer_step(state: BrainState) -> str:
     if clips and videos and len(videos) >= len(clips):
         return "finish"
     if clips and stills and (state.get("review_ok") or status == "video"):
-        return "video" if len(stills) >= len(clips) else "stills"
-    if clips and stills and len(stills) >= len(clips):
+        return "video" if painted_stills_complete(clips, stills) else "stills"
+    if clips and stills and painted_stills_complete(clips, stills):
         return "face_qa"
     if clips:
         return "stills"
@@ -1153,9 +1172,12 @@ def node_stills(studio: Studio, state: BrainState) -> BrainState:
     }
     write_report(studio.cfg, live, phase="comfy_idle")
 
-    for clip in state.get("clips") or []:
+    clips = list(state.get("clips") or [])
+    for i, clip in enumerate(clips):
         cid = clip.get("id")
         if not cid or stills.get(cid):
+            continue
+        if not clip_needs_painted_still(clip, i):
             continue
         progress = {"still_paths": stills, "job_ids": jobs, "current_clip": cid, "step": "stills", "status": "stills"}
         _raise_if_stopped(progress)
@@ -1221,11 +1243,12 @@ def node_face_qa(studio: Studio, state: BrainState) -> BrainState:
             cid = str(clip.get("id") or "")
             if cid and cid not in picks and stills.get(cid):
                 picks[cid] = str(stills[cid])
-    have_all = bool(clips) and all(c.get("id") in stills for c in clips)
+    have_all = painted_stills_complete(clips, stills)
+    needed = [c for i, c in enumerate(clips) if clip_needs_painted_still(c, i)]
     review_ok = bool(
         state.get("review_ok")
         or state.get("auto_pick")
-        or (have_all and len(picks) >= len(clips))
+        or (have_all and all(str(c.get("id") or "") in picks for c in needed))
     )
     status: Status = "video" if review_ok else "face_qa"
     phase = "wait_picks" if not review_ok else "board_get"
@@ -1387,10 +1410,17 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
         {"id": c.get("id"), "name": c.get("name")}
         for c in _plan_characters(studio, project_id)
     ]
-    stills = state.get("still_paths") or {}
+    stills = dict(state.get("still_paths") or {})
     videos = dict(state.get("video_paths") or {})
     jobs = list(state.get("job_ids") or [])
-    live = {**state, "status": "video", "step": "video", "video_paths": videos, "job_ids": jobs}
+    live = {
+        **state,
+        "status": "video",
+        "step": "video",
+        "video_paths": videos,
+        "still_paths": stills,
+        "job_ids": jobs,
+    }
     write_report(studio.cfg, live, phase="comfy_idle")
     prev_video: str | None = None
     for clip in state.get("clips") or []:
@@ -1406,16 +1436,20 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
         live["current_clip"] = cid
         write_report(studio.cfg, live, current_clip=cid, phase="comfy_idle")
         pick = (state.get("picks") or {}).get(cid)
-        still = pick if pick and Path(pick).is_file() else stills.get(cid)
-        if not still:
+        still = pick if pick and Path(str(pick)).is_file() else stills.get(cid)
+        if not still and (clip.get("cut") or not prev_video):
             raise BrainError(400, "missing_still", f"No still for {cid}", "Run stills first.", state=progress)
         frame_dest = studio.cfg.project_dir / project_id / "board" / cid / f"{cid}_from_prev.png"
         source, source_kind = resolve_video_source(
             clip,
-            still=str(still),
+            still=str(still or ""),
             prev_video=prev_video,
             dest=frame_dest,
         )
+        if source_kind == "continue" and source and not stills.get(cid):
+            stills[cid] = source
+            copy_still_to_board(studio.cfg, project_id, cid, source)
+            live["still_paths"] = stills
         if hasattr(studio, "wait_comfy_idle"):
             studio.wait_comfy_idle(should_stop=stopping)
         duration = clip_take_seconds(
@@ -1472,6 +1506,7 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
         write_report(studio.cfg, live, current_clip=cid, phase="video_wait")
     return {
         **state,
+        "still_paths": stills,
         "video_paths": videos,
         "job_ids": jobs,
         "status": "recut",
