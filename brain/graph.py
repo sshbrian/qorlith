@@ -628,13 +628,41 @@ def collect_disk_media(cfg: BrainConfig, state: BrainState) -> BrainState:
                     break
         if stills.get(key):
             copy_still_to_board(cfg, project_id, key, stills[key])
+        local = project_clip_video(cfg, project_id, key)
+        if media_ok(local, kind="video"):
+            videos[key] = str(local)
+            continue
         if not videos.get(key):
             for track in looks:
                 found = find_clip_output(cfg, track, project_id, key, "video", 0)
                 if found:
                     videos[key] = found
                     break
+        if videos.get(key):
+            videos[key] = copy_video_to_project(cfg, project_id, key, str(videos[key]))
     return {**state, "still_paths": stills, "video_paths": videos}
+
+
+def project_clip_video(cfg: BrainConfig, project_id: str, clip_id: str) -> Path:
+    return cfg.project_dir / project_id / "video" / f"{clip_id}.mp4"
+
+
+def copy_video_to_project(cfg: BrainConfig, project_id: str, clip_id: str, src: str) -> str:
+    """Keep a project-local copy so T2V covers and resume do not depend on Comfy output."""
+    path = Path(src)
+    if not project_id or not clip_id or not path.is_file():
+        return str(path)
+    dest = project_clip_video(cfg, project_id, clip_id)
+    try:
+        if dest.resolve() == path.resolve():
+            return str(dest)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if dest.exists() and dest.stat().st_size == path.stat().st_size:
+            return str(dest)
+        shutil.copy2(path, dest)
+    except OSError:
+        return str(path)
+    return str(dest)
 
 
 def copy_still_to_board(cfg: BrainConfig, project_id: str, clip_id: str, src: str) -> None:
@@ -1563,8 +1591,9 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
         path = video_path_from_job(done)
         if not path:
             raise BrainError(502, "no_video", f"Job {job_id} produced no video", "Check Comfy output.", state=progress)
-        videos[cid] = path
-        prev_video = path
+        copied = copy_video_to_project(studio.cfg, project_id, cid, path)
+        videos[cid] = copied
+        prev_video = copied
         live["video_paths"] = videos
         live["job_ids"] = jobs
         write_report(studio.cfg, live, current_clip=cid, phase="video_wait")

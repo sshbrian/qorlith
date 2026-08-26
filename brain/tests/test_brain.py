@@ -838,7 +838,31 @@ def test_collect_disk_media_fills_missing_paths(tmp_path: Path):
         clips=[{"id": "S01"}],
     )
     merged = collect_disk_media(cfg, state)
-    assert merged["video_paths"]["S01"] == str(clip)
+    copied = cfg.project_dir / "harbor" / "video" / "S01.mp4"
+    assert merged["video_paths"]["S01"] == str(copied)
+    assert copied.read_bytes() == clip.read_bytes()
+
+
+def test_copy_video_to_project_keeps_a_local_mp4(tmp_path: Path):
+    from brain.config import BrainConfig
+    from brain.graph import copy_video_to_project, project_clip_video
+
+    cfg = BrainConfig(
+        root=tmp_path,
+        monitor_url="http://127.0.0.1:3921",
+        comfy_url="http://127.0.0.1:8188",
+        planner_url="http://127.0.0.1:1234/v1",
+        checkpoint_path=tmp_path / "ck.sqlite",
+    )
+    src = tmp_path / "comfy" / "S01_00001_.mp4"
+    src.parent.mkdir(parents=True)
+    src.write_bytes(b"clip-bytes")
+    dest = copy_video_to_project(cfg, "harbor", "S01", str(src))
+    local = project_clip_video(cfg, "harbor", "S01")
+    assert dest == str(local)
+    assert local.read_bytes() == b"clip-bytes"
+    assert copy_video_to_project(cfg, "harbor", "S01", str(src)) == str(local)
+    assert copy_video_to_project(cfg, "harbor", "S01", "/missing.mp4") == "/missing.mp4"
 
 
 def test_copy_still_to_board_versions_new_takes(tmp_path: Path):
@@ -1028,7 +1052,9 @@ def test_collect_disk_media_drops_stale_paths(tmp_path: Path):
         video_paths={"S01": str(tmp_path / "missing.mp4")},
     )
     merged = collect_disk_media(cfg, state)
-    assert merged["video_paths"]["S01"] == str(clip)
+    copied = cfg.project_dir / "harbor" / "video" / "S01.mp4"
+    assert merged["video_paths"]["S01"] == str(copied)
+    assert media_ok(copied, kind="video")
     assert media_ok(clip, kind="video")
     assert not media_ok(tmp_path / "missing.mp4", kind="video")
 
