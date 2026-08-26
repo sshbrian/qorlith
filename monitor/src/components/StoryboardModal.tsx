@@ -43,7 +43,7 @@ export function StoryboardModal({ projectId, onClose }: { projectId: string; onC
       >
         <div className="flex items-start justify-between gap-4 px-8 pt-7 pb-4">
           <div className="min-w-0">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-cyan/80">Local LLM · Story</div>
+            <div className="text-[11px] uppercase tracking-[0.18em] text-cyan/80">Story</div>
             <h2 className="mt-1 text-[26px] font-semibold tracking-tight truncate">{title}</h2>
             {meta ? <div className="mt-1 text-[13px] text-ghost">{meta}</div> : null}
           </div>

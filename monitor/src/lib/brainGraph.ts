@@ -30,7 +30,7 @@ export const NODE_OPS: Record<string, NodeOp[]> = {
   plan: [
     { id: 'plan_get', label: 'Load the saved plan', via: 'http', call: 'GET /api/studio/plans/:id' },
     { id: 'plan_reuse', label: 'Reuse existing clips', via: 'disk', call: 'plan.json clips[]' },
-    { id: 'plan_llm', label: 'Local LLM writes the story', via: 'llm', call: 'POST /api/studio/plan → LM Studio' },
+    { id: 'plan_llm', label: 'Writer writes the story', via: 'llm', call: 'POST /api/studio/plan' },
     { id: 'plan_save', label: 'Save plan and board', via: 'disk', call: 'plan.json + board/' },
   ],
   stills: [
@@ -57,6 +57,7 @@ export const NODE_OPS: Record<string, NodeOp[]> = {
 }
 
 const T2V_OP_COPY: Record<string, Partial<NodeOp>> = {
+  plan_llm: { label: 'Writer writes the shot list' },
   plan_save: { label: 'Save the plan', call: 'plan.json' },
   video_queue: { label: 'Queue MiniMax T2VA' },
   video_wait: { label: 'Comfy makes the clip' },
@@ -401,7 +402,7 @@ export function resolveOps(
 }
 
 export function viaLabel(via: OpVia): string {
-  if (via === 'llm') return 'Local LLM'
+  if (via === 'llm') return 'Writer'
   if (via === 'comfy') return 'Comfy'
   if (via === 'http') return 'Monitor'
   if (via === 'disk') return 'Disk'

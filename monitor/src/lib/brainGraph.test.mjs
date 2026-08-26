@@ -307,7 +307,7 @@ describe('brain graph — step internals', () => {
   })
 
   it('builds a live technical headline', () => {
-    assert.equal(viaLabel('llm'), 'Local LLM')
+    assert.equal(viaLabel('llm'), 'Writer')
     assert.match(
       liveOpLine({
         step: 'stills',
@@ -325,7 +325,10 @@ describe('brain graph — step internals', () => {
     const save = plan.find((o) => o.id === 'plan_save')
     assert.equal(save?.label, 'Save the plan')
     assert.equal(save?.call, 'plan.json')
+    assert.equal(plan.find((o) => o.id === 'plan_llm')?.label, 'Writer writes the shot list')
     assert.doesNotMatch(JSON.stringify(plan), /board/)
+    assert.doesNotMatch(JSON.stringify(plan), /Local LLM/)
+    assert.doesNotMatch(JSON.stringify(plan), /LM Studio/)
     const video = nodeOps('video', 't2v')
     assert.equal(video.find((o) => o.id === 'video_wait')?.label, 'Comfy makes the clip')
     assert.equal(video.find((o) => o.id === 'video_queue')?.label, 'Queue MiniMax T2VA')
