@@ -518,57 +518,159 @@ export function validateMoviePlan(raw, { userPrompt = '' } = {}) {
   return plan
 }
 
-export function dryRunMoviePlan(userPrompt) {
+export function splitClipDurations(totalSec, bounds = clipDurationBounds()) {
+  const max = Number(bounds.max) > 0 ? Number(bounds.max) : 15
+  const continueMin = Number(bounds.continueMin) > 0 ? Number(bounds.continueMin) : 10
+  const prefer = Math.min(12, max)
+  const total = Math.max(6, Math.round(Number(totalSec) || 30))
+  if (total <= max) return [total]
+  const takes = []
+  let left = total
+  while (left > 0) {
+    if (left <= max) {
+      if (takes.length && left < continueMin) {
+        const steal = continueMin - left
+        const prev = takes[takes.length - 1]
+        if (prev - steal >= continueMin) {
+          takes[takes.length - 1] = prev - steal
+          left += steal
+        }
+      }
+      takes.push(Math.min(max, Math.max(takes.length ? continueMin : 6, left)))
+      break
+    }
+    let d = prefer
+    const rest = left - d
+    if (rest > 0 && rest < continueMin) d = left - continueMin
+    d = Math.min(max, Math.max(continueMin, d))
+    takes.push(d)
+    left -= d
+  }
+  return takes
+}
+
+function titleFromPrompt(prompt) {
+  let t = String(prompt || '')
+    .replace(/^\s*\d+\s*(?:seconds?|secs?|minutes?|mins?|s)\b\s*/i, '')
+    .trim()
+  t = t.split(/[.,]/)[0].trim()
+  const words = t.split(/\s+/).filter(Boolean).slice(0, 4)
+  if (!words.length) return 'Untitled film'
+  return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ').slice(0, 48)
+}
+
+function locationFromPrompt(t) {
+  if (/\brooftop\b/i.test(t)) return 'rain-slick rooftop, neon city behind, wet concrete'
+  if (/\balley\b/i.test(t)) return 'rain-wet neon alley, wet brick, puddles'
+  if (/\bserver|raid\b/i.test(t)) return 'night server floor, rows of racks, cold LEDs'
+  if (/\bkitchen\b/i.test(t)) return 'small kitchen, practical overhead light'
+  if (/\bhotel\b/i.test(t)) return 'hotel room, lamp light, drawn curtains'
+  if (/\bstreet|chase\b/i.test(t)) return 'night street, wet asphalt, sodium lamps'
+  return 'night exterior, practical light'
+}
+
+function propFromPrompt(t) {
+  if (/\bsmg\b/i.test(t)) return 'holding compact SMG two-handed, gun clearly in frame'
+  if (/\b(rifle|pistol|gunfire|gun)\b/i.test(t)) return 'holding a compact firearm two-handed, weapon clearly in frame'
+  return ''
+}
+
+function motionFromPrompt(t, index) {
+  let action = 'the lead shifts weight, rain moves, a slow breath'
+  if (/\b(smg|gunfire|gun|rifle|pistol)\b/i.test(t)) {
+    action =
+      index === 0
+        ? 'the lead holds the weapon steady, then a short burst, muzzle flash, casings drop'
+        : 'another short burst, casings bounce, the lead holds aim'
+  } else if (/\bchase|run\b/i.test(t)) {
+    action = index === 0 ? 'the lead runs forward, feet splash' : 'the chase continues, rain streaks'
+  } else if (/\bfight|raid\b/i.test(t)) {
+    action = index === 0 ? 'the lead strikes, recoil in the rain' : 'the fight continues, an irreversible hit lands'
+  }
+  return `The camera holds static with small amplitude at slow speed as ${action}.`
+}
+
+function soundFromPrompt(t) {
+  const bits = []
+  if (/\brain\b/i.test(t)) bits.push('Heavy rain')
+  if (/\b(smg|gunfire|gun)\b/i.test(t)) bits.push('A short burst cracks. Casings tinkle')
+  if (/\bchase\b/i.test(t)) bits.push('Footsteps splash')
+  if (!bits.length) bits.push('Ambient night air')
+  return `${bits.join('. ')}.`
+}
+
+/** Deterministic stills-first plan when no writer is available. House lock still applies. */
+export function draftMoviePlanFromPrompt(userPrompt, { reason = 'draft' } = {}) {
+  const prompt = String(userPrompt || '').trim()
+  const h = inferPlanHints(prompt)
+  const takes = splitClipDurations(h.durationSec)
+  const title = titleFromPrompt(prompt)
+  const loc = locationFromPrompt(prompt)
+  const prop = propFromPrompt(prompt)
+  const gun = Boolean(prop)
+  const anime = h.look === 'anime'
+  const leadLook = anime ? 'adult woman, short dark hair' : 'adult, short dark hair, dark jacket'
+  const stillCore = [anime ? '1girl, solo, adult woman' : 'adult', prop, loc, anime ? '2D cel shading' : 'cinematic lighting']
+    .filter(Boolean)
+    .join(', ')
+  const palette = h.noMusic
+    ? 'N/A'
+    : 'sparse taiko drums and distorted cello at moderate tempo, staccato dynamics, no vocals'
+  let t = 0
+  const clips = takes.map((durationSec, i) => {
+    const id = `S${String(i + 1).padStart(2, '0')}`
+    const clip = {
+      id,
+      title: i === 0 ? 'open' : i === takes.length - 1 ? 'close' : 'press',
+      section: 'main',
+      mood: gun ? 'tense' : 'neutral',
+      t_start: t,
+      t_end: t + durationSec,
+      durationSec,
+      cut: false,
+      gun_risk: gun,
+      sexy: false,
+      stillBrief: stillCore,
+      motionBrief: motionFromPrompt(prompt, i),
+      dialogue: h.noTalk ? '' : '',
+      soundscape: soundFromPrompt(prompt),
+      musicNote: palette,
+    }
+    t += durationSec
+    return clip
+  })
   const plan = validateMoviePlan(
     {
-      projectId: 'demo_plan',
-      title: 'Demo Plan (dry-run)',
-      logline: 'A dry-run plan when the local LLM is offline or dryRun is set.',
-      rating: 'R',
-      durationTargetSec: 24,
-      lookTrack: 'live',
-      song: 'MiniMax pulse score',
-      musicPalette:
-        'Low pulsing synth bass at moderate tempo, sparse snare, no vocals, drops under dialogue',
+      projectId: slugifyProjectId(title),
+      title,
+      logline: prompt.slice(0, 240) || title,
+      rating: h.wantsX ? 'X' : 'R',
+      durationTargetSec: takes.reduce((a, n) => a + n, 0),
+      lookTrack: h.look,
+      song: h.noMusic ? 'N/A' : 'taiko and cello',
+      musicPalette: palette,
       characters: [
         {
           id: 'S1',
-          name: 'Alex',
-          look: 'Adult, short dark hair, jacket',
-          voice: 'calm mid voice',
+          name: 'Lead',
+          look: leadLook,
+          voice: h.noTalk ? 'unused' : 'calm mid voice',
         },
       ],
-      clips: [
-        {
-          id: 'S01',
-          title: 'setup',
-          t_start: 0,
-          t_end: 12,
-          durationSec: 12,
-          stillBrief: 'Handheld night street, adult lead standing, face visible',
-          motionBrief: 'Walk toward camera, small shake',
-          dialogue: 'S1: Stay on me.',
-          soundscape: 'traffic, footsteps',
-          musicNote: 'Low pulsing synth bass at moderate tempo, music stays under speech',
-        },
-        {
-          id: 'S02',
-          title: 'turn',
-          t_start: 12,
-          t_end: 24,
-          durationSec: 12,
-          stillBrief: 'Doorway, flash light, adult lead',
-          motionBrief: 'Turn and run',
-          dialogue: 'S1: Go!',
-          soundscape: 'door, breath',
-          musicNote: 'Low pulsing synth bass at moderate tempo, dry snare hits, louder',
-        },
-      ],
-      markdown: `# Demo Plan\n\nDry-run for: ${String(userPrompt || '').slice(0, 200)}`,
+      clips,
+      markdown: `# ${title}\n\nDrafted from the prompt (${reason}).\n\n${prompt.slice(0, 400)}`,
     },
-    { userPrompt },
+    { userPrompt: prompt },
   )
+  plan.warnings = [
+    ...(plan.warnings || []),
+    `Drafted without a writer (${reason}). Start the planner or POST a plan JSON for a full story.`,
+  ]
   return plan
+}
+
+export function dryRunMoviePlan(userPrompt) {
+  return draftMoviePlanFromPrompt(userPrompt, { reason: 'dry-run' })
 }
 
 export function plannerSpec() {
@@ -621,9 +723,9 @@ export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig,
   const provider = resolved.provider
 
   if (provider === 'none') {
-    fail(400, 'planner_none', 'No planner backend is configured', {
-      hint: 'POST a plan JSON, set planner.provider to local/openai/xai, or use dry-run.',
-    })
+    const plan = draftMoviePlanFromPrompt(prompt, { reason: 'provider none' })
+    logInfo('director.plan', { kind: 'movie', projectId: plan.projectId, dryRun: false, model: 'draft', provider })
+    return { plan, dryRun: false, model: 'draft', provider: 'none', rawModelText: null }
   }
 
   if (resolved.needsKey && !resolved.apiKey) {
@@ -651,10 +753,15 @@ export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig,
     }
     const health = await lmstudioHealth(dcfg)
     if (!health.ok) {
-      fail(503, 'lms_offline', health.error || 'LM Studio not available — enable server, switch planner.provider, or import a plan', {
-        hint: 'Start LM Studio on :1234, set planner.provider: xai, or POST a plan JSON.',
-        health,
+      const plan = draftMoviePlanFromPrompt(prompt, { reason: 'local writer offline' })
+      logInfo('director.plan', {
+        kind: 'movie',
+        projectId: plan.projectId,
+        dryRun: false,
+        model: 'draft',
+        provider,
       })
+      return { plan, dryRun: false, model: 'draft', provider, rawModelText: null }
     }
     model =
       dcfg.apiModel ||

@@ -10,7 +10,9 @@ import {
   collectProjectMediaPaths,
   CORE_PLANNER_RULES,
   dryRunMoviePlan,
+  draftMoviePlanFromPrompt,
   ensureLeadFaceFraming,
+  splitClipDurations,
   inferPlanHints,
   parseJsonFromModel,
   planPaths,
@@ -257,6 +259,30 @@ describe('studioPlanner', () => {
     const p = dryRunMoviePlan('test prompt')
     assert.ok(p.clips.length >= 2)
     assert.ok(p.projectId)
+  })
+
+  it('splitClipDurations keeps continue takes at 10s+', () => {
+    assert.deepEqual(splitClipDurations(12), [12])
+    assert.deepEqual(splitClipDurations(20), [10, 10])
+    const d32 = splitClipDurations(32)
+    assert.equal(d32.reduce((a, n) => a + n, 0), 32)
+    assert.ok(d32.every((n) => n >= 10 && n <= 15))
+  })
+
+  it('draftMoviePlanFromPrompt follows the prompt, not a leftover demo cast', () => {
+    const p = draftMoviePlanFromPrompt('12 second rooftop fight, rain, no talking.')
+    assert.equal(p.clips.length, 1)
+    assert.equal(p.clips[0].durationSec, 12)
+    assert.equal(p.clips[0].dialogue, '')
+    assert.match(p.clips[0].stillBrief, /rooftop/i)
+    assert.equal(p.title, 'Rooftop Fight')
+    assert.doesNotMatch(p.characters[0].name, /Alex/i)
+    assert.ok(p.warnings.some((w) => /drafted without a writer/i.test(w)))
+    const silent = draftMoviePlanFromPrompt('20 second neon alley chase, rain, no talking.')
+    assert.equal(silent.clips.length, 2)
+    assert.ok(silent.clips.every((c) => !c.dialogue))
+    assert.match(silent.clips[0].stillBrief, /alley/i)
+    assert.equal(silent.clips[1].cut, false)
   })
 
   it('buildMoviePlanSystemPrompt teaches SDXL stills and H3 motion split', () => {
