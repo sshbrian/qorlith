@@ -54,8 +54,12 @@ describe('brain status view', () => {
       { clips: [{ id: 'S01', title: 'Open', video: '/S01.mp4', cut: false }] },
       rec,
     )
+    assert.equal(live.clips.length, 2)
     assert.equal(live.clips[0].video, '/S01.mp4')
     assert.equal(live.clips[0].motionBrief, 'rain alley')
+    assert.equal(live.clips[1].id, 'S02')
+    assert.equal(live.clips[1].cut, true)
+    assert.equal(live.clips[1].video, null)
   })
 
   it('idle t2v graph skips pictures', () => {

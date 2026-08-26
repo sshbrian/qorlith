@@ -268,25 +268,28 @@ export function planClipsForBrain(rec) {
 export function attachPlanClips(view, rec) {
   const planned = planClipsForBrain(rec)
   if (!planned.length || !view) return view
-  if (!Array.isArray(view.clips) || !view.clips.length) {
-    return { ...view, clips: planned }
+  const live = Array.isArray(view.clips) ? view.clips : []
+  const byLive = new Map(live.map((c) => [c.id, c]))
+  const clips = planned.map((p) => {
+    const c = byLive.get(p.id)
+    if (!c) return p
+    return {
+      ...p,
+      ...c,
+      title: c.title || p.title,
+      durationSec: c.durationSec ?? p.durationSec ?? null,
+      cut: Boolean(c.cut) || Boolean(p.cut),
+      stillBrief: c.stillBrief || p.stillBrief || null,
+      motionBrief: c.motionBrief || p.motionBrief || null,
+      still: c.still || null,
+      video: c.video || null,
+      pick: c.pick || null,
+    }
+  })
+  for (const c of live) {
+    if (!planned.some((p) => p.id === c.id)) clips.push(c)
   }
-  const byId = new Map(planned.map((c) => [c.id, c]))
-  return {
-    ...view,
-    clips: view.clips.map((c) => {
-      const p = byId.get(c.id)
-      if (!p) return c
-      return {
-        ...c,
-        title: c.title || p.title,
-        durationSec: c.durationSec ?? p.durationSec ?? null,
-        cut: Boolean(c.cut) || Boolean(p.cut),
-        stillBrief: c.stillBrief || p.stillBrief || null,
-        motionBrief: c.motionBrief || p.motionBrief || null,
-      }
-    }),
-  }
+  return { ...view, clips }
 }
 
 export function idleBrain(projectId, extra = {}) {
