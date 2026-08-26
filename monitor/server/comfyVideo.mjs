@@ -110,12 +110,23 @@ export function expandSoundscape(raw) {
 
 const STYLE_HEAD_RE =
   /^(?:2d-animated|live-action(?:\s*,\s*cinematic)?|cinematic|3d cg|claymation|watercolor|vintage film)\s*,\s*/i
+const T2V_SHOT_OPEN_RE =
+  /^(?:a\s+)?(?:medium-wide|wide|medium close-up|medium|close-up)\s+shot frames[^.!?]*[.!?]\s*/i
 
 function appendMotion(body, motion, alreadyAirlock) {
   const m = stripShotLabel(String(motion || '')).trim()
   if (!m) return body
   if (alreadyAirlock || /^(then\b|the camera\b)/i.test(m)) return `${body} ${m}`
   return `${body} Then ${m}`
+}
+
+/** Continue takes are I2VA from the last frame. Drop T2VA shot/identity reopeners. */
+export function continueMotionBody(motion) {
+  let m = stripShotLabel(String(motion || '')).replace(STYLE_HEAD_RE, '').trim()
+  m = m.replace(T2V_SHOT_OPEN_RE, '').trim()
+  const cam = m.match(/\bThe camera\b/i)
+  if (cam && cam.index > 0) m = m.slice(cam.index).trim()
+  return m
 }
 
 function t2vWho(job = {}) {
@@ -176,14 +187,15 @@ export function composeH3Prompt(job = {}) {
   const t2v = isT2vJob(job) && !job.continueFromPrior
   const style = h3ShotStyle(job)
   const lock = t2v ? '' : subjectLock(job)
-  const alreadyAirlock = hasAirlockLanguage(motion)
+  const motionBody = job.continueFromPrior ? continueMotionBody(motion) : motion
+  const alreadyAirlock = hasAirlockLanguage(motionBody)
   let body = t2v
     ? t2vShotBody(style, motion, t2vWho(job))
     : `[Shot 1] ${style}${lock ? `, ${lock}` : ''}`
   if (!t2v && !job.continueFromPrior && !alreadyAirlock) {
     body += ` ${STILL_ONSET}`
   }
-  if (!t2v) body = appendMotion(body, motion, alreadyAirlock)
+  if (!t2v) body = appendMotion(body, motionBody, alreadyAirlock)
   if (job.continueFromPrior && !alreadyAirlock) {
     body += ` ${AIRLOCK_LANDING}`
   }
@@ -227,7 +239,9 @@ function requireComfyRoot(root) {
  */
 export function applyMinimaxJob(prompt, job, report = []) {
   const p = deepClone(prompt)
-  const motion = String(job.motion || '')
+  const motion = job.continueFromPrior
+    ? continueMotionBody(job.motion)
+    : String(job.motion || '')
   const dialogue = String(job.dialogue || '')
   const music = String(job.music || '')
   const negative = String(job.negative || '')

@@ -65,6 +65,23 @@ describe('gitsLock', () => {
     assert.match(t2v.characters[0].look, /gitsstyl/)
     assert.equal(t2v.characters[0].name, 'Motoko')
     assert.ok(warnings.some((w) => /motionBrief for house lock/i.test(w)))
+    const chain = applyHouseLockToPlan(
+      {
+        videoMode: 't2v',
+        characters: [{ id: 'S1', name: 'Lead', look: 'adult woman' }],
+        clips: [
+          {
+            id: 'S01',
+            motionBrief: 'a medium-wide shot frames a rain-wet rooftop. The camera holds static as the lead strikes.',
+          },
+          { id: 'S02', cut: false, motionBrief: 'The camera holds static as the chase continues.' },
+        ],
+      },
+      'Ghost in the Shell rooftop with the Major Motoko',
+      [],
+    )
+    assert.match(chain.clips[0].motionBrief, /gitsstyl/)
+    assert.equal(chain.clips[1].motionBrief, 'The camera holds static as the chase continues.')
   })
 
   it('applyHouseLockToStillBrief stays tag-shaped', () => {

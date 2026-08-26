@@ -294,6 +294,11 @@ describe('studioPlanner', () => {
     const t2v = draftMoviePlanFromPrompt('12 second rooftop fight, rain, no talking.', { videoMode: 't2v' })
     assert.equal(t2v.videoMode, 't2v')
     assert.match(t2v.clips[0].motionBrief, /medium-wide shot frames/i)
+    const t2vChain = draftMoviePlanFromPrompt('20 second neon alley chase, rain, no talking.', { videoMode: 't2v' })
+    assert.equal(t2vChain.clips.length, 2)
+    assert.match(t2vChain.clips[0].motionBrief, /medium-wide shot frames/i)
+    assert.doesNotMatch(t2vChain.clips[1].motionBrief, /medium-wide shot frames/i)
+    assert.match(t2vChain.clips[1].motionBrief, /The camera /)
     const t2vGits = draftMoviePlanFromPrompt(
       '12 second Ghost in the Shell rooftop fight, rain, Motoko, no talking.',
       { videoMode: 't2v' },
@@ -379,6 +384,8 @@ describe('studioPlanner', () => {
     assert.match(p, /HOUSE_TRIGGER_xyz/)
     assert.match(p, /stillBrief: short location only/)
     assert.match(p, /motionBrief names the explicit act/)
+    assert.match(p, /Continue I2VA: camera \+ body action only/)
+    assert.match(p, /motionBrief \(continue\): The camera VERB/)
   })
 
   it('planPaths uses lookTrack folders', () => {

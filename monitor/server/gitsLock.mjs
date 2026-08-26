@@ -132,7 +132,8 @@ export function applyHouseLockToPlan(plan, userPrompt, warnings = []) {
     }
   }
   const t2v = isT2vPlan(plan)
-  for (const c of plan.clips || []) {
+  const clips = plan.clips || []
+  for (const [i, c] of clips.entries()) {
     const before = String(c.stillBrief || '')
     if (before.trim()) {
       const next = applyHouseLockToStillBrief(before, lock.look)
@@ -141,7 +142,8 @@ export function applyHouseLockToPlan(plan, userPrompt, warnings = []) {
         warnings.push(`${c.id || 'clip'}: repaired stillBrief for house lock`)
       }
     }
-    if (t2v) {
+    const t2vOpen = t2v && (i === 0 || Boolean(c.cut))
+    if (t2vOpen) {
       const beforeM = String(c.motionBrief || '')
       const nextM = applyHouseLockToMotionBrief(beforeM, lock)
       if (nextM !== beforeM) {

@@ -13,6 +13,7 @@ import {
   stripFrameImages,
   stripShotLabel,
   subjectLock,
+  continueMotionBody,
 } from './comfyVideo.mjs'
 import { getVideoWorkflowPath } from './studioConfig.mjs'
 import { dryRunVideoPlan } from './director.mjs'
@@ -167,6 +168,26 @@ describe('MiniMax H3 video plan', () => {
       characters: [{ name: 'Motoko', look: 'adult woman, gitsstyl' }],
     })
     assert.equal((already.match(/gitsstyl/g) || []).length, 1)
+    const cont = composeH3Prompt({
+      motion:
+        'a medium-wide shot frames a neon alley. Motoko, adult woman, gitsstyl. The camera holds static as rain falls.',
+      dialogue: '',
+      music: 'N/A',
+      lookTrack: 'anime',
+      t2v: true,
+      continueFromPrior: true,
+      characters: [{ id: 'S1', name: 'Motoko', look: 'adult woman, gitsstyl' }],
+    })
+    assert.match(cont, /seamless continuation/)
+    assert.match(cont, /The camera holds static as rain falls/)
+    assert.doesNotMatch(cont, /Then a medium-wide/)
+    assert.doesNotMatch(cont, /medium-wide shot frames/)
+    assert.equal(
+      continueMotionBody(
+        'a medium-wide shot frames a neon alley. Motoko, adult woman, gitsstyl. The camera holds static as rain falls.',
+      ),
+      'The camera holds static as rain falls.',
+    )
   })
 
   it('composeH3Prompt ignores anime motionPrefix on live and keeps singing', () => {

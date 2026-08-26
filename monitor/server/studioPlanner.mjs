@@ -167,15 +167,15 @@ CHARACTERS
 STILL BRIEF = unused place note
 - A short location string is enough. It is NOT sent to MiniMax. No SDXL tags, no frozen pose lists, no 1girl/solo.
 
-MOTION BRIEF = the FULL MiniMax T2VA scene
-No start still. The app wraps style (2D-animated or Live-action, cinematic). You write composition, who, place, action, camera.
-- Open with a readable shot: "a medium-wide shot frames LOCATION." Then body action. Then camera as prose.
-- Include the lead's appearance (hair, body, outfit) in the first clip unless a house lock already did.
+MOTION BRIEF
+S01 and cut=true are T2VA (no Picture 1). Continue (cut=false, not S01) is I2VA from the previous last frame.
+- T2VA (S01 / cut=true): the FULL MiniMax T2VA scene. Open with "a medium-wide shot frames LOCATION." Then who, action, camera. Include the lead's appearance unless a house lock already did. Do NOT write Picture 1 or [Shot 1].
+- Continue I2VA: camera + body action only AFTER the hold. Do NOT reopen the shot ("a medium-wide shot frames"). Do NOT re-describe wardrobe, hair, or the lead look — they are already in the last frame.
 - Path: action onset → continuous development → result/reaction. Do not write the continue hold or settle yourself.
 - Camera as prose: motion type + optional amplitude + optional speed.
   Verbs: push in, pull out, pan left/right, truck left/right, tilt up/down, pedestal, arc, tracking, static, POV, shake slightly/strongly, roll.
   Amplitude: with small amplitude / with large amplitude. Speed: at slow speed / at fast speed. Omit medium.
-- Do NOT write Picture 1, [Shot 1], SDXL tags, Wan "At 0 seconds" beat lists, or video model names.
+- Do NOT write SDXL tags, Wan "At 0 seconds" beat lists, or video model names.
 - Prefer one continuous shot. If you must cut inside a take: "the camera cuts to".
 
 DIALOGUE (H3 spoken field)
@@ -215,7 +215,8 @@ DURATION
 
 TEMPLATES (fill from the USER request — do not invent a leftover example cast)
 stillBrief: short location only
-motionBrief: a medium-wide shot frames LOCATION. The camera VERB with small amplitude at slow speed as BODY ACTION.
+motionBrief (S01 / cut=true): a medium-wide shot frames LOCATION. The camera VERB with small amplitude at slow speed as BODY ACTION.
+motionBrief (continue): The camera VERB with small amplitude at slow speed as BODY ACTION.
 musicNote: two named instruments at a TEMPO, DYNAMICS, music drops under dialogue
 Never copy a character, location, or spoken line that the user did not ask for.
 Never leave angle brackets or curly braces in the JSON.`
@@ -737,7 +738,7 @@ export function draftMoviePlanFromPrompt(userPrompt, { reason = 'draft', videoMo
       sexy: false,
       stillBrief: mode === 't2v' ? loc : stillCore,
       motionBrief:
-        mode === 't2v'
+        mode === 't2v' && i === 0
           ? `a medium-wide shot frames ${loc}. ${motionFromPrompt(prompt, i)}`
           : motionFromPrompt(prompt, i),
       dialogue: h.noTalk ? '' : '',
