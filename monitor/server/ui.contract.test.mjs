@@ -194,6 +194,8 @@ describe('UI contract — brain is shipped', () => {
     assert.match(t, /Tap for sound/)
     assert.match(t, /Make movie/)
     assert.match(t, /sceneClips/)
+    assert.match(t, /Making now/)
+    assert.match(t, /clips\.filter\(\(c\) => c\.id\)/)
     assert.doesNotMatch(t, /setInterval/)
   })
 

@@ -18,22 +18,24 @@ function SceneCard({
   clip,
   projectId,
   t2v,
+  live,
 }: {
   clip: BrainClip
   projectId: string
   t2v: boolean
+  live?: boolean
 }) {
   const still = clip.still ? api.mediaUrl(clip.still) : null
   const video = clip.video ? api.mediaUrl(clip.video) : null
   return (
-    <li className="scene-card">
+    <li className={['scene-card', live ? 'is-live' : ''].join(' ')}>
       <div className="scene-card-still">
         {still ? (
           <img src={still} alt="" />
         ) : video ? (
           <video src={video} muted playsInline preload="metadata" className="w-full h-full object-cover" />
         ) : (
-          <div className="scene-card-empty">Not made yet</div>
+          <div className="scene-card-empty">{live ? 'Making now' : 'Not made yet'}</div>
         )}
       </div>
       <div className="scene-card-body">
@@ -147,7 +149,7 @@ export function Watch() {
     : posterVideo
       ? api.mediaUrl(posterVideo)
       : null
-  const sceneClips = clips.filter((c) => c.still || c.video)
+  const sceneClips = clips.filter((c) => c.id)
 
   if (!projectId) {
     return <p className="text-[15px] text-ghost">Open a project to watch the film.</p>
@@ -205,7 +207,13 @@ export function Watch() {
           <h2 className="text-[15px] text-ghost mb-3">Scenes</h2>
           <ul className="scene-grid">
             {sceneClips.map((c) => (
-              <SceneCard key={c.id} clip={c} projectId={projectId} t2v={t2v} />
+              <SceneCard
+                key={c.id}
+                clip={c}
+                projectId={projectId}
+                t2v={t2v}
+                live={running && brain?.currentClip === c.id}
+              />
             ))}
           </ul>
         </div>

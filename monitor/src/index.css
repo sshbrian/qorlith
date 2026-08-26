@@ -918,12 +918,17 @@ video.theater-poster {
   background: #1c1c1e;
 }
 
+.scene-card.is-live {
+  box-shadow: 0 0 0 2px #0a84ff;
+}
+
 .scene-card-still {
   aspect-ratio: 16 / 9;
   background: #000;
 }
 
-.scene-card-still img {
+.scene-card-still img,
+.scene-card-still video {
   display: block;
   width: 100%;
   height: 100%;
