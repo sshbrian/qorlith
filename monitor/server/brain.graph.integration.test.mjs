@@ -109,12 +109,20 @@ describe('brain graph + monitor HTTP', () => {
         title: 'T2V Draft',
         lookTrack: 'anime',
         videoMode: 't2v',
-        clips: [{ id: 'S01', title: 'Open', durationSec: 12 }],
+        clips: [
+          {
+            id: 'S01',
+            title: 'Open',
+            durationSec: 12,
+            motionBrief: 'a medium-wide shot frames a rain-wet rooftop.',
+          },
+        ],
       },
     })
     const { status, body } = await getJson(port, '/api/brain/t2v_draft')
     assert.equal(status, 200)
     assert.equal(body.brain.videoMode, 't2v')
+    assert.equal(body.brain.clips[0].motionBrief, 'a medium-wide shot frames a rain-wet rooftop.')
     assert.deepEqual(
       body.brain.steps.map((s) => s.id),
       ['health', 'plan', 'video', 'free', 'finish'],

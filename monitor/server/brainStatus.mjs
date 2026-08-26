@@ -271,6 +271,8 @@ export function viewBrain(raw, fallbackId = '') {
         id: c.id,
         title: c.title || c.id,
         durationSec: c.durationSec ?? null,
+        stillBrief: c.stillBrief || null,
+        motionBrief: c.motionBrief || null,
         still: c.still || null,
         video: c.video || null,
         pick: c.pick || null,

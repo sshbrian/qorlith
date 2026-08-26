@@ -60,7 +60,7 @@ const Filmstrip = memo(function Filmstrip({
           ) : (
             <span className="filmstrip-empty" />
           )}
-          <span className="filmstrip-id">{c.id}</span>
+          <span className="filmstrip-id">{c.title || c.id}</span>
         </li>
       ))}
     </ul>

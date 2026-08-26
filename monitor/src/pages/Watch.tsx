@@ -27,6 +27,7 @@ function SceneCard({
 }) {
   const still = clip.still ? api.mediaUrl(clip.still) : null
   const video = clip.video ? api.mediaUrl(clip.video) : null
+  const beat = (t2v ? clip.motionBrief : clip.stillBrief) || clip.motionBrief || ''
   return (
     <li className={['scene-card', live ? 'is-live' : ''].join(' ')}>
       <div className="scene-card-still">
@@ -39,11 +40,14 @@ function SceneCard({
         )}
       </div>
       <div className="scene-card-body">
-        <div className="min-w-0">
-          <div className="text-[15px] truncate">{clip.title || clip.id}</div>
-          <div className="text-[12px] text-ghost">
-            {clip.durationSec != null ? `${clip.durationSec}s` : clip.id}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <div className="text-[15px] truncate">{clip.title || clip.id}</div>
+            <div className="text-[12px] text-ghost shrink-0">
+              {clip.durationSec != null ? `${clip.durationSec}s` : clip.id}
+            </div>
           </div>
+          {beat ? <div className="text-[12px] text-ghost truncate mt-0.5">{beat}</div> : null}
         </div>
         {t2v ? null : (
           <Link to={`/studio/${encodeURIComponent(projectId)}/board`} className="text-[13px] text-cyan shrink-0">

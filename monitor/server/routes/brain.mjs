@@ -38,6 +38,8 @@ export function mountBrain(app) {
           id: c.id,
           title: c.title || c.id,
           durationSec: c.durationSec ?? null,
+          stillBrief: c.stillBrief || null,
+          motionBrief: c.motionBrief || null,
           still: null,
           video: null,
           pick: null,

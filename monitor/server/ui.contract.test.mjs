@@ -198,6 +198,7 @@ describe('UI contract — brain is shipped', () => {
     assert.match(t, /sceneClips/)
     assert.match(t, /Making now/)
     assert.match(t, /clips\.filter\(\(c\) => c\.id\)/)
+    assert.match(t, /motionBrief/)
     assert.doesNotMatch(t, /setInterval/)
   })
 

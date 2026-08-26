@@ -986,6 +986,9 @@ video.theater-poster {
   display: block;
   padding: 8px 10px 10px;
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--color-ghost);
 }
 

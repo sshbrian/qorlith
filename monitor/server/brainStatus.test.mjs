@@ -52,6 +52,30 @@ describe('brain status view', () => {
     assert.equal(view.label, 'Making clips')
   })
 
+  it('keeps clip briefs on the public view', () => {
+    const view = viewBrain(
+      {
+        projectId: 'harbor',
+        status: 'video',
+        step: 'video',
+        videoMode: 't2v',
+        clips: [
+          {
+            id: 'S01',
+            title: 'open',
+            durationSec: 12,
+            motionBrief: 'a medium-wide shot frames a neon alley.',
+            stillBrief: 'neon alley',
+          },
+        ],
+      },
+      'harbor',
+    )
+    assert.equal(view.clips[0].title, 'open')
+    assert.equal(view.clips[0].motionBrief, 'a medium-wide shot frames a neon alley.')
+    assert.equal(view.clips[0].stillBrief, 'neon alley')
+  })
+
   it('reads a live v1 report', () => {
     const view = viewBrain(
       {

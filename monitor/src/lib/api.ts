@@ -367,6 +367,8 @@ export type BrainClip = {
   id: string
   title?: string
   durationSec?: number | null
+  stillBrief?: string | null
+  motionBrief?: string | null
   still?: string | null
   video?: string | null
   pick?: string | null

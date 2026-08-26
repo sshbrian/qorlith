@@ -17,7 +17,10 @@ export function runIsLive(
 export function brainFingerprint(brain: BrainReport | null | undefined): string {
   if (!brain) return ''
   const clips = (brain.clips || [])
-    .map((c) => `${c.id}:${c.still || ''}:${c.video || ''}:${c.pick || ''}:${c.durationSec ?? ''}`)
+    .map(
+      (c) =>
+        `${c.id}:${c.still || ''}:${c.video || ''}:${c.pick || ''}:${c.durationSec ?? ''}:${c.title || ''}:${c.motionBrief || ''}`,
+    )
     .join(',')
   const steps = (brain.steps || []).map((s) => `${s.id}:${s.state}`).join(',')
   return [
