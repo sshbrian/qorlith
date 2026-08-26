@@ -198,7 +198,12 @@ export function Watch() {
             <div className="play-mark" aria-hidden>
               ▶
             </div>
-            <p className="page-lead mt-5 text-center">Nothing to watch yet.</p>
+            <p className="page-lead mt-5 text-center">
+              {sceneClips.length ? 'The film is not made yet.' : 'Nothing to watch yet.'}
+            </p>
+            {sceneClips.length && runtime ? (
+              <p className="theater-runtime mt-2">{runtime} planned</p>
+            ) : null}
             <Link to={makeHref} className="btn btn-primary btn-xl mt-6">
               Make movie
             </Link>
