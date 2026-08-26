@@ -369,12 +369,21 @@ export function loadVideoTemplate(explicit, { t2v = false } = {}) {
   return { template: t2v ? stripFrameImages(kitchen) : kitchen, templatePath: resolved }
 }
 
+/** Continue last-frames are not stills. Do not tell Straight to video to paint one. */
+export function missingFrameHint(sourceAbs) {
+  const name = path.basename(String(sourceAbs || ''))
+  if (/_from_prev\./i.test(name)) {
+    return 'Finish the previous clip so a last frame exists, or mark this take as a cut.'
+  }
+  return 'Paint a still in Make, or pick one on the Board.'
+}
+
 export function stageInputImage(sourceAbs, comfyRoot) {
   const root = requireComfyRoot(comfyRoot)
   const src = path.resolve(sourceAbs)
   if (!fs.existsSync(src)) {
     fail(400, 'missing_source_still', `First frame not found: ${src}`, {
-      hint: 'Paint a still in Make, or finish the previous clip so a last frame exists.',
+      hint: missingFrameHint(src),
     })
   }
   const inputDir = path.join(root, 'input')

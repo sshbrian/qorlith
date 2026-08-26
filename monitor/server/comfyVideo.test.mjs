@@ -14,10 +14,20 @@ import {
   stripShotLabel,
   subjectLock,
   continueMotionBody,
+  missingFrameHint,
   t2vWho,
 } from './comfyVideo.mjs'
 import { getVideoWorkflowPath } from './studioConfig.mjs'
 import { dryRunVideoPlan } from './director.mjs'
+
+describe('missing first frame', () => {
+  it('does not tell a continue last-frame to paint a still', () => {
+    assert.match(missingFrameHint('/projects/roof/video/S02_from_prev.png'), /previous clip/)
+    assert.doesNotMatch(missingFrameHint('/projects/roof/video/S02_from_prev.png'), /Paint a still/)
+    assert.doesNotMatch(missingFrameHint('board/S02/S02_from_prev.png'), /Paint a still/)
+    assert.match(missingFrameHint('/board/S01/pick.png'), /Paint a still/)
+  })
+})
 
 describe('MiniMax H3 video plan', () => {
   it('dry-run exposes motion / dialogue / music', () => {
