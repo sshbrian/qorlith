@@ -22,6 +22,7 @@ from brain.graph import (
     GRAPH_NODES,
     after_plan,
     after_qa,
+    after_stills,
     apply_step_timing,
     build_graph,
     concat_videos,
@@ -503,6 +504,29 @@ def test_t2v_skips_stills_and_queues_video():
     assert video_calls[0][1] == ""
     assert video_calls[0][2]["t2v"] is True
     assert out["status"] == "done"
+
+
+def test_t2v_resume_skips_leftover_stills_step():
+    leftover = empty_state(
+        project_id="roof",
+        video_mode="t2v",
+        step="stills",
+        status="stills",
+        clips=[{"id": "S01"}],
+    )
+    assert infer_step(leftover) == "video"
+    assert route_start(leftover) == "video"
+    assert after_stills(leftover) == "video"
+    qa = empty_state(
+        project_id="roof",
+        video_mode="t2v",
+        step="face_qa",
+        status="face_qa",
+        clips=[{"id": "S01"}],
+    )
+    assert infer_step(qa) == "video"
+    empty = empty_state(project_id="roof", video_mode="t2v", step="stills", status="stills")
+    assert infer_step(empty) == "plan"
 
 
 def test_clip_needs_painted_still():

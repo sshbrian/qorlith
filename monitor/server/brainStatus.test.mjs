@@ -60,6 +60,12 @@ describe('brain status view', () => {
     assert.equal(view.label, 'Making clips')
   })
 
+  it('leftover stills status on T2V still reads as making clips', () => {
+    assert.equal(statusLabel({ started: true, status: 'stills', videoMode: 't2v' }), 'Making clips')
+    assert.equal(statusLabel({ started: true, status: 'face_qa', videoMode: 't2v' }), 'Making clips')
+    assert.equal(statusLabel({ started: true, status: 'stills' }), 'Painting pictures')
+  })
+
   it('keeps clip briefs on the public view', () => {
     const view = viewBrain(
       {

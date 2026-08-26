@@ -478,6 +478,8 @@ def infer_step(state: BrainState) -> str:
         return "finish"
     if clips and videos and len(videos) >= len(clips) and not state.get("comfy_freed"):
         return "free"
+    if _is_t2v(state) and (step in T2V_SKIP_STEPS or status in ("stills", "face_qa")):
+        return "video" if clips else "plan"
     if step in GRAPH_NODES:
         return step
     if clips and videos and len(videos) >= len(clips):
@@ -1337,6 +1339,15 @@ def node_stills(studio: Studio, state: BrainState) -> BrainState:
 
 
 def node_face_qa(studio: Studio, state: BrainState) -> BrainState:
+    if _is_t2v(state):
+        return {
+            **state,
+            "status": "video",
+            "step": "video",
+            "review_ok": True,
+            "auto_pick": True,
+            "phase": "t2v_skip_board",
+        }
     write_report(studio.cfg, {**state, "step": "face_qa"}, phase="board_get")
     picks = _picks_from_board(studio, state["project_id"])
     stills = state.get("still_paths") or {}
@@ -1680,7 +1691,11 @@ def after_plan(state: BrainState) -> str:
 
 
 def after_stills(state: BrainState) -> str:
-    return "face_qa" if _ok(state) else "end"
+    if not _ok(state):
+        return "end"
+    if _is_t2v(state):
+        return "video"
+    return "face_qa"
 
 
 def after_qa(state: BrainState) -> str:
@@ -1744,7 +1759,7 @@ def build_graph(studio: Studio, cfg: BrainConfig | None = None, checkpointer=Non
     )
     graph.add_conditional_edges("health", after_health, {"plan": "plan", "end": END})
     graph.add_conditional_edges("plan", after_plan, {"stills": "stills", "video": "video", "end": END})
-    graph.add_conditional_edges("stills", after_stills, {"face_qa": "face_qa", "end": END})
+    graph.add_conditional_edges("stills", after_stills, {"face_qa": "face_qa", "video": "video", "end": END})
     graph.add_conditional_edges("face_qa", after_qa, {"video": "video", "end": END})
     graph.add_conditional_edges("video", after_video, {"free": "free"})
     graph.add_conditional_edges("free", after_free, {"finish": "finish", "end": END})

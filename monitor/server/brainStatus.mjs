@@ -70,8 +70,12 @@ export function statusLabel(brain) {
   if (brain.stopAfter === 'plan' && (brain.step === 'plan' || brain.step === 'stills')) {
     return 'Plan ready'
   }
-  if (brain.status === 'face_qa') return 'Your turn — pick stills'
-  if (brain.status === 'stills') return 'Painting pictures'
+  if (brain.status === 'face_qa') {
+    return brain.videoMode === 't2v' ? 'Making clips' : 'Your turn — pick stills'
+  }
+  if (brain.status === 'stills') {
+    return brain.videoMode === 't2v' ? 'Making clips' : 'Painting pictures'
+  }
   if (brain.status === 'video') return brain.videoMode === 't2v' ? 'Making clips' : 'Animating clips'
   if (brain.status === 'recut') return 'Joining the film'
   if (brain.status === 'pending') return 'Starting'
