@@ -305,9 +305,8 @@ export function decorateProgressForBrain(view, brain) {
   const out = { ...view }
   const place = `${idx + 1} of ${clips.length}`
   if (videoPhase) {
-    const t2v = brain.videoMode === 't2v'
     out.kind = view.kind === 'wait' ? 'wait' : 'video'
-    out.title = t2v ? `Making ${clip.title || clip.id}` : `Animating ${clip.title || clip.id}`
+    out.title = `Making ${clip.title || clip.id}`
     out.hint = 'This clip takes a few minutes. You can leave — it keeps going.'
   } else {
     out.kind = view.kind === 'wait' ? 'wait' : 'still'

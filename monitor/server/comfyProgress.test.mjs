@@ -73,7 +73,7 @@ describe('comfy progress', () => {
         ],
       },
     )
-    assert.equal(view.title, 'Animating Rainy Pursuit')
+    assert.equal(view.title, 'Making Rainy Pursuit')
     assert.match(view.line, /2 of 2/)
     const t2v = decorateProgressForBrain(
       { active: true, kind: 'video', title: 'Making the clip', line: 'Frame 4 of 168', hint: 'x' },

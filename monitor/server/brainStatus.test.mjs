@@ -97,6 +97,8 @@ describe('brain status view', () => {
     assert.equal(statusLabel({ started: true, status: 'stills', videoMode: 't2v' }), 'Making clips')
     assert.equal(statusLabel({ started: true, status: 'face_qa', videoMode: 't2v' }), 'Making clips')
     assert.equal(statusLabel({ started: true, status: 'stills' }), 'Painting pictures')
+    assert.equal(statusLabel({ started: true, status: 'video' }), 'Making clips')
+    assert.equal(statusLabel({ started: true, status: 'video', videoMode: 't2v' }), 'Making clips')
   })
 
   it('keeps clip briefs on the public view', () => {

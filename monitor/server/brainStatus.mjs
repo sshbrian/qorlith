@@ -78,7 +78,7 @@ export function statusLabel(brain) {
   if (brain.status === 'stills') {
     return brain.videoMode === 't2v' ? 'Making clips' : 'Painting pictures'
   }
-  if (brain.status === 'video') return brain.videoMode === 't2v' ? 'Making clips' : 'Animating clips'
+  if (brain.status === 'video') return 'Making clips'
   if (brain.status === 'recut') return 'Joining the film'
   if (brain.status === 'pending') return 'Starting'
   return brain.status || 'Idle'
