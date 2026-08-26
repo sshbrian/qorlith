@@ -64,7 +64,7 @@ export function buildStoryboardMarkdown(record) {
         if (c.motionBrief) bits.push('**Scene**', '', c.motionBrief, '')
       } else {
         if (c.stillBrief) bits.push('**Still**', '', c.stillBrief, '')
-        if (c.motionBrief) bits.push('**Motion**', '', c.motionBrief, '')
+        if (c.motionBrief) bits.push('**Clip**', '', c.motionBrief, '')
       }
       if (c.dialogue) bits.push('**Dialogue**', '', c.dialogue, '')
       else bits.push('**Dialogue** — none', '')

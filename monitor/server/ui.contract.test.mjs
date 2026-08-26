@@ -134,6 +134,8 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /t2v \? null/)
     assert.match(t, /label="Still"/)
     assert.match(t, /Scene/)
+    assert.match(t, /t2v \? 'Scene' : 'Clip'/)
+    assert.doesNotMatch(t, /t2v \? 'Scene' : 'Motion'/)
     assert.match(t, /clipJoinNote/)
     assert.match(t, /Open Make to make the film/)
     assert.doesNotMatch(t, /paint the stills/)

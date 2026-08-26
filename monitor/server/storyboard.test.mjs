@@ -40,6 +40,8 @@ describe('storyboard markdown', () => {
     assert.match(md, /### S1 — The Major/)
     assert.match(md, /### S01 · rooftop_overwatch/)
     assert.match(md, /\*\*Still\*\*/)
+    assert.match(md, /\*\*Clip\*\*/)
+    assert.doesNotMatch(md, /\*\*Motion\*\*/)
     assert.match(md, /No radio/)
   })
 

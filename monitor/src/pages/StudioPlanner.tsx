@@ -162,7 +162,7 @@ function PlanVisual({ plan }: { plan: StudioMoviePlan }) {
                 </div>
               </div>
               {t2v ? null : <Field label="Still" value={selected.stillBrief} />}
-              <Field label={t2v ? 'Scene' : 'Motion'} value={selected.motionBrief} />
+              <Field label={t2v ? 'Scene' : 'Clip'} value={selected.motionBrief} />
               <Field label="Dialogue" value={selected.dialogue} />
               <Field label="Sound" value={selected.soundscape} />
               <Field label="Music" value={selected.musicNote} />
