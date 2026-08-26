@@ -630,11 +630,13 @@ export function floorOverlayFromProduce(detail, baseFloor) {
           : 'painting stills'
         : baseFloor.mood
 
+  const reviewing =
+    detail.currentState === 'stills' || detail.currentState === 'face_qa'
   const friends = [
     { name: detail.name, blurb: `${detail.done}/${detail.total}` },
     { name: 'ComfyUI', blurb: detail.active ? 'busy GPU' : 'standby' },
     { name: 'All media', blurb: 'library' },
-    { name: 'Board', blurb: 'review' },
+    ...(reviewing ? [{ name: 'Board', blurb: 'review' }] : []),
   ]
 
   return {

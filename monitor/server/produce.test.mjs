@@ -285,6 +285,39 @@ describe('produce.mjs', () => {
     assert.ok(!over.friends.some((f) => f.name === 'Gallery'))
   })
 
+  it('produce overlay only lists Board during stills review', () => {
+    const base = { mood: 'idle', statusLine: 'x', friends: [], progress: {} }
+    const clips = floorOverlayFromProduce(
+      {
+        name: 'Pack',
+        total: 2,
+        done: 1,
+        failed: 0,
+        percent: 50,
+        active: true,
+        currentState: 'video',
+        currentClip: 'C02',
+        currentTitle: 'next',
+      },
+      base,
+    )
+    assert.ok(!clips.friends.some((f) => f.name === 'Board'))
+    const stills = floorOverlayFromProduce(
+      {
+        name: 'Pack',
+        total: 2,
+        done: 0,
+        failed: 0,
+        percent: 0,
+        active: true,
+        currentState: 'stills',
+        currentClip: 'C01',
+      },
+      base,
+    )
+    assert.ok(stills.friends.some((f) => f.name === 'Board'))
+  })
+
   it('unknown pipeline returns null', () => {
     assert.equal(getPipelineDetail('nope', {}), null)
   })
