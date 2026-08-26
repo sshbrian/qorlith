@@ -53,7 +53,11 @@ export function StoryboardModal({ projectId, onClose }: { projectId: string; onC
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-8 pb-8">
           <FailNote error={err} />
-          {markdown ? <MarkdownView markdown={markdown} /> : !err ? <p className="text-ghost">Writing the board…</p> : null}
+          {markdown ? (
+            <MarkdownView markdown={markdown} />
+          ) : !err ? (
+            <p className="text-ghost">Writing the storyboard…</p>
+          ) : null}
         </div>
       </div>
     </div>
