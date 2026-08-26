@@ -43,6 +43,21 @@ describe('studioPlanner', () => {
     assert.doesNotMatch(p, /Motoko/)
   })
 
+  it('CORE and T2V share clip math, look, dialogue, and score', () => {
+    for (const rules of [CORE_PLANNER_RULES, T2V_PLANNER_RULES]) {
+      assert.match(rules, /CLIP MATH \(hard\)/)
+      assert.ok(rules.includes('Never one 30–120'))
+      assert.match(rules, /lookTrack is only "anime" or "live"/)
+      assert.match(rules, /DIALOGUE \(H3 spoken field\)/)
+      assert.match(rules, /1–4 English sentences/)
+      assert.match(rules, /every musicNote is N\/A/)
+      assert.match(rules, /Hard max 15/)
+    }
+    assert.match(CORE_PLANNER_RULES, /Stills-first: each clip is/)
+    assert.match(T2V_PLANNER_RULES, /Straight to video: each clip is/)
+    assert.doesNotMatch(T2V_PLANNER_RULES, /STILL BRIEF = start-frame prompt BODY/)
+  })
+
   it('buildPlanUserMessage turns GitS lock off for vague prompts', () => {
     const msg = buildPlanUserMessage('make a cool action short')
     assert.match(msg, /House character lock: OFF/)

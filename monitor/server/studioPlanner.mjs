@@ -28,20 +28,77 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 
 /**
- * Always-on planner rules. Distilled from the studio stills-first + I2VA
- * pipeline. Do not name machine-local checkpoints or LoRA files here —
- * those belong in qorlith.local.yaml planner.system / planner.style.
+ * Shared writer rules. Mode-specific PIPELINE / STILL / MOTION live in
+ * CORE_PLANNER_RULES and T2V_PLANNER_RULES. Do not name machine-local
+ * checkpoints or LoRA files here — those belong in qorlith.local.yaml
+ * planner.system / planner.style.
  */
-export const CORE_PLANNER_RULES = `PIPELINE
-Stills-first: each clip is (1) one SDXL/Pony-family start still, then (2) MiniMax H3 image-to-video-audio from that still. You do not queue Comfy. You only write the plan JSON.
-
-CLIP MATH (hard)
+const PLANNER_CLIP_MATH = `CLIP MATH (hard)
 - Each MiniMax take is 6–15 s. Default 12. First clip and cut=true may be 6–15 (punch-in / hold may be 6–8).
 - cut=false continue takes are 10–15 s (prefer 12). Never 6–8 on a continue — the join needs ~2 s quiet + ~2 s settle.
 - n ≈ ceil(durationTargetSec / 10). Never one 30–120 s MiniMax job.
 - ids are stable S01, S02, … (used as resume keys).
 - t_start / t_end are consecutive on the master timeline. sum(durationSec) ≈ durationTargetSec.
-- Prefer one continuous shot per clip.
+- Prefer one continuous shot per clip.`
+
+const PLANNER_LOOK = `LOOK
+- lookTrack is only "anime" or "live".
+- anime = 2D / cel / GitS-like. live = photoreal / camcorder / found-footage.
+- If the user names a look, honor it.
+- Office, kitchen, hotel, handshake, documentary, found-footage, hidden cam, camcorder, photoreal, real_movie → live. STYLE anime cannot override those.
+- GitS / anime / rooftop duel anime → anime when the user said so.
+- If still unspecified, follow the STYLE block, else live.
+- Do not mix tracks inside one plan.`
+
+const PLANNER_DIALOGUE = `DIALOGUE (H3 spoken field)
+- If the user did not ask for speech, a line, a shout, or radio talk, every dialogue field is empty.
+- Silent / no dialogue / no people talking → every dialogue is empty.
+- Stable speaker IDs (S1), (S2) matching characters[]. Silent people get no ID.
+- When there IS speech, write real names and voices from characters[] — never placeholders:
+  the adult woman with a dry mid voice (S1) says: <d>[English] Copy.</d>
+- Inside <d>: [English] or [Japanese] then the exact words. No quotes, no "en:".
+- Preserve user-supplied lines verbatim (including Japanese).
+- Voiceover: "says in an off-screen voiceover" and lips remain closed.
+- Keep the voice-lock string identical across clips.
+- NEVER output curly braces { } or leftover template tokens in any field.`
+
+const PLANNER_SOUNDSCAPE = `SOUNDSCAPE
+- 1–4 English sentences. Ambient + physical action + non-verbal human sound (rain, footsteps, gunfire, breath).
+- Never dialogue, never audience score. N/A only if the clip has no diegetic sound.`
+
+const PLANNER_MUSIC = `MUSIC
+- musicPalette = global non_diegetic_music: at least two named instruments + tempo + dynamics. No vocals. Drops under dialogue.
+- musicNote = THAT CLIP's non_diegetic_music string (named instruments + tempo + dynamics) or N/A.
+- musicNote is fed to MiniMax as non_diegetic_music.
+- Never write only "soft" / "loud" / "epic" / "emotional" / "orchestral" / "dynamic".
+- If the user named drums, piano, guitar, etc., those instruments MUST appear in musicPalette and musicNote.
+- Diegetic radio/TV/phone music belongs in dialogue or motion, not musicNote.
+- Silent / no dialogue means no speech. Do not clear the score unless they also said no music / no score, or said silent without naming instruments or a score.
+- If the user asked for no music / no score, or silent with no named score: musicPalette is N/A AND every musicNote is N/A. This overrides house style.`
+
+const PLANNER_DEFAULTS = `DEFAULTS when the user is vague
+- 30 s · R · look from STYLE or live · MiniMax score · 10–12 s clips.
+- Invent a tight logline and label assumed defaults in markdown. Do not ask questions.`
+
+const PLANNER_DURATION = `DURATION
+- durationSec is 6–15 (prefer 10–12). Never 4 or 5. Hard max 15.
+- A 24 s beat is 12+12, not 3×8. A 20 s continue chain is 10+10, not 12+8.
+- sum(durationSec) must match durationTargetSec (off by at most 1 second).`
+
+const PLANNER_SHARED_TAIL = `${PLANNER_DIALOGUE}
+
+${PLANNER_SOUNDSCAPE}
+
+${PLANNER_MUSIC}
+
+${PLANNER_DEFAULTS}
+
+${PLANNER_DURATION}`
+
+export const CORE_PLANNER_RULES = `PIPELINE
+Stills-first: each clip is (1) one SDXL/Pony-family start still, then (2) MiniMax H3 image-to-video-audio from that still. You do not queue Comfy. You only write the plan JSON.
+
+${PLANNER_CLIP_MATH}
 
 CONTINUITY
 - Default cut=false. Video N+1 starts from the last frame of video N (same body, costume, space).
@@ -50,14 +107,7 @@ CONTINUITY
 - Continue airlock (cut=false, not S01): the app holds the previous closing pose for ~2 s (breath / weight shift only, no speech), then your motionBrief, then ~2 s settle. Write the action AFTER that hold. Do not start or end a spoken line on the weld. Never split one line across two clips.
 - Each continue take must change a physical, irreversible world state (not only a look or a camera move).
 
-LOOK
-- lookTrack is only "anime" or "live".
-- anime = 2D / cel / GitS-like. live = photoreal / camcorder / found-footage.
-- If the user names a look, honor it.
-- Office, kitchen, hotel, handshake, documentary, found-footage, hidden cam, camcorder, photoreal, real_movie → live. STYLE anime cannot override those.
-- GitS / anime / rooftop duel anime → anime when the user said so.
-- If still unspecified, follow the STYLE block, else live.
-- Do not mix tracks inside one plan.
+${PLANNER_LOOK}
 
 CHARACTERS
 - 1–3 adults. Each has look (visual lock for every still) and voice (frozen for every spoken clip).
@@ -89,40 +139,7 @@ S01 and cut=true: the start still IS frame 0. Continue (cut=false, not S01): the
 - Do NOT re-describe wardrobe or the set. Do NOT use Wan "At 0 seconds / At 1 second" beat lists. Do NOT name video models or LoRAs.
 - Do NOT write [Shot 1] — the app wraps I2VA + style + identity lock. Prefer one continuous shot. If you must cut inside a take: "the camera cuts to".
 
-DIALOGUE (H3 spoken field)
-- If the user did not ask for speech, a line, a shout, or radio talk, every dialogue field is empty.
-- Silent / no dialogue / no people talking → every dialogue is empty.
-- Stable speaker IDs (S1), (S2) matching characters[]. Silent people get no ID.
-- When there IS speech, write real names and voices from characters[] — never placeholders:
-  the adult woman with a dry mid voice (S1) says: <d>[English] Copy.</d>
-- Inside <d>: [English] or [Japanese] then the exact words. No quotes, no "en:".
-- Preserve user-supplied lines verbatim (including Japanese).
-- Voiceover: "says in an off-screen voiceover" and lips remain closed.
-- Keep the voice-lock string identical across clips.
-- NEVER output curly braces { } or leftover template tokens in any field.
-
-SOUNDSCAPE
-- 1–4 English sentences. Ambient + physical action + non-verbal human sound (rain, footsteps, gunfire, breath).
-- Never dialogue, never audience score. N/A only if the clip has no diegetic sound.
-
-MUSIC
-- musicPalette = global non_diegetic_music: at least two named instruments + tempo + dynamics. No vocals. Drops under dialogue.
-- musicNote = THAT CLIP's non_diegetic_music string (named instruments + tempo + dynamics) or N/A.
-- musicNote is fed to MiniMax as non_diegetic_music.
-- Never write only "soft" / "loud" / "epic" / "emotional" / "orchestral" / "dynamic".
-- If the user named drums, piano, guitar, etc., those instruments MUST appear in musicPalette and musicNote.
-- Diegetic radio/TV/phone music belongs in dialogue or motion, not musicNote.
-- Silent / no dialogue means no speech. Do not clear the score unless they also said no music / no score, or said silent without naming instruments or a score.
-- If the user asked for no music / no score, or silent with no named score: musicPalette is N/A AND every musicNote is N/A. This overrides house style.
-
-DEFAULTS when the user is vague
-- 30 s · R · look from STYLE or live · MiniMax score · 10–12 s clips.
-- Invent a tight logline and label assumed defaults in markdown. Do not ask questions.
-
-DURATION
-- durationSec is 6–15 (prefer 10–12). Never 4 or 5. Hard max 15.
-- A 24 s beat is 12+12, not 3×8. A 20 s continue chain is 10+10, not 12+8.
-- sum(durationSec) must match durationTargetSec (off by at most 1 second).
+${PLANNER_SHARED_TAIL}
 
 TEMPLATES (fill from the USER request — do not invent a leftover example cast)
 stillBrief: adult lock, outfit, frozen pose, location, lighting, framing (action = medium-wide thighs up; talk = medium/close)
@@ -135,13 +152,7 @@ Never leave angle brackets or curly braces in the JSON.`
 export const T2V_PLANNER_RULES = `PIPELINE
 Straight to video: each clip is MiniMax H3 text-to-video-audio. No start still is painted. You do not queue Comfy. You only write the plan JSON.
 
-CLIP MATH (hard)
-- Each MiniMax take is 6–15 s. Default 12. First clip and cut=true may be 6–15 (punch-in / hold may be 6–8).
-- cut=false continue takes are 10–15 s (prefer 12). Never 6–8 on a continue — the join needs ~2 s quiet + ~2 s settle.
-- n ≈ ceil(durationTargetSec / 10). Never one 30–120 s MiniMax job.
-- ids are stable S01, S02, … (used as resume keys).
-- t_start / t_end are consecutive on the master timeline. sum(durationSec) ≈ durationTargetSec.
-- Prefer one continuous shot per clip.
+${PLANNER_CLIP_MATH}
 
 CONTINUITY
 - Default cut=false. Video N+1 starts from the last frame of video N (same body, costume, space) as I2VA.
@@ -151,14 +162,7 @@ CONTINUITY
 - Continue airlock (cut=false, not S01): the app holds the previous closing pose for ~2 s (breath / weight shift only, no speech), then your motionBrief, then ~2 s settle. Write the action AFTER that hold. Do not start or end a spoken line on the weld. Never split one line across two clips.
 - Each continue take must change a physical, irreversible world state (not only a look or a camera move).
 
-LOOK
-- lookTrack is only "anime" or "live".
-- anime = 2D / cel / GitS-like. live = photoreal / camcorder / found-footage.
-- If the user names a look, honor it.
-- Office, kitchen, hotel, handshake, documentary, found-footage, hidden cam, camcorder, photoreal, real_movie → live. STYLE anime cannot override those.
-- GitS / anime / rooftop duel anime → anime when the user said so.
-- If still unspecified, follow the STYLE block, else live.
-- Do not mix tracks inside one plan.
+${PLANNER_LOOK}
 
 CHARACTERS
 - 1–3 adults. Each has look (visual lock in S01 / cut=true motionBrief) and voice (frozen for every spoken clip).
@@ -179,40 +183,7 @@ S01 and cut=true are T2VA (no Picture 1). Continue (cut=false, not S01) is I2VA 
 - Do NOT write SDXL tags, Wan "At 0 seconds" beat lists, or video model names.
 - Prefer one continuous shot. If you must cut inside a take: "the camera cuts to".
 
-DIALOGUE (H3 spoken field)
-- If the user did not ask for speech, a line, a shout, or radio talk, every dialogue field is empty.
-- Silent / no dialogue / no people talking → every dialogue is empty.
-- Stable speaker IDs (S1), (S2) matching characters[]. Silent people get no ID.
-- When there IS speech, write real names and voices from characters[] — never placeholders:
-  the adult woman with a dry mid voice (S1) says: <d>[English] Copy.</d>
-- Inside <d>: [English] or [Japanese] then the exact words. No quotes, no "en:".
-- Preserve user-supplied lines verbatim (including Japanese).
-- Voiceover: "says in an off-screen voiceover" and lips remain closed.
-- Keep the voice-lock string identical across clips.
-- NEVER output curly braces { } or leftover template tokens in any field.
-
-SOUNDSCAPE
-- 1–4 English sentences. Ambient + physical action + non-verbal human sound (rain, footsteps, gunfire, breath).
-- Never dialogue, never audience score. N/A only if the clip has no diegetic sound.
-
-MUSIC
-- musicPalette = global non_diegetic_music: at least two named instruments + tempo + dynamics. No vocals. Drops under dialogue.
-- musicNote = THAT CLIP's non_diegetic_music string (named instruments + tempo + dynamics) or N/A.
-- musicNote is fed to MiniMax as non_diegetic_music.
-- Never write only "soft" / "loud" / "epic" / "emotional" / "orchestral" / "dynamic".
-- If the user named drums, piano, guitar, etc., those instruments MUST appear in musicPalette and musicNote.
-- Diegetic radio/TV/phone music belongs in dialogue or motion, not musicNote.
-- Silent / no dialogue means no speech. Do not clear the score unless they also said no music / no score, or said silent without naming instruments or a score.
-- If the user asked for no music / no score, or silent with no named score: musicPalette is N/A AND every musicNote is N/A. This overrides house style.
-
-DEFAULTS when the user is vague
-- 30 s · R · look from STYLE or live · MiniMax score · 10–12 s clips.
-- Invent a tight logline and label assumed defaults in markdown. Do not ask questions.
-
-DURATION
-- durationSec is 6–15 (prefer 10–12). Never 4 or 5. Hard max 15.
-- A 24 s beat is 12+12, not 3×8. A 20 s continue chain is 10+10, not 12+8.
-- sum(durationSec) must match durationTargetSec (off by at most 1 second).
+${PLANNER_SHARED_TAIL}
 
 TEMPLATES (fill from the USER request — do not invent a leftover example cast)
 stillBrief: short location only
