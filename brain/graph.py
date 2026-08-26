@@ -650,6 +650,13 @@ def project_clip_video(cfg: BrainConfig, project_id: str, clip_id: str) -> Path:
     return cfg.project_dir / project_id / "video" / f"{clip_id}.mp4"
 
 
+def continue_frame_path(cfg: BrainConfig, project_id: str, clip_id: str, *, t2v: bool) -> Path:
+    """Last-frame source for a continue take. T2V keeps it next to the clip, not on the board."""
+    if t2v:
+        return cfg.project_dir / project_id / "video" / f"{clip_id}_from_prev.png"
+    return cfg.project_dir / project_id / "board" / clip_id / f"{clip_id}_from_prev.png"
+
+
 def copy_video_to_project(cfg: BrainConfig, project_id: str, clip_id: str, src: str) -> str:
     """Keep a project-local copy so T2V covers and resume do not depend on Comfy output."""
     path = Path(src)
@@ -1538,7 +1545,8 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
             still = pick if pick and Path(str(pick)).is_file() else stills.get(cid)
             if not still and (clip.get("cut") or not prev_video):
                 raise BrainError(400, "missing_still", f"No still for {cid}", "Run stills first.", state=progress)
-            frame_dest = studio.cfg.project_dir / project_id / "board" / cid / f"{cid}_from_prev.png"
+            t2v = _is_t2v(state)
+            frame_dest = continue_frame_path(studio.cfg, project_id, cid, t2v=t2v)
             source, source_kind = resolve_video_source(
                 clip,
                 still=str(still or ""),
@@ -1547,7 +1555,8 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
             )
             if source_kind == "continue" and source and not stills.get(cid):
                 stills[cid] = source
-                copy_still_to_board(studio.cfg, project_id, cid, source)
+                if not t2v:
+                    copy_still_to_board(studio.cfg, project_id, cid, source)
                 live["still_paths"] = stills
         if hasattr(studio, "wait_comfy_idle"):
             studio.wait_comfy_idle(should_stop=stopping)

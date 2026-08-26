@@ -16,6 +16,7 @@ from brain.graph import (
     media_ok,
     weld_videos,
     resolve_video_source,
+    continue_frame_path,
     GRAPH_EDGES,
     GRAPH_NODE_META,
     GRAPH_NODES,
@@ -429,8 +430,46 @@ def test_video_continue_without_a_second_still(tmp_path: Path, monkeypatch):
     sources = [c[1] for c in s.calls if c and c[0] == "video"]
     assert sources[0] == str(still_a)
     assert sources[1].endswith("S02_from_prev.png")
+    assert "board" in sources[1]
     assert out["still_paths"]["S02"].endswith("S02_from_prev.png")
     assert [c[2]["continueFromPrior"] for c in s.calls if c and c[0] == "video"] == [False, True]
+
+
+def test_t2v_continue_frame_lives_next_to_the_clip(monkeypatch):
+    s = FakeStudio()
+    s01 = s.cfg.project_dir / "harbor" / "video" / "S01.mp4"
+    s01.parent.mkdir(parents=True, exist_ok=True)
+    s01.write_bytes(b"m" * 50_000)
+
+    def fake_extract(_video, dest):
+        p = Path(dest)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(b"last")
+        return p
+
+    monkeypatch.setattr("brain.graph.extract_last_frame", fake_extract)
+    out = node_video(
+        s,
+        empty_state(
+            project_id="harbor",
+            video_mode="t2v",
+            review_ok=True,
+            auto_pick=True,
+            clips=[
+                {"id": "S01", "motionBrief": "walk", "durationSec": 12},
+                {"id": "S02", "motionBrief": "keep walking", "durationSec": 10},
+            ],
+            video_paths={"S01": str(s01)},
+        ),
+    )
+    sources = [c[1] for c in s.calls if c and c[0] == "video"]
+    assert len(sources) == 1
+    assert sources[0].endswith("video/S02_from_prev.png")
+    assert "board" not in sources[0]
+    assert continue_frame_path(s.cfg, "harbor", "S02", t2v=True) == Path(sources[0])
+    board = s.cfg.project_dir / "harbor" / "board"
+    assert not board.exists() or not any(board.rglob("*"))
+    assert out["still_paths"]["S02"].endswith("video/S02_from_prev.png")
 
 
 def test_t2v_skips_stills_and_queues_video():
