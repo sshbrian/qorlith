@@ -90,6 +90,146 @@ select {
   contain: layout;
 }
 
+.lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  min-height: calc(100vh - 120px);
+  contain: layout;
+}
+
+.lobby.is-empty {
+  justify-content: center;
+  gap: 32px;
+  padding-bottom: 8vh;
+}
+
+.lobby-hold {
+  min-height: 68vh;
+}
+
+.lobby-hero {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lobby-mark {
+  height: 44px;
+  width: 44px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0a0a0b;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 12px 40px rgba(10, 132, 255, 0.16);
+}
+
+.lobby-word {
+  margin: 22px 0 0;
+  font-size: clamp(44px, 7vw, 72px);
+  font-weight: 620;
+  letter-spacing: -0.045em;
+  line-height: 0.92;
+}
+
+.lobby-kicker {
+  margin: 14px 0 0;
+  max-width: 28rem;
+  font-size: 18px;
+  line-height: 1.35;
+  letter-spacing: -0.024em;
+  color: var(--color-ghost);
+}
+
+.title-card {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.title-card-field {
+  width: 100%;
+  resize: none;
+  min-height: 132px;
+  border: 0;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(28, 28, 30, 0.92), rgba(12, 12, 14, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 28px 80px rgba(0, 0, 0, 0.45);
+  color: var(--color-ink);
+  font-size: 22px;
+  font-weight: 510;
+  letter-spacing: -0.03em;
+  line-height: 1.35;
+  padding: 22px 24px;
+  outline: none;
+}
+
+.lobby.is-empty .title-card-field {
+  min-height: 168px;
+  font-size: 24px;
+}
+
+.title-card-field:focus {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(10, 132, 255, 0.55),
+    0 0 0 8px rgba(10, 132, 255, 0.14),
+    0 28px 80px rgba(0, 0, 0, 0.45);
+}
+
+.title-card-field::placeholder {
+  color: rgba(235, 235, 245, 0.28);
+}
+
+.title-card-starters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.title-card-hint,
+.title-card-key {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-ghost);
+}
+
+.title-card-go {
+  width: 100%;
+  min-height: 52px;
+  font-size: 17px;
+}
+
+.poster-wall {
+  margin-top: 8px;
+}
+
+.poster-wall-kicker {
+  margin: 0 0 16px;
+  font-size: 12px;
+  font-weight: 510;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ghost);
+}
+
+.poster-wall-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
 .studio-scroll,
 .studio-scroll-body {
   overflow-anchor: none;
@@ -465,6 +605,7 @@ select {
 }
 
 .seg-item[aria-selected="true"],
+.seg-item[aria-checked="true"],
 .seg-item.is-on {
   background: rgba(255, 255, 255, 0.16);
   color: #fff;
@@ -904,6 +1045,36 @@ video.theater-poster {
   padding: 14px 16px 16px;
 }
 
+.poster-card.is-overlay {
+  background: #0a0a0b;
+  border-radius: 20px;
+}
+
+.poster-card.is-overlay .poster-still {
+  aspect-ratio: 16 / 10;
+}
+
+.poster-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 1;
+  padding: 28px 16px 16px;
+  text-align: left;
+}
+
+.poster-overlay-title {
+  font-size: 18px;
+  font-weight: 620;
+  letter-spacing: -0.028em;
+  line-height: 1.15;
+}
+
+.poster-overlay-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(235, 235, 245, 0.72);
+}
+
 .scene-grid {
   list-style: none;
   margin: 0;
@@ -1001,6 +1172,12 @@ video.theater-poster {
   color: var(--color-ghost);
 }
 
+@media (max-width: 1100px) {
+  .poster-wall-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 860px) {
   .studio-menu {
     display: inline-flex;
@@ -1049,6 +1226,26 @@ video.theater-poster {
     gap: 20px;
   }
 
+  .lobby {
+    gap: 28px;
+    min-height: 0;
+  }
+
+  .lobby-word {
+    font-size: 40px;
+  }
+
+  .title-card-field,
+  .lobby.is-empty .title-card-field {
+    font-size: 18px;
+    min-height: 120px;
+    padding: 16px 18px;
+  }
+
+  .poster-wall-grid {
+    grid-template-columns: 1fr;
+  }
+
   header.studio-top,
   .studio-main-header {
     padding-left: 12px;
@@ -1069,7 +1266,8 @@ video.theater-poster {
   .poster-still img,
   .poster-still video,
   .archive-card-still img,
-  .archive-card-still video {
+  .archive-card-still video,
+  .title-card-field {
     transition: none;
   }
 }

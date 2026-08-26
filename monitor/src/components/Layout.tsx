@@ -445,7 +445,7 @@ function LayoutBody({
                     ? 'Training'
                     : area === 'archive'
                       ? 'Archive'
-                      : current?.title || (projectId ? projectId : '')}
+                      : current?.title || (projectId ? projectId : 'Qorlith')}
               </div>
             </div>
             {showStages ? (
@@ -502,7 +502,7 @@ function LayoutBody({
                   : stage === 'watch'
                     ? 'studio-scroll-body studio-theater mx-auto w-full max-w-[1180px] px-6 py-6 lg:px-10 lg:py-8'
                     : location.pathname === '/studio'
-                      ? 'studio-scroll-body mx-auto w-full max-w-[820px] px-8 py-10 lg:px-10 lg:py-14'
+                      ? 'studio-scroll-body lobby-shell mx-auto w-full max-w-[1240px] px-6 py-8 lg:px-12 lg:py-10'
                       : 'studio-scroll-body mx-auto w-full max-w-[980px] px-8 py-8 lg:px-10 lg:py-10'
               }
             >

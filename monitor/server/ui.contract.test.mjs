@@ -155,6 +155,10 @@ describe('UI contract — stages, not tools', () => {
   it('Home and Plan expose Straight to video', () => {
     assert.match(read(path.join(src, 'components', 'VideoModeToggle.tsx')), /Straight to video/)
     assert.match(page('StudioHome.tsx'), /VideoModeToggle/)
+    assert.match(page('StudioHome.tsx'), /lobby/)
+    assert.match(page('StudioHome.tsx'), /title-card/)
+    assert.match(page('StudioHome.tsx'), /poster-wall/)
+    assert.match(page('StudioHome.tsx'), /overlay/)
     assert.match(page('StudioPlanner.tsx'), /VideoModeToggle/)
     assert.match(read(path.join(src, 'lib', 'api.ts')), /videoMode/)
   })

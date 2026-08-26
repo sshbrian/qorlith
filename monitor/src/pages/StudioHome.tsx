@@ -11,11 +11,12 @@ import { canonicalStage, projectPath, PROMPT_PLACEHOLDER, PROMPT_STARTERS, VIDEO
 export function StudioHome() {
   const { projects, projectsReady, refreshProjects } = useStudioSession()
   const navigate = useNavigate()
-  const recents = projects.slice(0, 6)
+  const recents = projects.slice(0, 9)
   const [prompt, setPrompt] = useState('')
   const [videoMode, setVideoMode] = useState<VideoMode>('stills')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<unknown>(null)
+  const emptyHouse = recents.length === 0
 
   const makeMovie = async () => {
     const text = prompt.trim()
@@ -34,35 +35,38 @@ export function StudioHome() {
   }
 
   if (!projectsReady) {
-    return <div className="min-h-[68vh]" />
+    return <div className="lobby lobby-hold" />
   }
 
   return (
-    <div className="page">
-      <div className="flex flex-col items-center text-center pt-4">
-        <div className="h-16 w-16 rounded-[18px] overflow-hidden bg-void ring-1 ring-white/[0.1] shadow-[0_0_40px_rgba(10,132,255,0.18)]">
-          <BrandMark className="h-16 w-16" title="Qorlith" />
+    <div className={['lobby', emptyHouse ? 'is-empty' : ''].join(' ')}>
+      <header className="lobby-hero">
+        <div className="lobby-mark" aria-hidden>
+          <BrandMark className="h-11 w-11" title="Qorlith" />
         </div>
-        <h1 className="mt-6 text-[40px] font-semibold tracking-tight leading-none">Make a movie</h1>
-        <p className="page-lead mt-3 max-w-xl">
-          Type what happens. Press the blue button. Come back when it is done.
+        <h1 className="lobby-word">Make a movie</h1>
+        <p className="lobby-kicker">
+          {emptyHouse ? 'The house is dark. A sentence becomes a film.' : 'A sentence becomes a film.'}
         </p>
-      </div>
+      </header>
 
-      <div className="card space-y-4 max-w-2xl mx-auto w-full">
-        <label className="block text-[13px] text-ghost text-left">What happens in the film?</label>
+      <div className="title-card">
+        <label className="sr-live" htmlFor="lobby-prompt">
+          What happens in the film?
+        </label>
         <textarea
+          id="lobby-prompt"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void makeMovie()
           }}
-          rows={5}
+          rows={emptyHouse ? 4 : 3}
           autoFocus
           placeholder={PROMPT_PLACEHOLDER}
-          className="field resize-y min-h-[128px]"
+          className="title-card-field"
         />
-        <div className="flex flex-wrap gap-2">
+        <div className="title-card-starters">
           {PROMPT_STARTERS.map((s) => (
             <button
               key={s.label}
@@ -75,28 +79,27 @@ export function StudioHome() {
           ))}
         </div>
         <VideoModeToggle value={videoMode} onChange={setVideoMode} />
-        <p className="text-[12px] text-ghost text-center">
-          {VIDEO_MODE_HINT[videoMode]}
-        </p>
+        <p className="title-card-hint">{VIDEO_MODE_HINT[videoMode]}</p>
         <FailNote error={err} />
         <button
           type="button"
           disabled={busy || !prompt.trim()}
           onClick={() => void makeMovie()}
-          className="btn btn-primary btn-xl w-full"
+          className="btn btn-primary btn-xl title-card-go"
         >
           {busy ? 'Starting…' : 'Make movie'}
         </button>
-        <p className="text-[12px] text-ghost text-center">Ctrl+Enter also starts it.</p>
+        <p className="title-card-key">Ctrl+Enter also starts it.</p>
       </div>
 
       {recents.length ? (
-        <div>
-          <h2 className="text-[15px] text-ghost mb-3">Recent</h2>
-          <ul className="grid sm:grid-cols-2 gap-3">
+        <section className="poster-wall" aria-label="Recent films">
+          <h2 className="poster-wall-kicker">On the wall</h2>
+          <ul className="poster-wall-grid">
             {recents.map((p) => (
               <li key={p.id}>
                 <PosterCard
+                  overlay
                   title={p.title}
                   coverUrl={p.coverUrl}
                   coverKind={p.coverKind}
@@ -107,7 +110,7 @@ export function StudioHome() {
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       ) : null}
     </div>
   )
