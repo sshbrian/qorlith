@@ -20,6 +20,7 @@ process.env.QORLITH_MIGRATE = '1'
 
 const {
   coverKindFromPath,
+  coverMissingHint,
   createStudioProject,
   findProjectCover,
   loadProjectRecord,
@@ -170,6 +171,14 @@ describe('project folder', () => {
     fs.writeFileSync(master, Buffer.alloc(3000))
     assert.equal(findProjectCover(project.id), master)
     assert.equal(coverKindFromPath(master), 'video')
+  })
+
+  it('T2V missing cover does not tell you to paint a still', () => {
+    const t2v = createStudioProject({ title: 'T2V Hint', videoMode: 't2v' })
+    assert.doesNotMatch(coverMissingHint(t2v.project.id), /Paint a still/)
+    assert.match(coverMissingHint(t2v.project.id), /clip/)
+    const stills = createStudioProject({ title: 'Stills Hint' })
+    assert.match(coverMissingHint(stills.project.id), /Paint a still/)
   })
 
   it('migrates a legacy studio_plans json into the project folder', () => {

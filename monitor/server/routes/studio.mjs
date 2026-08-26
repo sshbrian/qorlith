@@ -19,6 +19,7 @@ import { approvePlan, archivePlanProject, generateMoviePlan, plannerSpec, unarch
 import { plannerNeedsLms, resolvePlanner } from '../plannerProvider.mjs'
 import { listProjectWorkflows, writeStoryboard } from '../storyboard.mjs'
 import {
+  coverMissingHint,
   createStudioProject,
   findProjectCover,
   listArchivedStudioProjects,
@@ -191,7 +192,7 @@ export function mountStudio(app) {
       const abs = findProjectCover(id)
       if (!abs) {
         fail(404, 'no_cover', 'No cover on this project yet', {
-          hint: 'Paint a still, or finish the film so master.mp4 is on disk.',
+          hint: coverMissingHint(id),
         })
       }
       const root = path.resolve(projectDir(id))

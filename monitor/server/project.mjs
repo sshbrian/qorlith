@@ -222,6 +222,13 @@ function isT2vRecord(id) {
   return rec?.plan?.videoMode === 't2v'
 }
 
+/** Straight to video has no still to paint. */
+export function coverMissingHint(id) {
+  return isT2vRecord(id)
+    ? 'Finish a clip so the film or an mp4 is on disk.'
+    : 'Paint a still, or finish the film so master.mp4 is on disk.'
+}
+
 /** Stills: board still first (S01 preferred). T2V: the film — last-frame PNGs are not a poster. */
 export function findProjectCover(id) {
   const slug = slugifyProjectId(id)
