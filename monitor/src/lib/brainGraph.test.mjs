@@ -335,6 +335,7 @@ describe('brain graph — step internals', () => {
     const video = nodeOps('video', 't2v')
     assert.equal(video.find((o) => o.id === 'video_wait')?.label, 'Comfy makes the clip')
     assert.equal(video.find((o) => o.id === 'video_queue')?.label, 'Queue MiniMax')
+    assert.equal(nodeOps('video').find((o) => o.id === 'video_queue')?.label, 'Queue MiniMax')
     assert.doesNotMatch(JSON.stringify(video), /T2VA/)
     assert.doesNotMatch(JSON.stringify(video), /animates/i)
     assert.equal(nodeOps('stills', 't2v').length, 0)

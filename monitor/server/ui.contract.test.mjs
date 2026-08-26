@@ -296,6 +296,7 @@ describe('UI contract — brain is shipped', () => {
     assert.match(page('Brain.tsx'), /if \(!t2v\) setSheet\('stills'\)/)
     assert.match(page('Brain.tsx'), /if \(!t2v\) navigate/)
     assert.match(graph, /Open the MiniMax workflow/)
+    assert.doesNotMatch(graph, /Open video workflows in Comfy/)
     assert.match(graph, /Straight to video — no stills/)
     assert.match(read(path.join(src, 'components', 'WorkflowModal.tsx')), /MiniMax · clips/)
     assert.match(graph, /thumb\.kind === 'video'/)

@@ -208,9 +208,7 @@ function Tile({
               ? 'Straight to video — no stills'
               : 'Open still workflows in Comfy'
             : node.id === 'video'
-              ? brain.videoMode === 't2v'
-                ? 'Open the MiniMax workflow'
-                : 'Open video workflows in Comfy'
+              ? 'Open the MiniMax workflow'
               : node.blurb
       }
       onClick={onPick}

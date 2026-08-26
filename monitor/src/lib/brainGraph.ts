@@ -45,7 +45,7 @@ export const NODE_OPS: Record<string, NodeOp[]> = {
   ],
   video: [
     { id: 'comfy_idle', label: 'Wait until Comfy is idle', via: 'comfy', call: 'GET /queue' },
-    { id: 'video_queue', label: 'Queue MiniMax video', via: 'http', call: 'POST /api/director/video/run' },
+    { id: 'video_queue', label: 'Queue MiniMax', via: 'http', call: 'POST /api/director/video/run' },
     { id: 'video_wait', label: 'Comfy makes the clip', via: 'comfy', call: 'WS /ws + find .mp4' },
   ],
   free: [{ id: 'comfy_free', label: 'Unload Comfy models', via: 'comfy', call: 'POST /free' }],
@@ -59,7 +59,6 @@ export const NODE_OPS: Record<string, NodeOp[]> = {
 const T2V_OP_COPY: Record<string, Partial<NodeOp>> = {
   plan_llm: { label: 'Writer writes the shot list' },
   plan_save: { label: 'Save the plan', call: 'plan.json' },
-  video_queue: { label: 'Queue MiniMax' },
 }
 
 export function nodeOps(nodeId: string, videoMode?: string | null): NodeOp[] {
