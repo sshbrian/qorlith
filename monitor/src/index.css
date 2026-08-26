@@ -849,15 +849,22 @@ select {
   background: rgba(120, 120, 128, 0.4);
 }
 
+.screening {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 .theater-player {
   position: relative;
   overflow: hidden;
-  border-radius: 22px;
+  border-radius: 4px;
   background: #000;
   aspect-ratio: 16 / 9;
+  cursor: pointer;
   box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
+    0 40px 120px rgba(0, 0, 0, 0.72),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .theater-video {
@@ -896,7 +903,28 @@ select {
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 18px;
+  margin-top: 10px;
+  padding: 0 2px;
+}
+
+.theater-save {
+  color: var(--color-ghost);
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.theater-save:hover {
+  color: var(--color-ink);
+}
+
+.theater-pause-mark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0.9;
 }
 
 .theater-title {
@@ -1122,6 +1150,72 @@ video.theater-poster {
   justify-content: space-between;
   gap: 8px;
   padding: 12px 14px 14px;
+}
+
+.workprint {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 8px 0 4px;
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+}
+
+.workprint-frame {
+  flex: 0 0 92px;
+  position: relative;
+}
+
+.workprint-frame.is-cut {
+  margin-left: 14px;
+}
+
+.workprint-frame.is-cut::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: 8px;
+  bottom: 18px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.workprint-still {
+  aspect-ratio: 16 / 9;
+  background: #0a0a0b;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.workprint-still img,
+.workprint-still video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.88;
+}
+
+.workprint-frame.is-live .workprint-still {
+  box-shadow: 0 0 0 1px #0a84ff;
+}
+
+.workprint-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--color-ghost);
+}
+
+.workprint-mark {
+  display: block;
+  margin-top: 5px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(235, 235, 245, 0.42);
 }
 
 .filmstrip {

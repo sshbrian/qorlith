@@ -500,7 +500,7 @@ function LayoutBody({
                 area === 'media'
                   ? 'studio-scroll-body w-full p-6 lg:p-8'
                   : stage === 'watch'
-                    ? 'studio-scroll-body studio-theater mx-auto w-full max-w-[1180px] px-6 py-6 lg:px-10 lg:py-8'
+                    ? 'studio-scroll-body screening-shell mx-auto w-full max-w-[1360px] px-4 py-5 lg:px-8 lg:py-7'
                     : location.pathname === '/studio'
                       ? 'studio-scroll-body lobby-shell mx-auto w-full max-w-[1240px] px-6 py-8 lg:px-12 lg:py-10'
                       : 'studio-scroll-body mx-auto w-full max-w-[980px] px-8 py-8 lg:px-10 lg:py-10'

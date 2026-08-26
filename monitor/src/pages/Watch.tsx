@@ -15,15 +15,13 @@ function formatRuntime(clips: BrainClip[]) {
   return r ? `${m}m ${r}s` : `${m}m`
 }
 
-function SceneCard({
+function WorkprintFrame({
   clip,
-  projectId,
   t2v,
   live,
   index,
 }: {
   clip: BrainClip
-  projectId: string
   t2v: boolean
   live?: boolean
   index: number
@@ -31,34 +29,22 @@ function SceneCard({
   const poster = clipPoster(clip, t2v ? 't2v' : 'stills')
   const beat = clipBeat(clip)
   const join = clipJoinNote(index, clip.cut)
+  const title = [clip.title || clip.id, beat, join].filter(Boolean).join(' · ')
   return (
-    <li className={['scene-card', live ? 'is-live' : ''].join(' ')}>
-      <div className="scene-card-still">
+    <li
+      className={['workprint-frame', live ? 'is-live' : '', join === 'cut' ? 'is-cut' : ''].join(' ')}
+      title={title}
+    >
+      <div className="workprint-still">
         {poster?.kind === 'image' ? (
           <img src={api.mediaUrl(poster.src)} alt="" />
         ) : poster?.kind === 'video' ? (
-          <video src={api.mediaUrl(poster.src)} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+          <video src={api.mediaUrl(poster.src)} muted playsInline preload="metadata" />
         ) : (
-          <div className="scene-card-empty">{live ? 'Making now' : 'Not made yet'}</div>
+          <div className="workprint-empty">{live ? 'Making now' : ''}</div>
         )}
       </div>
-      <div className="scene-card-body">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-2">
-            <div className="text-[15px] truncate">{clip.title || clip.id}</div>
-            <div className="text-[12px] text-ghost shrink-0">
-              {clip.durationSec != null ? `${clip.durationSec}s` : clip.id}
-              {join ? ` · ${join}` : ''}
-            </div>
-          </div>
-          {beat ? <div className="text-[12px] text-ghost truncate mt-0.5">{beat}</div> : null}
-        </div>
-        {t2v ? null : (
-          <Link to={`/studio/${encodeURIComponent(projectId)}/board`} className="text-[13px] text-cyan shrink-0">
-            Board
-          </Link>
-        )}
-      </div>
+      <span className="workprint-mark">{clip.id}</span>
     </li>
   )
 }
@@ -74,14 +60,16 @@ function TheaterPlayer({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [needSound, setNeedSound] = useState(true)
+  const [paused, setPaused] = useState(false)
 
   useEffect(() => {
     setNeedSound(true)
+    setPaused(false)
     const el = videoRef.current
     if (!el) return
     el.muted = true
     const play = el.play()
-    if (play && typeof play.catch === 'function') play.catch(() => {})
+    if (play && typeof play.catch === 'function') play.catch(() => setPaused(true))
   }, [projectId])
 
   useEffect(() => {
@@ -96,8 +84,13 @@ function TheaterPlayer({
         el.muted = false
         setNeedSound(false)
       }
-      if (el.paused) void el.play()
-      else el.pause()
+      if (el.paused) {
+        void el.play()
+        setPaused(false)
+      } else {
+        el.pause()
+        setPaused(true)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -111,15 +104,27 @@ function TheaterPlayer({
     el.volume = 1
     setNeedSound(false)
     void el.play()
+    setPaused(false)
+  }
+
+  const togglePlay = () => {
+    const el = videoRef.current
+    if (!el) return
+    if (el.paused) {
+      void el.play()
+      setPaused(false)
+    } else {
+      el.pause()
+      setPaused(true)
+    }
   }
 
   return (
     <div className="theater">
-      <div className="theater-player">
+      <div className="theater-player" onClick={togglePlay}>
         <video
           ref={videoRef}
           src={api.brainMasterUrl(projectId)}
-          controls
           playsInline
           preload="auto"
           className="theater-video"
@@ -129,13 +134,18 @@ function TheaterPlayer({
             Tap for sound
           </button>
         ) : null}
+        {paused && !needSound ? (
+          <div className="play-mark theater-pause-mark" aria-hidden>
+            ▶
+          </div>
+        ) : null}
       </div>
       <div className="theater-meta">
         <div className="min-w-0">
           <h1 className="theater-title">{title}</h1>
           {runtime ? <p className="theater-runtime">{runtime}</p> : null}
         </div>
-        <a href={api.brainMasterUrl(projectId)} download className="btn btn-secondary">
+        <a href={api.brainMasterUrl(projectId)} download className="theater-save">
           Save film
         </a>
       </div>
@@ -166,7 +176,7 @@ export function Watch() {
   const makingLine = (liveComfy?.active && liveComfy.title) || brain?.label || 'Making your movie'
 
   return (
-    <div className="page">
+    <div className="screening">
       <FailNote error={err} />
 
       {brain?.master ? (
@@ -211,21 +221,17 @@ export function Watch() {
       )}
 
       {sceneClips.length ? (
-        <div>
-          <h2 className="text-[15px] text-ghost mb-3">Scenes</h2>
-          <ul className="scene-grid">
-            {sceneClips.map((c, i) => (
-              <SceneCard
-                key={c.id}
-                clip={c}
-                projectId={projectId}
-                t2v={t2v}
-                index={i}
-                live={running && brain?.currentClip === c.id}
-              />
-            ))}
-          </ul>
-        </div>
+        <ol className="workprint" aria-label="Workprint">
+          {sceneClips.map((c, i) => (
+            <WorkprintFrame
+              key={c.id}
+              clip={c}
+              t2v={t2v}
+              index={i}
+              live={running && brain?.currentClip === c.id}
+            />
+          ))}
+        </ol>
       ) : null}
     </div>
   )
