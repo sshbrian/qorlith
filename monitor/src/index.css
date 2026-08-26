@@ -212,7 +212,8 @@ select {
   background: #000;
 }
 
-.graph-thumbs img {
+.graph-thumbs img,
+.graph-thumbs video {
   display: block;
   width: 24px;
   height: 16px;

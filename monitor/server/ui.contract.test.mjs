@@ -267,6 +267,9 @@ describe('UI contract — brain is shipped', () => {
     assert.match(page('Brain.tsx'), /if \(!t2v\) navigate/)
     assert.match(graph, /Open the MiniMax workflow/)
     assert.match(graph, /Straight to video — no stills/)
+    assert.match(graph, /thumb\.kind === 'video'/)
+    assert.match(graph, /<video src=\{api\.mediaUrl\(thumb\.src\)\}/)
+    assert.match(spec, /t2v && nodeId === 'stills'/)
   })
 })
 

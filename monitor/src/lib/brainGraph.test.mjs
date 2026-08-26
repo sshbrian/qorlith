@@ -395,6 +395,20 @@ describe('brain graph — step internals', () => {
     assert.equal(t2v[0].src, '/only.mp4')
     assert.equal(t2v[0].kind, 'video')
     assert.equal(nodeThumbs('stills', { clips: [{ id: 'S01', video: '/only.mp4' }] }).length, 0)
+    assert.equal(
+      nodeThumbs('video', {
+        videoMode: 't2v',
+        clips: [{ id: 'S02', still: '/video/S02_from_prev.png' }],
+      }).length,
+      0,
+    )
+    assert.equal(
+      nodeThumbs('stills', {
+        videoMode: 't2v',
+        clips: [{ id: 'S01', still: '/a.png', video: '/a.mp4' }],
+      }).length,
+      0,
+    )
     const ticks = spliceTicks({ clips, currentClip: 'S02', step: 'video' })
     assert.deepEqual(
       ticks.map((t) => [t.id, t.ready, t.live]),

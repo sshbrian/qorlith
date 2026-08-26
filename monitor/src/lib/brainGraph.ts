@@ -200,13 +200,17 @@ export type GraphThumb = {
 
 export function nodeThumbs(
   nodeId: string,
-  report: Pick<BrainReport, 'clips' | 'currentClip' | 'step'>,
+  report: Pick<BrainReport, 'clips' | 'currentClip' | 'step' | 'videoMode'>,
 ): GraphThumb[] {
   if (nodeId !== 'stills' && nodeId !== 'video') return []
+  const t2v = report.videoMode === 't2v'
+  if (t2v && nodeId === 'stills') return []
   const out: GraphThumb[] = []
   for (const clip of report.clips || []) {
     const src =
-      nodeId === 'video' ? clip.video || clip.pick || clip.still : clip.pick || clip.still
+      nodeId === 'video'
+        ? clip.video || (t2v ? null : clip.pick || clip.still)
+        : clip.pick || clip.still
     if (!src) continue
     out.push({
       id: clip.id,

@@ -224,13 +224,11 @@ function Tile({
         <span className="graph-thumbs">
           {thumbs.slice(0, 4).map((thumb) => (
             <span key={thumb.id} className={thumb.live ? 'is-live' : undefined}>
-              <img
-                src={api.mediaUrl(thumb.src)}
-                alt=""
-                width={24}
-                height={16}
-                decoding="async"
-              />
+              {thumb.kind === 'video' ? (
+                <video src={api.mediaUrl(thumb.src)} muted playsInline preload="metadata" />
+              ) : (
+                <img src={api.mediaUrl(thumb.src)} alt="" width={24} height={16} decoding="async" />
+              )}
               {thumb.kind === 'video' ? <span className="graph-thumb-play" /> : null}
             </span>
           ))}
