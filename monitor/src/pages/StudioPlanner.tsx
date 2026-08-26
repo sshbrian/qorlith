@@ -145,8 +145,8 @@ function PlanVisual({ plan }: { plan: StudioMoviePlan }) {
                 <h2 className="text-[20px] font-semibold tracking-tight">{selected.title}</h2>
                 <div className="text-[13px] text-ghost mt-0.5">{selected.id}</div>
               </div>
-              <Field label="Still" value={selected.stillBrief} />
-              <Field label="Motion" value={selected.motionBrief} />
+              {videoMode === 't2v' ? null : <Field label="Still" value={selected.stillBrief} />}
+              <Field label={videoMode === 't2v' ? 'Scene' : 'Motion'} value={selected.motionBrief} />
               <Field label="Dialogue" value={selected.dialogue} />
               <Field label="Sound" value={selected.soundscape} />
               <Field label="Music" value={selected.musicNote} />

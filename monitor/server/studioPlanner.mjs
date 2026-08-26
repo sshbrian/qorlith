@@ -198,6 +198,7 @@ const WIDE_FRAME_RE =
 
 /** S01 must keep a readable face. Action stills go medium-wide, talk stills go closer. */
 export function ensureLeadFaceFraming(plan, warnings = []) {
+  if (normalizeVideoMode(plan?.videoMode) === 't2v') return plan
   const first = Array.isArray(plan?.clips) ? plan.clips[0] : null
   if (!first) return plan
   let brief = String(first.stillBrief || '')

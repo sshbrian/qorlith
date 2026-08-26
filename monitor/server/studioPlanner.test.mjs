@@ -246,6 +246,12 @@ describe('studioPlanner', () => {
     ensureLeadFaceFraming(already, [])
     assert.equal(already.clips[0].stillBrief.startsWith('medium close-up'), true)
     assert.doesNotMatch(already.clips[0].stillBrief, /medium close-up, face clearly visible, looking toward camera, medium close-up/)
+    const t2v = {
+      videoMode: 't2v',
+      clips: [{ id: 'S01', stillBrief: 'rain-wet rooftop' }],
+    }
+    ensureLeadFaceFraming(t2v, [])
+    assert.equal(t2v.clips[0].stillBrief, 'rain-wet rooftop')
   })
 
   it('CORE_PLANNER_RULES asks for a face-visible first still', () => {
