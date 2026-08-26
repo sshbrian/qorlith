@@ -26,7 +26,7 @@ export function StudioHome() {
     try {
       const r = await api.studioFilm({ prompt: text, videoMode })
       await refreshProjects()
-      navigate(`/studio/${encodeURIComponent(r.projectId)}/make`)
+      navigate(`/studio/${encodeURIComponent(r.projectId)}/make`, { viewTransition: true })
     } catch (e) {
       setErr(e)
     } finally {
@@ -105,7 +105,9 @@ export function StudioHome() {
                   coverKind={p.coverKind}
                   live={p.active}
                   meta={p.active ? 'Making now' : p.clipCount ? `${p.clipCount} clips` : 'Draft'}
-                  onClick={() => navigate(projectPath(p.id, canonicalStage(p.stage) || 'watch'))}
+                  onClick={() =>
+                    navigate(projectPath(p.id, canonicalStage(p.stage) || 'watch'), { viewTransition: true })
+                  }
                 />
               </li>
             ))}

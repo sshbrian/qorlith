@@ -120,6 +120,10 @@ function LayoutBody({
   const t2v = brain?.videoMode === 't2v' || current?.videoMode === 't2v'
   const stages = t2v ? STAGES.filter((s) => s.id !== 'board') : STAGES
 
+  const walk = (to: string | { pathname: string; search?: string }, opts: { replace?: boolean } = {}) => {
+    navigate(to, { viewTransition: true, ...opts })
+  }
+
   useEffect(() => {
     if (projectId) writeLastProject(projectId)
   }, [projectId])
@@ -130,7 +134,7 @@ function LayoutBody({
 
   useEffect(() => {
     if (!t2v || stage !== 'board' || !projectId) return
-    navigate(projectPath(projectId, 'make'), { replace: true })
+    walk(projectPath(projectId, 'make'), { replace: true })
   }, [t2v, stage, projectId, navigate])
 
   useEffect(() => {
@@ -149,13 +153,13 @@ function LayoutBody({
 
   useEffect(() => {
     if (area !== 'studio' || !projectId || stage) return
-    navigate(projectPath(projectId, canonicalStage(current?.stage) || 'plan'), { replace: true })
+    walk(projectPath(projectId, canonicalStage(current?.stage) || 'plan'), { replace: true })
   }, [area, projectId, stage, current?.stage, navigate])
 
   const openProject = (id: string, nextStage?: StudioStage) => {
     writeLastProject(id)
     const hit = projects.find((p) => p.id === id)
-    navigate(projectPath(id, nextStage || canonicalStage(hit?.stage) || 'plan'))
+    walk(projectPath(id, nextStage || canonicalStage(hit?.stage) || 'plan'))
   }
 
   const toggleRail = () => {
@@ -172,12 +176,12 @@ function LayoutBody({
     if (hadPanel) next.delete('panel')
     if (location.pathname === '/settings') {
       const last = projectId || readLastProject()
-      navigate(last ? projectPath(last) : '/studio', { replace: true })
+      walk(last ? projectPath(last) : '/studio', { replace: true })
       return
     }
     if (hadPanel) {
       const search = next.toString()
-      navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true })
+      walk({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true })
     }
   }
 
@@ -196,7 +200,7 @@ function LayoutBody({
       setOverlay(null)
       setCreateErr(null)
       await refreshProjects()
-      navigate(projectPath(r.project.id, 'plan'))
+      walk(projectPath(r.project.id, 'plan'))
     } catch (e) {
       setCreateErr(e)
     } finally {
@@ -223,7 +227,7 @@ function LayoutBody({
       setNewVideoMode('stills')
       setOverlay(null)
       await refreshProjects()
-      navigate(projectPath(r.projectId, 'make'))
+      walk(projectPath(r.projectId, 'make'))
     } catch (e) {
       setCreateErr(e)
     } finally {
@@ -240,7 +244,7 @@ function LayoutBody({
       setArchiveOpen(false)
       clearLastProject(current.id)
       await refreshProjects()
-      navigate('/archive')
+      walk('/archive')
     } catch (e) {
       setArchiveErr(e)
     } finally {
@@ -269,7 +273,7 @@ function LayoutBody({
           <div className={['flex items-center gap-2.5 px-3 pt-4 pb-3', railCollapsed ? 'justify-center' : ''].join(' ')}>
             <button
               type="button"
-              onClick={() => navigate('/studio')}
+              onClick={() => walk('/studio')}
               className="h-8 w-8 shrink-0 rounded-[9px] overflow-hidden bg-void ring-1 ring-white/[0.08] hover:ring-white/[0.16]"
               title="Qorlith"
             >
@@ -370,6 +374,7 @@ function LayoutBody({
 
           <div className="border-t border-white/[0.06] p-2 space-y-0.5">
             <NavLink
+              viewTransition
               to="/archive"
               className={({ isActive }) =>
                 [
@@ -384,6 +389,7 @@ function LayoutBody({
               {!railCollapsed ? <span>Archive</span> : null}
             </NavLink>
             <NavLink
+              viewTransition
               to="/media"
               className={({ isActive }) =>
                 [
@@ -398,6 +404,7 @@ function LayoutBody({
               {!railCollapsed ? <span>All media</span> : null}
             </NavLink>
             <NavLink
+              viewTransition
               to="/train"
               className={({ isActive }) =>
                 [
@@ -456,7 +463,7 @@ function LayoutBody({
                     type="button"
                     role="tab"
                     aria-selected={stage === s.id}
-                    onClick={() => projectId && navigate(projectPath(projectId, s.id))}
+                    onClick={() => projectId && walk(projectPath(projectId, s.id))}
                     className="seg-item"
                   >
                     {s.label}
@@ -505,6 +512,8 @@ function LayoutBody({
                       ? 'studio-scroll-body table-shell mx-auto w-full max-w-[1240px] px-6 py-6 lg:px-10 lg:py-8'
                       : location.pathname === '/studio'
                       ? 'studio-scroll-body lobby-shell mx-auto w-full max-w-[1240px] px-6 py-8 lg:px-12 lg:py-10'
+                      : stage === 'plan' || stage === 'make'
+                        ? 'studio-scroll-body room-shell mx-auto w-full max-w-[1080px] px-6 py-7 lg:px-10 lg:py-8'
                       : 'studio-scroll-body mx-auto w-full max-w-[980px] px-8 py-8 lg:px-10 lg:py-10'
               }
             >

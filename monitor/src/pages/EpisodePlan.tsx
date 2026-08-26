@@ -117,7 +117,7 @@ export function EpisodePlan() {
           <div className="table-glow" />
           <p className="set-call">The glass is empty. Write the story, then come back for the cut.</p>
           {projectId ? (
-            <Link to={`/studio/${encodeURIComponent(projectId)}/plan`} className="btn btn-primary btn-xl mt-6">
+            <Link viewTransition to={`/studio/${encodeURIComponent(projectId)}/plan`} className="btn btn-primary btn-xl mt-6">
               Open Plan
             </Link>
           ) : null}
@@ -137,7 +137,7 @@ export function EpisodePlan() {
           Choose the frame for the cut. {picked} of {data.scenes.length} pinned.
         </p>
         {projectId ? (
-          <Link to={`/studio/${encodeURIComponent(projectId)}/make`} className="theater-save">
+          <Link viewTransition to={`/studio/${encodeURIComponent(projectId)}/make`} className="theater-save">
             Back to the set
           </Link>
         ) : null}

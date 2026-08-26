@@ -104,7 +104,7 @@ export function Brain() {
     if (!sawLive.current || sentWatch.current) return
     sentWatch.current = true
     sawLive.current = false
-    navigate(`/studio/${encodeURIComponent(projectId)}/watch`)
+    navigate(`/studio/${encodeURIComponent(projectId)}/watch`, { viewTransition: true })
   }, [projectId, running, report.status, report.master, navigate])
 
   if (!projectId) {
@@ -118,8 +118,8 @@ export function Brain() {
       if (!t2v) setSheet('stills')
     } else if (id === 'video') setSheet('video')
     else if (id === 'face_qa') {
-      if (!t2v) navigate(`/studio/${encodeURIComponent(projectId)}/board`)
-    } else if (id === 'finish') navigate(`/studio/${encodeURIComponent(projectId)}/watch`)
+      if (!t2v) navigate(`/studio/${encodeURIComponent(projectId)}/board`, { viewTransition: true })
+    } else if (id === 'finish') navigate(`/studio/${encodeURIComponent(projectId)}/watch`, { viewTransition: true })
   }
   const steps = t2v
     ? (report.steps || []).filter((s) => s.id !== 'stills' && s.id !== 'face_qa')
@@ -159,7 +159,7 @@ export function Brain() {
 
       <div className="set-hands">
         {hasMaster && !running ? (
-          <Link to={`/studio/${encodeURIComponent(projectId)}/watch`} className="btn btn-primary">
+          <Link viewTransition to={`/studio/${encodeURIComponent(projectId)}/watch`} className="btn btn-primary">
             Watch
           </Link>
         ) : null}
@@ -227,7 +227,7 @@ export function Brain() {
       {report.status === 'face_qa' && !report.reviewOk && !t2v ? (
         <p className="set-board">
           Waiting on the board.{' '}
-          <Link to={`/studio/${encodeURIComponent(projectId)}/board`} className="text-cyan hover:underline">
+          <Link viewTransition to={`/studio/${encodeURIComponent(projectId)}/board`} className="text-cyan hover:underline">
             Set picks
           </Link>
           , then press Continue.
@@ -263,6 +263,7 @@ export function Brain() {
 
       {hasMaster && !running ? (
         <Link
+          viewTransition
           to={`/studio/${encodeURIComponent(projectId)}/watch`}
           className="set-print"
           title="Watch the film"

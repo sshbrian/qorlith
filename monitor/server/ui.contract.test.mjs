@@ -195,6 +195,9 @@ describe('UI contract — stages, not tools', () => {
     assert.match(page('Archive.tsx'), /CoverThumb/)
     assert.match(read(path.join(src, 'components', 'Layout.tsx')), /CoverThumb/)
     assert.match(read(path.join(src, 'components', 'Layout.tsx')), /preferBrainComfy/)
+    assert.match(read(path.join(src, 'components', 'Layout.tsx')), /viewTransition: true/)
+    assert.match(read(path.join(src, 'index.css')), /view-transition-name: title-card/)
+    assert.match(read(path.join(src, 'index.css')), /view-transition-name: picture/)
   })
 
   it('Home and Plan share the same prompt chips', () => {

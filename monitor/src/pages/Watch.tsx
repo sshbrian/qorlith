@@ -213,7 +213,7 @@ export function Watch() {
             {sceneClips.length && runtime ? (
               <p className="theater-runtime mt-2">{runtime} planned</p>
             ) : null}
-            <Link to={makeHref} className="btn btn-primary btn-xl mt-6">
+            <Link viewTransition to={makeHref} className="btn btn-primary btn-xl mt-6">
               Make movie
             </Link>
           </div>
