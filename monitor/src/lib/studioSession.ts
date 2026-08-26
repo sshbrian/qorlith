@@ -67,6 +67,15 @@ export function projectsFingerprint(list: StudioProject[] | null | undefined): s
     .join(';')
 }
 
+/** Prefer the Brain-named Comfy view (Making S01) over the raw Animating the clip feed. */
+export function preferBrainComfy(
+  brain: Pick<BrainReport, 'comfy' | 'running'> | null | undefined,
+  comfy: ComfyProgressView | null | undefined,
+): ComfyProgressView | null | undefined {
+  if (brain?.comfy && (brain.comfy.active || brain.running)) return brain.comfy
+  return comfy
+}
+
 export function idleBrainReport(projectId: string, extra: { videoMode?: string } = {}): BrainReport {
   return {
     projectId,

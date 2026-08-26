@@ -7,7 +7,7 @@ import { StoryboardModal } from '../components/StoryboardModal'
 import { WorkflowModal } from '../components/WorkflowModal'
 import { useStudioLive, useStudioSession } from '../components/StudioSession'
 import { api, type BrainClip, type BrainStep } from '../lib/api'
-import { idleBrainReport, runIsLive } from '../lib/studioSession'
+import { idleBrainReport, preferBrainComfy, runIsLive } from '../lib/studioSession'
 import { clipPoster } from '../lib/studio'
 
 function StepNode({ step }: { step: BrainStep }) {
@@ -35,10 +35,11 @@ function StepNode({ step }: { step: BrainStep }) {
 
 function BrainProgress({ armed }: { armed: boolean }) {
   const { comfy } = useStudioLive()
+  const { brain } = useStudioSession()
   if (!armed) return null
   return (
     <div className="progress-slot is-armed">
-      <ComfyProgress progress={comfy} hold />
+      <ComfyProgress progress={preferBrainComfy(brain, comfy)} hold />
     </div>
   )
 }

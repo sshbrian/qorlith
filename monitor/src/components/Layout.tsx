@@ -8,7 +8,7 @@ import { ArchiveProjectDialog } from './ArchiveProjectDialog'
 import { StudioSessionProvider, useStudioLive, useStudioProjects, useStudioSession } from './StudioSession'
 import { ComfyProgress } from './ComfyProgress'
 import { api } from '../lib/api'
-import { runIsLive } from '../lib/studioSession'
+import { preferBrainComfy, runIsLive } from '../lib/studioSession'
 import {
   areaFromPath,
   canonicalStage,
@@ -40,7 +40,11 @@ function HeaderMeters() {
   const { comfy, comfyOk } = useStudioLive()
   return (
     <>
-      <ComfyProgress progress={comfy} compact hold={Boolean(comfy?.active) || runIsLive(brain)} />
+      <ComfyProgress
+        progress={preferBrainComfy(brain, comfy)}
+        compact
+        hold={Boolean(comfy?.active) || runIsLive(brain)}
+      />
       <span className="hidden sm:flex items-center">
         <PulseDot ok={comfyOk} title={comfyOk ? 'Renderer online' : 'Renderer offline'} />
       </span>

@@ -156,6 +156,7 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /more && !t2v/)
     assert.match(t, /Pictures only/)
     assert.match(t, /clipPoster/)
+    assert.match(t, /preferBrainComfy/)
     assert.match(t, /currentClip === c\.id \? 'Now'/)
   })
 
@@ -166,6 +167,7 @@ describe('UI contract — stages, not tools', () => {
     assert.match(page('StudioHome.tsx'), /coverKind/)
     assert.match(page('Archive.tsx'), /CoverThumb/)
     assert.match(read(path.join(src, 'components', 'Layout.tsx')), /CoverThumb/)
+    assert.match(read(path.join(src, 'components', 'Layout.tsx')), /preferBrainComfy/)
   })
 
   it('Home and Plan share the same prompt chips', () => {
@@ -216,6 +218,7 @@ describe('UI contract — brain is shipped', () => {
     assert.match(t, /The film is not made yet/)
     assert.match(t, /clipJoinNote/)
     assert.match(t, /clipPoster/)
+    assert.match(t, /preferBrainComfy/)
     assert.match(t, /sceneClips/)
     assert.match(t, /Making now/)
     assert.match(t, /clips\.filter\(\(c\) => c\.id\)/)

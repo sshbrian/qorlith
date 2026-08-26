@@ -4,7 +4,7 @@ import { FailNote } from '../components/FailNote'
 import { useStudioLive, useStudioProjects, useStudioSession } from '../components/StudioSession'
 import { api, type BrainClip } from '../lib/api'
 import { clipJoinNote, clipPoster } from '../lib/studio'
-import { runIsLive } from '../lib/studioSession'
+import { preferBrainComfy, runIsLive } from '../lib/studioSession'
 
 function formatRuntime(clips: BrainClip[]) {
   const sec = clips.reduce((n, c) => n + (Number(c.durationSec) || 0), 0)
@@ -152,6 +152,7 @@ export function Watch() {
   const t2v = brain?.videoMode === 't2v' || current?.videoMode === 't2v'
   const makingPoster = clips.map((c) => clipPoster(c, t2v ? 't2v' : 'stills')).find(Boolean) || null
   const sceneClips = clips.filter((c) => c.id)
+  const liveComfy = preferBrainComfy(brain, comfy)
 
   if (!projectId) {
     return <p className="text-[15px] text-ghost">Open a project to watch the film.</p>
@@ -161,8 +162,8 @@ export function Watch() {
   const title = brain?.title || current?.title || projectId
   const runtime = formatRuntime(clips)
   const makeHref = `/studio/${encodeURIComponent(projectId)}/make`
-  const percent = comfy?.percent
-  const makingLine = (comfy?.active && comfy.title) || brain?.label || 'Making your movie'
+  const percent = liveComfy?.percent
+  const makingLine = (liveComfy?.active && liveComfy.title) || brain?.label || 'Making your movie'
 
   return (
     <div className="page">

@@ -4,6 +4,7 @@ import {
   brainFingerprint,
   comfyFingerprint,
   idleBrainReport,
+  preferBrainComfy,
   projectsFingerprint,
   runIsLive,
 } from './studioSession.ts'
@@ -91,6 +92,14 @@ describe('studio session fingerprints', () => {
     assert.notEqual(projectsFingerprint([p]), projectsFingerprint([{ ...p, active: false }]))
     assert.notEqual(projectsFingerprint([p]), projectsFingerprint([{ ...p, videoMode: 't2v' }]))
     assert.notEqual(projectsFingerprint([p]), projectsFingerprint([{ ...p, coverKind: 'video' }]))
+  })
+
+  it('preferBrainComfy uses the named clip title while Brain is live', () => {
+    const named = { active: true, title: 'Making Open', kind: 'video' }
+    const raw = { active: true, title: 'Animating the clip', kind: 'video' }
+    assert.equal(preferBrainComfy({ running: true, comfy: named }, raw).title, 'Making Open')
+    assert.equal(preferBrainComfy({ running: false, comfy: null }, raw).title, 'Animating the clip')
+    assert.equal(preferBrainComfy(null, raw).title, 'Animating the clip')
   })
 
   it('idle report is a stable empty document', () => {
