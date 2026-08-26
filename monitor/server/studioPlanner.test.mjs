@@ -386,6 +386,8 @@ describe('studioPlanner', () => {
     assert.match(p, /motionBrief names the explicit act/)
     assert.match(p, /Continue I2VA: camera \+ body action only/)
     assert.match(p, /motionBrief \(continue\): The camera VERB/)
+    assert.match(p, /"videoMode": "t2v"/)
+    assert.match(p, /short location only/)
   })
 
   it('planPaths uses lookTrack folders', () => {

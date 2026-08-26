@@ -150,8 +150,8 @@ export function mountStudio(app) {
 
   app.get(
     '/api/studio/planner',
-    wrap(async (_req, res) => {
-      res.json({ ok: true, ...plannerSpec() })
+    wrap(async (req, res) => {
+      res.json({ ok: true, ...plannerSpec({ videoMode: req.query?.videoMode }) })
     }),
   )
 

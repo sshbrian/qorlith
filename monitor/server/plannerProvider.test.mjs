@@ -70,8 +70,16 @@ describe('imported movie plans', () => {
   it('plannerSpec exposes schema for Grok bots', () => {
     const spec = plannerSpec()
     assert.equal(typeof spec.system, 'string')
+    assert.equal(spec.videoMode, 'stills')
     assert.match(spec.schema, /stillBrief/)
+    assert.match(spec.schema, /"videoMode": "stills"/)
     assert.match(spec.howTo, /\/api\/studio\/plan/)
+    const t2v = plannerSpec({ videoMode: 't2v' })
+    assert.equal(t2v.videoMode, 't2v')
+    assert.match(t2v.system, /Straight to video MiniMax H3 T2VA/)
+    assert.match(t2v.schema, /"videoMode": "t2v"/)
+    assert.match(t2v.howTo, /videoMode: "t2v"/)
+    assert.doesNotMatch(t2v.system, /Stills-first: each clip is \(1\) one SDXL/)
   })
 })
 

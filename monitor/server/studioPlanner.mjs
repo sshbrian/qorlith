@@ -225,13 +225,16 @@ export function plannerCoreRules(videoMode) {
   return normalizeVideoMode(videoMode) === 't2v' ? T2V_PLANNER_RULES : CORE_PLANNER_RULES
 }
 
-export const PLAN_JSON_SCHEMA = `{
+export function planJsonSchema(videoMode) {
+  const t2v = normalizeVideoMode(videoMode) === 't2v'
+  return `{
   "projectId": "snake_case_id",
   "title": "Human title",
   "logline": "one sentence",
   "rating": "R|X|PG-13|G",
   "durationTargetSec": 30,
   "lookTrack": "live" | "anime",
+  "videoMode": "${t2v ? 't2v' : 'stills'}",
   "song": "short music label",
   "musicPalette": "instruments + tempo + dynamics for MiniMax non_diegetic_music",
   "characters": [{ "id": "S1", "name": "", "look": "visual lock", "voice": "frozen voice lock" }],
@@ -246,14 +249,17 @@ export const PLAN_JSON_SCHEMA = `{
     "cut": false,
     "gun_risk": false,
     "sexy": false,
-    "stillBrief": "frozen start-frame prompt body (no motion, no score tags)",
-    "motionBrief": "camera + body action only",
+    "stillBrief": "${t2v ? 'short location only' : 'frozen start-frame prompt body (no motion, no score tags)'}",
+    "motionBrief": "${t2v ? 'T2VA full scene on S01/cut; continue I2VA camera + action only' : 'camera + body action only'}",
     "dialogue": "H3 spoken line or empty",
     "soundscape": "1-4 diegetic sentences or N/A",
     "musicNote": "instruments + tempo + dynamics, or N/A"
   }],
   "markdown": "short production notes: defaults assumed, clip math, risks"
 }`
+}
+
+export const PLAN_JSON_SCHEMA = planJsonSchema('stills')
 
 export function buildMoviePlanSystemPrompt(extra = {}) {
   const system = String(extra.system || '').trim()
@@ -272,7 +278,7 @@ ${plannerCoreRules(extra.videoMode)}
 
 CRITICAL OUTPUT
 - JSON only, matching this schema:
-${PLAN_JSON_SCHEMA}
+${planJsonSchema(extra.videoMode)}
 - Each clip durationSec MUST be 6–15 (max 15). Continue (cut=false) takes MUST be ≥10. cut defaults to false.
 - stillBrief ≤ 800 characters. motionBrief ≤ 800 characters.
 - Adults only.
@@ -783,22 +789,27 @@ export function dryRunMoviePlan(userPrompt, extra = {}) {
   return draftMoviePlanFromPrompt(userPrompt, { reason: 'dry-run', ...extra })
 }
 
-export function plannerSpec() {
+export function plannerSpec({ videoMode } = {}) {
   const studio = loadStudio()
   const resolved = resolvePlanner(studio.planner)
+  const mode = normalizeVideoMode(videoMode)
   return {
     provider: resolved.provider,
     url: resolved.url,
     model: resolved.model || null,
     local: resolved.local,
+    videoMode: mode,
     system: buildMoviePlanSystemPrompt({
       system: studio.planner.system,
       style: studio.planner.style,
+      videoMode: mode,
     }),
-    userTemplate: buildPlanUserMessage('YOUR PROMPT HERE'),
-    schema: PLAN_JSON_SCHEMA,
+    userTemplate: buildPlanUserMessage('YOUR PROMPT HERE', { videoMode: mode }),
+    schema: planJsonSchema(mode),
     howTo:
-      'POST /api/studio/plan with { prompt, plan } to skip the LLM, or POST /api/studio/film for one-click stills+video. GET this spec, write JSON matching the schema, then POST it back.',
+      mode === 't2v'
+        ? 'POST /api/studio/plan with { prompt, videoMode: "t2v" } or POST /api/studio/film for one-click Straight to video. GET this spec with ?videoMode=t2v, write JSON matching the schema, then POST it back.'
+        : 'POST /api/studio/plan with { prompt, plan } to skip the LLM, or POST /api/studio/film for one-click stills+video. GET this spec, write JSON matching the schema, then POST it back.',
   }
 }
 
