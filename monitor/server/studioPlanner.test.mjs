@@ -52,6 +52,7 @@ describe('studioPlanner', () => {
       assert.match(rules, /1–4 English sentences/)
       assert.match(rules, /every musicNote is N\/A/)
       assert.match(rules, /Hard max 15/)
+      assert.match(rules, /Camera as prose/)
     }
     assert.match(CORE_PLANNER_RULES, /Stills-first: each clip is/)
     assert.match(T2V_PLANNER_RULES, /Straight to video: each clip is/)

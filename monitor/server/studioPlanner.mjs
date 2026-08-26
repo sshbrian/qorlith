@@ -85,6 +85,10 @@ const PLANNER_DURATION = `DURATION
 - A 24 s beat is 12+12, not 3×8. A 20 s continue chain is 10+10, not 12+8.
 - sum(durationSec) must match durationTargetSec (off by at most 1 second).`
 
+const PLANNER_CAMERA_PROSE = `- Camera as prose: motion type + optional amplitude + optional speed.
+  Verbs: push in, pull out, pan left/right, truck left/right, tilt up/down, pedestal, arc, tracking, static, POV, shake slightly/strongly, roll.
+  Amplitude: with small amplitude / with large amplitude. Speed: at slow speed / at fast speed. Omit medium.`
+
 const PLANNER_SHARED_TAIL = `${PLANNER_DIALOGUE}
 
 ${PLANNER_SOUNDSCAPE}
@@ -132,9 +136,7 @@ MOTION BRIEF = MiniMax H3 I2VA motion only
 S01 and cut=true: the start still IS frame 0. Continue (cut=false, not S01): the previous last frame IS frame 0. The app wraps I2VA + style + identity lock. You write only what CHANGES.
 - Path: action onset → continuous development → result/reaction. The app holds the first frame for about one second, then your motion, then ~2 s settle on continue takes.
 - Do not write the hold or the settle yourself. Do not walk the subject into frame from off-screen — they are already in the first frame.
-- Camera as prose: motion type + optional amplitude + optional speed.
-  Verbs: push in, pull out, pan left/right, truck left/right, tilt up/down, pedestal, arc, tracking, static, POV, shake slightly/strongly, roll.
-  Amplitude: with small amplitude / with large amplitude. Speed: at slow speed / at fast speed. Omit medium.
+${PLANNER_CAMERA_PROSE}
 - Keep identity, costume, colors, props, and space consistent with the first frame.
 - Do NOT re-describe wardrobe or the set. Do NOT use Wan "At 0 seconds / At 1 second" beat lists. Do NOT name video models or LoRAs.
 - Do NOT write [Shot 1] — the app wraps I2VA + style + identity lock. Prefer one continuous shot. If you must cut inside a take: "the camera cuts to".
@@ -177,9 +179,7 @@ S01 and cut=true are T2VA (no Picture 1). Continue (cut=false, not S01) is I2VA 
 - T2VA (S01 / cut=true): the FULL MiniMax T2VA scene. Open with "a medium-wide shot frames LOCATION." Then who, action, camera. Include the lead's appearance unless a house lock already did. Do NOT write Picture 1 or [Shot 1].
 - Continue I2VA: camera + body action only AFTER the hold. Do NOT reopen the shot ("a medium-wide shot frames"). Do NOT re-describe wardrobe, hair, or the lead look — they are already in the last frame.
 - Path: action onset → continuous development → result/reaction. Do not write the continue hold or settle yourself.
-- Camera as prose: motion type + optional amplitude + optional speed.
-  Verbs: push in, pull out, pan left/right, truck left/right, tilt up/down, pedestal, arc, tracking, static, POV, shake slightly/strongly, roll.
-  Amplitude: with small amplitude / with large amplitude. Speed: at slow speed / at fast speed. Omit medium.
+${PLANNER_CAMERA_PROSE}
 - Do NOT write SDXL tags, Wan "At 0 seconds" beat lists, or video model names.
 - Prefer one continuous shot. If you must cut inside a take: "the camera cuts to".
 

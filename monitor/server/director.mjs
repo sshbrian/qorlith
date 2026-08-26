@@ -872,11 +872,13 @@ Convert free-form intent into a STRICT JSON plan. No start still is painted. mot
 Convert free-form intent into a STRICT JSON plan. The previous last frame IS frame 0. The app wraps I2VA + style + identity lock. You write only what CHANGES.`
       : `You are Qorlith Video Director for MiniMax H3 image-to-video-audio.
 Convert free-form intent into a STRICT JSON plan. The start still IS frame 0. The app wraps I2VA + style + identity lock. You write only what CHANGES.`
+  const cameraRule =
+    '4. Camera as prose: push in / pull out / pan / truck / tilt / tracking / static / shake slightly, plus optional "with small amplitude" / "at slow speed".'
   const motionRule = openT2v
     ? `3. motion is a medium-wide T2VA scene. Open with "a medium-wide shot frames LOCATION." Then who, action, camera. Include the lead's appearance. Do not write Picture 1 or [Shot 1].
-4. Camera as prose: push in / pull out / pan / truck / tilt / tracking / static / shake slightly, plus optional "with small amplitude" / "at slow speed".`
+${cameraRule}`
     : `3. motion is camera + body action only. Do not rename models or LoRAs. Do not write [Shot 1].
-4. Camera as prose: push in / pull out / pan / truck / tilt / tracking / static / shake slightly, plus optional "with small amplitude" / "at slow speed".`
+${cameraRule}`
   const motionSchema = openT2v
     ? 'medium-wide T2VA scene (who, place, action, camera)'
     : 'camera + body action only'
