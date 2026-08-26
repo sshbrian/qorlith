@@ -222,7 +222,7 @@ export function mountStudio(app) {
     wrap(async (req, res) => {
       const title = String(req.body?.title || '').trim()
       const prompt = String(req.body?.prompt || '').trim()
-      const created = createStudioProject({ title, prompt })
+      const created = createStudioProject({ title, prompt, videoMode: req.body?.videoMode })
       res.status(201).json({ ok: true, ...created })
     }),
   )
@@ -378,6 +378,7 @@ export function mountStudio(app) {
         const created = createStudioProject({
           title: title || 'Untitled project',
           prompt: prompt || String(imported?.logline || ''),
+          videoMode: req.body?.videoMode || imported?.videoMode,
         })
         pinnedId = created.project.id
         existing = created.record

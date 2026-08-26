@@ -55,6 +55,8 @@ describe('UI contract — App routes & nav', () => {
     assert.match(t, /Watch/)
     assert.match(t, /s\.id !== 'board'/)
     assert.match(t, /stage !== 'board'/)
+    assert.match(t, /studioProjectCreate/)
+    assert.match(t, /videoMode: newVideoMode/)
     assert.doesNotMatch(t, /<Director/)
     assert.match(t, /<Outlet/)
     assert.match(t, /StudioSessionProvider/)

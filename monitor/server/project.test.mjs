@@ -27,6 +27,8 @@ const {
   planRecordPath,
   projectDir,
   saveProjectRecord,
+  suggestedStage,
+  syncBoardFromPlan,
 } = await import('./project.mjs')
 const { approvePlan } = await import('./studioPlanner.mjs')
 const { listEpisodePlans } = await import('./episodePlan.mjs')
@@ -49,7 +51,42 @@ describe('project folder', () => {
     const loaded = loadProjectRecord(project.id)
     assert.equal(loaded.userPrompt, 'two adults, alley')
     assert.equal(loaded.plan.title, 'Night Chase')
+    assert.equal(loaded.plan.videoMode, 'stills')
+    assert.equal(project.videoMode, 'stills')
+    assert.equal(project.hasBoard, true)
     assert.equal(record.projectId, 'night_chase')
+  })
+
+  it('T2V create keeps videoMode and skips the empty board', () => {
+    const { project, record } = createStudioProject({
+      title: 'Straight Cut',
+      prompt: 'rooftop, rain, no talking',
+      videoMode: 't2v',
+    })
+    assert.equal(project.videoMode, 't2v')
+    assert.equal(project.hasBoard, false)
+    assert.equal(project.stage, 'plan')
+    assert.equal(record.plan.videoMode, 't2v')
+    const loaded = loadProjectRecord(project.id)
+    assert.equal(loaded.plan.videoMode, 't2v')
+    assert.equal(fs.existsSync(path.join(projectDir(project.id), 'manifest.json')), false)
+    assert.equal(suggestedStage(project), 'plan')
+  })
+
+  it('T2V plan sync does not seed clip scenes on the board', () => {
+    const { project } = createStudioProject({ title: 'No Board Sync', videoMode: 't2v' })
+    const rec = loadProjectRecord(project.id)
+    rec.plan = {
+      ...rec.plan,
+      videoMode: 't2v',
+      clips: [
+        { id: 'S01', title: 'Open', durationSec: 12 },
+        { id: 'S02', title: 'Press', durationSec: 12 },
+      ],
+    }
+    saveProjectRecord(rec)
+    assert.equal(syncBoardFromPlan(rec.plan), null)
+    assert.equal(fs.existsSync(path.join(projectDir(project.id), 'manifest.json')), false)
   })
 
   it('approve seeds a board from plan clips', () => {

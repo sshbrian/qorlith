@@ -623,7 +623,7 @@ export const api = {
       {},
     ),
   brainMasterUrl: (id: string) => `/api/brain/${encodeURIComponent(id)}/master`,
-  studioProjectCreate: (body: { title?: string; prompt?: string }) =>
+  studioProjectCreate: (body: { title?: string; prompt?: string; videoMode?: 'stills' | 't2v' }) =>
     post<{
       ok: boolean
       project: StudioProject

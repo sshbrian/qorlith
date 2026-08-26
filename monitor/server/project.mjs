@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url'
 import { slugifyProjectId } from './ids.mjs'
 import { ensureEpisodePlan, listEpisodePlans } from './episodePlan.mjs'
 import { info as logInfo } from './log.mjs'
+import { normalizeVideoMode } from './studioConfig.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -254,7 +255,7 @@ export function suggestedStage(project) {
     }
   }
   if (project.hasPlan && (project.clipCount || 0) > 0) return 'make'
-  if (project.videoMode === 't2v') return project.hasPlan ? 'make' : 'plan'
+  if (project.videoMode === 't2v') return 'plan'
   if (project.hasBoard && (project.sceneCount || 0) > 0) return 'board'
   return 'plan'
 }
@@ -420,11 +421,13 @@ export function uniqueProjectId(title) {
   return id
 }
 
-export function createStudioProject({ title, prompt } = {}) {
+export function createStudioProject({ title, prompt, videoMode } = {}) {
   const name = String(title || '').trim() || 'Untitled project'
   const id = uniqueProjectId(name)
   const now = new Date().toISOString()
   const userPrompt = String(prompt || '').trim()
+  const mode = normalizeVideoMode(videoMode)
+  const t2v = mode === 't2v'
   const record = {
     projectId: id,
     createdAt: now,
@@ -441,6 +444,7 @@ export function createStudioProject({ title, prompt } = {}) {
       rating: '',
       durationTargetSec: 0,
       lookTrack: 'live',
+      videoMode: mode,
       song: '',
       musicPalette: '',
       characters: [],
@@ -450,8 +454,10 @@ export function createStudioProject({ title, prompt } = {}) {
     },
   }
   saveProjectRecord(record)
-  ensureEpisodePlan(id, { title: name, markdown: record.plan.markdown, scenes: [] })
-  logInfo('project.create', { id, title: name })
+  if (!t2v) {
+    ensureEpisodePlan(id, { title: name, markdown: record.plan.markdown, scenes: [] })
+  }
+  logInfo('project.create', { id, title: name, videoMode: mode })
   return {
     project: {
       id,
@@ -466,10 +472,11 @@ export function createStudioProject({ title, prompt } = {}) {
       produceRegistered: false,
       archived: false,
       hasPlan: true,
-      hasBoard: true,
+      hasBoard: !t2v,
       hasProduce: false,
       updatedAt: now,
       lookTrack: 'live',
+      videoMode: mode,
       stage: 'plan',
     },
     record,
@@ -478,6 +485,7 @@ export function createStudioProject({ title, prompt } = {}) {
 
 export function syncBoardFromPlan(plan) {
   if (!plan?.projectId) return null
+  if (normalizeVideoMode(plan.videoMode) === 't2v') return null
   return ensureEpisodePlan(plan.projectId, {
     title: plan.title,
     markdown: plan.markdown,

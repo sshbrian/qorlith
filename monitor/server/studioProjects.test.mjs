@@ -69,6 +69,18 @@ describe('studioProjects merge', () => {
     )
   })
 
+  it('keeps an empty t2v draft on plan', () => {
+    assert.equal(
+      suggestedStage({
+        hasPlan: true,
+        hasBoard: false,
+        clipCount: 0,
+        videoMode: 't2v',
+      }),
+      'plan',
+    )
+  })
+
   it('never suggests the board for a t2v project', () => {
     assert.equal(
       suggestedStage({

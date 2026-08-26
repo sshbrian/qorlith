@@ -182,9 +182,11 @@ function LayoutBody({
       const r = await api.studioProjectCreate({
         title: newTitle.trim() || 'Untitled project',
         prompt: newPrompt.trim(),
+        videoMode: newVideoMode,
       })
       setNewTitle('')
       setNewPrompt('')
+      setNewVideoMode('stills')
       setOverlay(null)
       setCreateErr(null)
       await refreshProjects()
@@ -212,6 +214,7 @@ function LayoutBody({
       })
       setNewTitle('')
       setNewPrompt('')
+      setNewVideoMode('stills')
       setOverlay(null)
       await refreshProjects()
       navigate(projectPath(r.projectId, 'make'))
