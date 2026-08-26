@@ -149,6 +149,24 @@ describe('MiniMax H3 video plan', () => {
     assert.doesNotMatch(t2v, /Then 2D-animated/)
     assert.equal((t2v.match(/2D-animated/g) || []).length, 1)
     assert.match(t2v, /\[Shot 1\] 2D-animated, a medium-wide shot frames a neon alley/)
+    const t2vLock = composeH3Prompt({
+      motion: 'a medium-wide shot frames a neon alley. The camera holds static as rain falls.',
+      dialogue: '',
+      music: 'N/A',
+      lookTrack: 'anime',
+      t2v: true,
+      characters: [{ id: 'S1', name: 'Motoko', look: 'adult woman, gitsstyl' }],
+    })
+    assert.match(t2vLock, /Motoko/)
+    assert.match(t2vLock, /gitsstyl/)
+    assert.doesNotMatch(t2vLock, /Picture 1/)
+    const already = composeH3Prompt({
+      motion: 'Motoko, adult woman, gitsstyl, a medium-wide shot frames a neon alley.',
+      t2v: true,
+      lookTrack: 'anime',
+      characters: [{ name: 'Motoko', look: 'adult woman, gitsstyl' }],
+    })
+    assert.equal((already.match(/gitsstyl/g) || []).length, 1)
   })
 
   it('composeH3Prompt ignores anime motionPrefix on live and keeps singing', () => {

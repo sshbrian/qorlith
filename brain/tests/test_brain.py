@@ -664,6 +664,17 @@ def test_step_states_mark_current_and_done():
     assert failed[2]["state"] == "fail"
 
 
+def test_step_states_t2v_skips_pictures():
+    steps = step_states("video", "video", video_mode="t2v")
+    assert [s["id"] for s in steps] == ["health", "plan", "video", "free", "finish"]
+    assert steps[2]["state"] == "active"
+    report = public_report(
+        empty_state(project_id="harbor", status="video", step="video", video_mode="t2v")
+    )
+    assert [s["id"] for s in report["steps"]] == ["health", "plan", "video", "free", "finish"]
+    assert "stills" not in {s["id"] for s in report["steps"]}
+
+
 def test_public_report_lists_clip_media():
     report = public_report(
         empty_state(

@@ -55,6 +55,8 @@ const Filmstrip = memo(function Filmstrip({
         <li key={c.id} className={currentClip === c.id ? 'is-live' : ''}>
           {c.still ? (
             <img src={api.mediaUrl(c.still)} alt="" decoding="async" />
+          ) : c.video ? (
+            <video src={api.mediaUrl(c.video)} muted playsInline preload="metadata" />
           ) : (
             <span className="filmstrip-empty" />
           )}
@@ -106,6 +108,10 @@ export function Brain() {
   }
 
   const clips = report.clips || []
+  const t2v = report.videoMode === 't2v'
+  const steps = t2v
+    ? (report.steps || []).filter((s) => s.id !== 'stills' && s.id !== 'face_qa')
+    : report.steps || []
   const canStart = !running && !busy
   const canStop = running && !busy
   const canResume =
@@ -127,7 +133,9 @@ export function Brain() {
             ? 'Making your movie. You can leave this page.'
             : hasMaster
               ? 'The film is ready.'
-              : 'One button. Stills, motion, then the film.'}
+              : t2v
+                ? 'One button. Straight to video, then the film.'
+                : 'One button. Stills, motion, then the film.'}
         </p>
         <div className={`text-[15px] ${statusTone}`}>
           {running ? (
@@ -158,12 +166,14 @@ export function Brain() {
             Stop
           </button>
         ) : null}
-        <button type="button" onClick={() => setMore((v) => !v)} className="btn btn-secondary">
-          {more ? 'Less' : 'More'}
-        </button>
+        {t2v ? null : (
+          <button type="button" onClick={() => setMore((v) => !v)} className="btn btn-secondary">
+            {more ? 'Less' : 'More'}
+          </button>
+        )}
       </div>
 
-      {more ? (
+      {more && !t2v ? (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -201,7 +211,7 @@ export function Brain() {
       {(running || more) && (report.started || (report.steps || []).length) ? (
         <div className="card">
           <div className="flex flex-wrap items-center gap-2" role="list">
-            {(report.steps || []).map((step, i) => (
+            {steps.map((step, i) => (
               <div key={step.id} className="flex items-center gap-2" role="listitem">
                 {i > 0 ? <span className="text-ghost/35 text-xs">→</span> : null}
                 <StepNode step={step} />
@@ -211,7 +221,7 @@ export function Brain() {
           <p className="text-[15px] text-ghost mt-4 min-h-[1.35em]">
             {report.currentClip ? `Now ${report.currentClip}` : '\u00a0'}
           </p>
-          {report.status === 'face_qa' && !report.reviewOk ? (
+          {report.status === 'face_qa' && !report.reviewOk && !t2v ? (
             <p className="text-[17px] text-ghost mt-4">
               Waiting on the board.{' '}
               <Link to={`/studio/${encodeURIComponent(projectId)}/board`} className="text-cyan hover:underline">

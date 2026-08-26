@@ -65,6 +65,18 @@ function countTag(n) {
   return n > 1 ? `${n}girls` : '1girl, solo'
 }
 
+function escapeRegExp(s) {
+  return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function textHasLook(text, look) {
+  const hay = String(text || '').toLowerCase()
+  const l = String(look || '').trim().toLowerCase()
+  if (!l || !hay) return false
+  if (hay.includes(l)) return true
+  return hay.includes(l.slice(0, Math.min(24, l.length)))
+}
+
 export function applyHouseLockToStillBrief(brief, lockLook = '') {
   let s = String(brief || '').trim()
   if (!s) return s
@@ -79,6 +91,29 @@ export function applyHouseLockToStillBrief(brief, lockLook = '') {
   const sceneHit = s.match(SCENE_RE)
   const scene = sceneHit ? s.slice(sceneHit.index).trim() : s
   return `${countTag(n)}, ${look}, ${scene}`.replace(/\s+/g, ' ').trim().slice(0, 800)
+}
+
+/** Natural-language identity for MiniMax T2VA. No SDXL 1girl tags. */
+export function applyHouseLockToMotionBrief(brief, lock = {}) {
+  let s = String(brief || '').trim()
+  const look = String(lock.look || '').trim()
+  const name = String(lock.name || '').trim()
+  if (!look && !name) return s.slice(0, 800)
+  if (textHasLook(s, look)) return s.slice(0, 800)
+  const nameIn = name && new RegExp(`\\b${escapeRegExp(name)}\\b`, 'i').test(s)
+  const who = [!nameIn && name, look].filter(Boolean).join(', ')
+  if (!who) return s.slice(0, 800)
+  if (!s) return who.slice(0, 800)
+  const shot = s.match(/^(a\s+(?:medium-wide|wide|medium close-up|medium|close-up)\b[^.!?]*[.!?])\s*/i)
+  if (shot) {
+    return `${shot[1]} ${who}. ${s.slice(shot[0].length)}`.replace(/\s+/g, ' ').trim().slice(0, 800)
+  }
+  return `${who}. ${s}`.replace(/\s+/g, ' ').trim().slice(0, 800)
+}
+
+function isT2vPlan(plan) {
+  const v = String(plan?.videoMode || plan?.mode || '').trim().toLowerCase()
+  return v === 't2v' || v === 't2va' || v === 'text' || v === 'text-to-video' || v === 'straight'
 }
 
 export function applyHouseLockToPlan(plan, userPrompt, warnings = []) {
@@ -96,13 +131,23 @@ export function applyHouseLockToPlan(plan, userPrompt, warnings = []) {
       warnings.push(`${lead.id || 'S1'}: renamed lead to house lock`)
     }
   }
+  const t2v = isT2vPlan(plan)
   for (const c of plan.clips || []) {
     const before = String(c.stillBrief || '')
-    if (!before.trim()) continue
-    const next = applyHouseLockToStillBrief(before, lock.look)
-    if (next !== before) {
-      c.stillBrief = next
-      warnings.push(`${c.id || 'clip'}: repaired stillBrief for house lock`)
+    if (before.trim()) {
+      const next = applyHouseLockToStillBrief(before, lock.look)
+      if (next !== before) {
+        c.stillBrief = next
+        warnings.push(`${c.id || 'clip'}: repaired stillBrief for house lock`)
+      }
+    }
+    if (t2v) {
+      const beforeM = String(c.motionBrief || '')
+      const nextM = applyHouseLockToMotionBrief(beforeM, lock)
+      if (nextM !== beforeM) {
+        c.motionBrief = nextM
+        warnings.push(`${c.id || 'clip'}: repaired motionBrief for house lock`)
+      }
     }
   }
   return plan

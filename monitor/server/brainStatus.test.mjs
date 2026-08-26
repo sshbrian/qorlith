@@ -22,6 +22,36 @@ describe('brain status view', () => {
     assert.ok(idle.steps.every((s) => s.state === 'idle'))
   })
 
+  it('idle t2v graph skips pictures', () => {
+    const idle = idleBrain('harbor', { videoMode: 't2v' })
+    assert.equal(idle.videoMode, 't2v')
+    assert.deepEqual(
+      idle.steps.map((s) => s.id),
+      ['health', 'plan', 'video', 'free', 'finish'],
+    )
+    const view = viewBrain(
+      {
+        projectId: 'harbor',
+        status: 'video',
+        step: 'video',
+        videoMode: 't2v',
+        steps: [
+          { id: 'health', state: 'done' },
+          { id: 'plan', state: 'done' },
+          { id: 'stills', state: 'done' },
+          { id: 'face_qa', state: 'done' },
+          { id: 'video', state: 'active' },
+        ],
+      },
+      'harbor',
+    )
+    assert.deepEqual(
+      view.steps.map((s) => s.id),
+      ['health', 'plan', 'video'],
+    )
+    assert.equal(view.label, 'Making clips')
+  })
+
   it('reads a live v1 report', () => {
     const view = viewBrain(
       {

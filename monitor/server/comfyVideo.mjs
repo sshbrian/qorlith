@@ -118,10 +118,26 @@ function appendMotion(body, motion, alreadyAirlock) {
   return `${body} Then ${m}`
 }
 
-function t2vShotBody(style, motion) {
+function t2vWho(job = {}) {
+  const chars = Array.isArray(job.characters) ? job.characters : []
+  const lead = chars[0]
+  if (!lead || typeof lead !== 'object') return ''
+  const name = String(lead.name || '').trim()
+  const look = String(lead.look || '').trim()
+  return [name, look].filter(Boolean).join(', ')
+}
+
+function t2vShotBody(style, motion, who = '') {
   const scene = stripShotLabel(String(motion || '')).replace(STYLE_HEAD_RE, '').trim()
-  if (!scene) return `[Shot 1] ${style}`
-  return `[Shot 1] ${style}, ${scene}`
+  const ident = String(who || '').trim()
+  const hay = scene.toLowerCase()
+  const need =
+    ident &&
+    !hay.includes(ident.toLowerCase()) &&
+    !hay.includes(ident.toLowerCase().slice(0, Math.min(24, ident.length)))
+  const identBit = need ? ident : ''
+  const parts = [style, identBit, scene].filter(Boolean)
+  return `[Shot 1] ${parts.join(', ')}`
 }
 
 export function isT2vJob(job = {}) {
@@ -161,7 +177,9 @@ export function composeH3Prompt(job = {}) {
   const style = h3ShotStyle(job)
   const lock = t2v ? '' : subjectLock(job)
   const alreadyAirlock = hasAirlockLanguage(motion)
-  let body = t2v ? t2vShotBody(style, motion) : `[Shot 1] ${style}${lock ? `, ${lock}` : ''}`
+  let body = t2v
+    ? t2vShotBody(style, motion, t2vWho(job))
+    : `[Shot 1] ${style}${lock ? `, ${lock}` : ''}`
   if (!t2v && !job.continueFromPrior && !alreadyAirlock) {
     body += ` ${STILL_ONSET}`
   }

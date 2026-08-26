@@ -341,7 +341,17 @@ describe('brain graph — step internals', () => {
     )
     const motion = nodeThumbs('video', { clips, currentClip: 'S01', step: 'video' })
     assert.equal(motion[0].kind, 'video')
+    assert.equal(motion[0].src, '/a.mp4')
     assert.equal(nodeThumbs('plan', { clips }).length, 0)
+    const t2v = nodeThumbs('video', {
+      clips: [{ id: 'S01', video: '/only.mp4' }],
+      currentClip: 'S01',
+      step: 'video',
+    })
+    assert.equal(t2v.length, 1)
+    assert.equal(t2v[0].src, '/only.mp4')
+    assert.equal(t2v[0].kind, 'video')
+    assert.equal(nodeThumbs('stills', { clips: [{ id: 'S01', video: '/only.mp4' }] }).length, 0)
     const ticks = spliceTicks({ clips, currentClip: 'S02', step: 'video' })
     assert.deepEqual(
       ticks.map((t) => [t.id, t.ready, t.live]),

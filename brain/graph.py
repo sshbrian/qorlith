@@ -120,6 +120,7 @@ STEPS = (
     ("free", "Clear"),
     ("finish", "Film"),
 )
+T2V_SKIP_STEPS = frozenset({"stills", "face_qa"})
 
 # Drawn graph — must stay in lockstep with build_graph().
 GRAPH_NODE_META = (
@@ -128,7 +129,7 @@ GRAPH_NODE_META = (
     ("plan", "Story", "Write the clip list"),
     ("stills", "Pictures", "Paint each still"),
     ("face_qa", "Your picks", "You choose the frames"),
-    ("video", "Motion", "Animate the picks"),
+    ("video", "Motion", "Make each clip"),
     ("free", "Clear", "Unload Comfy models"),
     ("finish", "Film", "Join the clips"),
     ("end", "End", "Stop or done"),
@@ -169,14 +170,30 @@ STATUS_STEP = {
 }
 
 
-def step_states(status: str, current: str, stop_after: str | None = None) -> list[dict[str, str]]:
-    order = [sid for sid, _ in STEPS]
+def pipeline_steps(video_mode: Any = None) -> tuple[tuple[str, str], ...]:
+    if normalize_video_mode(video_mode) == "t2v":
+        return tuple(item for item in STEPS if item[0] not in T2V_SKIP_STEPS)
+    return STEPS
+
+
+def step_states(
+    status: str,
+    current: str,
+    stop_after: str | None = None,
+    video_mode: str | None = None,
+) -> list[dict[str, str]]:
+    steps = pipeline_steps(video_mode)
+    order = [sid for sid, _ in steps]
     cur = current if current in order else STATUS_STEP.get(status, "health")
+    if cur not in order:
+        cur = "finish" if status == "done" else order[0]
     if stop_after == "plan" and cur == "stills":
         cur = "plan"
+    if cur not in order:
+        cur = order[0]
     idx = order.index(cur)
     out: list[dict[str, str]] = []
-    for i, (sid, label) in enumerate(STEPS):
+    for i, (sid, label) in enumerate(steps):
         if status == "done":
             state = "done"
         elif status == "fail" and i == idx:
@@ -340,7 +357,7 @@ def public_report(
         prev_times = {}
     close = status in {"done", "fail", "stopped"}
     timings = apply_step_timing(prev_times, now, close=close) if now in dict(STEPS) else dict(prev_times)
-    steps = step_states(status, now, state.get("stop_after") or None)
+    steps = step_states(status, now, state.get("stop_after") or None, state.get("video_mode"))
     return {
         "schema": "qorlith.brain.v1",
         "projectId": state.get("project_id") or "",

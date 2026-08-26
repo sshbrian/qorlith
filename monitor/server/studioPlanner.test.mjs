@@ -286,6 +286,44 @@ describe('studioPlanner', () => {
     const t2v = draftMoviePlanFromPrompt('12 second rooftop fight, rain, no talking.', { videoMode: 't2v' })
     assert.equal(t2v.videoMode, 't2v')
     assert.match(t2v.clips[0].motionBrief, /medium-wide shot frames/i)
+    const t2vGits = draftMoviePlanFromPrompt(
+      '12 second Ghost in the Shell rooftop fight, rain, Motoko, no talking.',
+      { videoMode: 't2v' },
+    )
+    assert.match(t2vGits.clips[0].motionBrief, /gitsstyl/)
+    assert.match(t2vGits.clips[0].motionBrief, /Motoko/)
+    assert.doesNotMatch(t2vGits.clips[0].motionBrief, /\b1girl\b/)
+  })
+
+  it('validateMoviePlan puts house lock on T2V motionBrief', () => {
+    const p = validateMoviePlan(
+      {
+        projectId: 't',
+        title: 'T',
+        logline: 'L',
+        lookTrack: 'anime',
+        videoMode: 't2v',
+        characters: [{ id: 'S1', name: 'Lead', look: 'adult woman' }],
+        clips: [
+          {
+            id: 'S01',
+            durationSec: 12,
+            stillBrief: 'rain-wet rooftop',
+            motionBrief:
+              'a medium-wide shot frames a rain-wet rooftop. The camera holds static as the lead strikes.',
+          },
+        ],
+      },
+      {
+        userPrompt: '12 second Ghost in the Shell anime rooftop fight. The Major Motoko Kusanagi.',
+        videoMode: 't2v',
+      },
+    )
+    assert.equal(p.videoMode, 't2v')
+    assert.match(p.clips[0].motionBrief, /Motoko/)
+    assert.match(p.clips[0].motionBrief, /gitsstyl/)
+    assert.match(p.clips[0].stillBrief, /gitsstyl/)
+    assert.doesNotMatch(p.clips[0].motionBrief, /\b1girl\b/)
   })
 
   it('buildMoviePlanSystemPrompt teaches SDXL stills and H3 motion split', () => {

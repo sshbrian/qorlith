@@ -30,6 +30,10 @@ export function mountBrain(app) {
       if (rec?.plan?.title && !view.started) {
         view.title = rec.plan.title
         view.lookTrack = rec.plan.lookTrack || view.lookTrack
+        if (rec.plan.videoMode) view.videoMode = rec.plan.videoMode
+        if (view.videoMode === 't2v' && Array.isArray(view.steps)) {
+          view.steps = view.steps.filter((s) => s.id !== 'stills' && s.id !== 'face_qa')
+        }
         view.clips = (rec.plan.clips || []).map((c) => ({
           id: c.id,
           title: c.title || c.id,

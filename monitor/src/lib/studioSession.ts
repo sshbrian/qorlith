@@ -24,6 +24,7 @@ export function brainFingerprint(brain: BrainReport | null | undefined): string 
     brain.runId || '',
     brain.status,
     brain.step,
+    brain.videoMode || '',
     brain.phase || '',
     brain.running ? '1' : '0',
     brain.started ? '1' : '0',

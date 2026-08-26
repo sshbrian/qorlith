@@ -6,7 +6,7 @@ export const GRAPH_NODE_META = [
   { id: 'plan', label: 'Story', blurb: 'Write the clip list' },
   { id: 'stills', label: 'Pictures', blurb: 'Paint each still' },
   { id: 'face_qa', label: 'Your picks', blurb: 'You choose the frames' },
-  { id: 'video', label: 'Motion', blurb: 'Animate the picks' },
+  { id: 'video', label: 'Motion', blurb: 'Make each clip' },
   { id: 'free', label: 'Clear', blurb: 'Unload Comfy models' },
   { id: 'finish', label: 'Film', blurb: 'Join the clips' },
   { id: 'end', label: 'End', blurb: 'Stop or done' },
@@ -181,7 +181,8 @@ export function nodeThumbs(
   if (nodeId !== 'stills' && nodeId !== 'video') return []
   const out: GraphThumb[] = []
   for (const clip of report.clips || []) {
-    const src = clip.pick || clip.still
+    const src =
+      nodeId === 'video' ? clip.video || clip.pick || clip.still : clip.pick || clip.still
     if (!src) continue
     out.push({
       id: clip.id,

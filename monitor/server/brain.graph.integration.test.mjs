@@ -100,6 +100,27 @@ describe('brain graph + monitor HTTP', () => {
     assert.ok(body.brain.steps.every((s) => s.state === 'idle'))
   })
 
+  it('idle t2v plan skips picture steps', async () => {
+    writeJson(path.join(root, 'projects', 't2v_draft', 'plan.json'), {
+      projectId: 't2v_draft',
+      status: 'draft',
+      plan: {
+        projectId: 't2v_draft',
+        title: 'T2V Draft',
+        lookTrack: 'anime',
+        videoMode: 't2v',
+        clips: [{ id: 'S01', title: 'Open', durationSec: 12 }],
+      },
+    })
+    const { status, body } = await getJson(port, '/api/brain/t2v_draft')
+    assert.equal(status, 200)
+    assert.equal(body.brain.videoMode, 't2v')
+    assert.deepEqual(
+      body.brain.steps.map((s) => s.id),
+      ['health', 'plan', 'video', 'free', 'finish'],
+    )
+  })
+
   it('serves live graph, timings, and comfy overlay from brain.json', async () => {
     const id = 'live_harbor'
     writeJson(path.join(root, 'projects', id, 'plan.json'), {

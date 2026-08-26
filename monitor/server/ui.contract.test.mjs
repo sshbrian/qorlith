@@ -120,6 +120,16 @@ describe('UI contract — stages, not tools', () => {
     assert.match(read(path.join(src, 'lib', 'api.ts')), /videoMode/)
   })
 
+  it('Make hides stills-first chrome in Straight to video', () => {
+    const t = page('Brain.tsx')
+    assert.match(t, /videoMode === 't2v'/)
+    assert.match(t, /Straight to video, then the film/)
+    assert.match(t, /t2v \? null/)
+    assert.match(t, /more && !t2v/)
+    assert.match(t, /Pictures only/)
+    assert.match(t, /c\.video/)
+  })
+
   it('Home and Plan share the same prompt chips', () => {
     const studio = read(path.join(src, 'lib', 'studio.ts'))
     assert.match(studio, /PROMPT_STARTERS/)

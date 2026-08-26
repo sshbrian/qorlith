@@ -27,17 +27,27 @@ export const BRAIN_STEPS = [
   { id: 'free', label: 'Clear' },
   { id: 'finish', label: 'Film' },
 ]
+const T2V_SKIP_STEPS = new Set(['stills', 'face_qa'])
+
+function pipelineSteps(videoMode) {
+  if (normalizeVideoMode(videoMode) === 't2v') {
+    return BRAIN_STEPS.filter((s) => !T2V_SKIP_STEPS.has(s.id))
+  }
+  return BRAIN_STEPS
+}
 
 export function brainReportPath(id) {
   return path.join(projectDir(id), 'brain.json')
 }
 
-function stepStates(status, current, stopAfter = null) {
-  const order = BRAIN_STEPS.map((s) => s.id)
+function stepStates(status, current, stopAfter = null, videoMode = null) {
+  const steps = pipelineSteps(videoMode)
+  const order = steps.map((s) => s.id)
   let cur = order.includes(current) ? current : 'health'
   if (stopAfter === 'plan' && cur === 'stills') cur = 'plan'
+  if (!order.includes(cur)) cur = status === 'done' ? 'finish' : order[0]
   const idx = order.indexOf(cur)
-  return BRAIN_STEPS.map((s, i) => {
+  return steps.map((s, i) => {
     let state = 'idle'
     if (status === 'done') state = 'done'
     else if (status === 'fail' && i === idx) state = 'fail'
@@ -62,7 +72,7 @@ export function statusLabel(brain) {
   }
   if (brain.status === 'face_qa') return 'Your turn — pick stills'
   if (brain.status === 'stills') return 'Painting pictures'
-  if (brain.status === 'video') return 'Animating clips'
+  if (brain.status === 'video') return brain.videoMode === 't2v' ? 'Making clips' : 'Animating clips'
   if (brain.status === 'recut') return 'Joining the film'
   if (brain.status === 'pending') return 'Starting'
   return brain.status || 'Idle'
@@ -224,12 +234,13 @@ export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk 
 }
 
 export function idleBrain(projectId, extra = {}) {
+  const videoMode = normalizeVideoMode(extra.videoMode)
   return {
     schema: 'qorlith.brain.v1',
     projectId,
     title: extra.title || projectId,
     lookTrack: extra.lookTrack || 'live',
-    videoMode: extra.videoMode || 'stills',
+    videoMode,
     status: 'idle',
     step: 'health',
     stopAfter: null,
@@ -237,7 +248,7 @@ export function idleBrain(projectId, extra = {}) {
     lastError: null,
     currentClip: null,
     updatedAt: extra.updatedAt || null,
-    steps: BRAIN_STEPS.map((s) => ({ ...s, state: 'idle' })),
+    steps: pipelineSteps(videoMode).map((s) => ({ ...s, state: 'idle' })),
     clips: extra.clips || [],
     jobIds: [],
     master: extra.master || null,
@@ -265,12 +276,18 @@ export function viewBrain(raw, fallbackId = '') {
         pick: c.pick || null,
       }))
     : []
+  const videoMode = normalizeVideoMode(raw.videoMode)
+  let steps =
+    Array.isArray(raw.steps) && raw.steps.length
+      ? raw.steps
+      : stepStates(status, step, raw.stopAfter || null, videoMode)
+  if (videoMode === 't2v') steps = steps.filter((s) => !T2V_SKIP_STEPS.has(s.id))
   const view = {
     schema: 'qorlith.brain.v1',
     projectId: raw.projectId || fallbackId,
     title: raw.title || raw.projectId || fallbackId,
     lookTrack: raw.lookTrack || 'live',
-    videoMode: raw.videoMode || 'stills',
+    videoMode,
     status,
     step,
     stopAfter: raw.stopAfter || null,
@@ -278,10 +295,7 @@ export function viewBrain(raw, fallbackId = '') {
     lastError: raw.lastError || null,
     currentClip: raw.currentClip || null,
     updatedAt: raw.updatedAt || null,
-    steps:
-      Array.isArray(raw.steps) && raw.steps.length
-        ? raw.steps
-        : stepStates(status, step, raw.stopAfter || null),
+    steps,
     clips,
     jobIds: Array.isArray(raw.jobIds) ? raw.jobIds : [],
     master: raw.master || null,
@@ -314,10 +328,20 @@ function readBrainFile(id) {
 }
 
 export function loadBrain(id) {
+  const rec = loadProjectRecord(id)
+  const planMode = normalizeVideoMode(rec?.plan?.videoMode)
   const raw = readBrainFile(id)
   let view
   if (raw && typeof raw === 'object') view = viewBrain(raw, id)
-  else view = lastGoodBrain.get(id) || idleBrain(id)
+  else {
+    view =
+      lastGoodBrain.get(id) ||
+      idleBrain(id, { videoMode: planMode, title: rec?.plan?.title || rec?.title })
+    if (planMode === 't2v') view.videoMode = 't2v'
+  }
+  if (view.videoMode === 't2v' && Array.isArray(view.steps)) {
+    view.steps = view.steps.filter((s) => !T2V_SKIP_STEPS.has(s.id))
+  }
   if (view.started || (view.clips && view.clips.length)) lastGoodBrain.set(id, view)
   view.running = isBrainRunning(id)
   view.label = statusLabel(view)

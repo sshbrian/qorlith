@@ -964,6 +964,7 @@ video.theater-poster {
 }
 
 .filmstrip img,
+.filmstrip video,
 .filmstrip-empty {
   display: block;
   width: 148px;
