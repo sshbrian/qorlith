@@ -867,7 +867,10 @@ export function buildVideoSystemPrompt({ t2v = false, continueFromPrior = false 
   const intro = openT2v
     ? `You are Qorlith Video Director for MiniMax H3 text-to-video-audio.
 Convert free-form intent into a STRICT JSON plan. No start still is painted. motion is the FULL MiniMax scene.`
-    : `You are Qorlith Video Director for MiniMax H3 image-to-video-audio.
+    : continueFromPrior
+      ? `You are Qorlith Video Director for MiniMax H3 image-to-video-audio.
+Convert free-form intent into a STRICT JSON plan. The previous last frame IS frame 0. The app wraps I2VA + style + identity lock. You write only what CHANGES.`
+      : `You are Qorlith Video Director for MiniMax H3 image-to-video-audio.
 Convert free-form intent into a STRICT JSON plan. The start still IS frame 0. The app wraps I2VA + style + identity lock. You write only what CHANGES.`
   const motionRule = openT2v
     ? `3. motion is a medium-wide T2VA scene. Open with "a medium-wide shot frames LOCATION." Then who, action, camera. Include the lead's appearance. Do not write Picture 1 or [Shot 1].
@@ -997,7 +1000,9 @@ export async function generateVideoPlan({
         role: 'user',
         content: openT2v
           ? `Straight to video MiniMax T2VA (no painted still). Do not write Picture 1 or [Shot 1].\n${userText}\n\nReturn the JSON video plan now.`
-          : `Motion intent for I2VA (start image already set). Do not write [Shot 1].\n${userText}\n\nReturn the JSON video plan now.`,
+          : continueFromPrior
+            ? `Motion intent for I2VA (previous last frame already set). Do not write [Shot 1].\n${userText}\n\nReturn the JSON video plan now.`
+            : `Motion intent for I2VA (start image already set). Do not write [Shot 1].\n${userText}\n\nReturn the JSON video plan now.`,
       },
     ],
   }
