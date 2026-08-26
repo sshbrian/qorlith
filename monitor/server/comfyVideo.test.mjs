@@ -14,6 +14,7 @@ import {
   stripShotLabel,
   subjectLock,
   continueMotionBody,
+  t2vWho,
 } from './comfyVideo.mjs'
 import { getVideoWorkflowPath } from './studioConfig.mjs'
 import { dryRunVideoPlan } from './director.mjs'
@@ -188,6 +189,32 @@ describe('MiniMax H3 video plan', () => {
       ),
       'The camera holds static as rain falls.',
     )
+    const two = composeH3Prompt({
+      motion: 'a medium-wide shot frames a neon alley. The camera holds static as rain falls.',
+      dialogue: '',
+      music: 'N/A',
+      lookTrack: 'anime',
+      t2v: true,
+      characters: [
+        { id: 'S1', name: 'Motoko', look: 'adult woman, gitsstyl' },
+        { id: 'S2', name: 'Batou', look: 'large cyborg, dark goggles' },
+      ],
+    })
+    assert.match(two, /Motoko/)
+    assert.match(two, /Batou/)
+    assert.match(two, /goggles/)
+    assert.doesNotMatch(two, /Picture 1/)
+    const extra = t2vWho(
+      {
+        characters: [
+          { name: 'Motoko', look: 'adult woman, gitsstyl' },
+          { name: 'Batou', look: 'large cyborg, dark goggles' },
+        ],
+      },
+      'Motoko, adult woman, gitsstyl, a medium-wide shot frames a neon alley.',
+    )
+    assert.doesNotMatch(extra, /Motoko/)
+    assert.match(extra, /Batou/)
   })
 
   it('composeH3Prompt ignores anime motionPrefix on live and keeps singing', () => {

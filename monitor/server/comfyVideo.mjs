@@ -129,24 +129,26 @@ export function continueMotionBody(motion) {
   return m
 }
 
-function t2vWho(job = {}) {
+export function t2vWho(job = {}, motion = '') {
   const chars = Array.isArray(job.characters) ? job.characters : []
-  const lead = chars[0]
-  if (!lead || typeof lead !== 'object') return ''
-  const name = String(lead.name || '').trim()
-  const look = String(lead.look || '').trim()
-  return [name, look].filter(Boolean).join(', ')
+  const hay = stripShotLabel(String(motion || '')).toLowerCase()
+  const bits = []
+  for (const c of chars.slice(0, 3)) {
+    if (!c || typeof c !== 'object') continue
+    const name = String(c.name || '').trim()
+    const look = String(c.look || '').trim()
+    const lookKey = look.toLowerCase().slice(0, Math.min(24, look.length))
+    if (name && hay.includes(name.toLowerCase())) continue
+    if (lookKey && hay.includes(lookKey)) continue
+    const who = [name, look].filter(Boolean).join(', ')
+    if (who) bits.push(who)
+  }
+  return bits.join('; ')
 }
 
 function t2vShotBody(style, motion, who = '') {
   const scene = stripShotLabel(String(motion || '')).replace(STYLE_HEAD_RE, '').trim()
-  const ident = String(who || '').trim()
-  const hay = scene.toLowerCase()
-  const need =
-    ident &&
-    !hay.includes(ident.toLowerCase()) &&
-    !hay.includes(ident.toLowerCase().slice(0, Math.min(24, ident.length)))
-  const identBit = need ? ident : ''
+  const identBit = String(who || '').trim()
   const parts = [style, identBit, scene].filter(Boolean)
   return `[Shot 1] ${parts.join(', ')}`
 }
@@ -190,7 +192,7 @@ export function composeH3Prompt(job = {}) {
   const motionBody = job.continueFromPrior ? continueMotionBody(motion) : motion
   const alreadyAirlock = hasAirlockLanguage(motionBody)
   let body = t2v
-    ? t2vShotBody(style, motion, t2vWho(job))
+    ? t2vShotBody(style, motion, t2vWho(job, motion))
     : `[Shot 1] ${style}${lock ? `, ${lock}` : ''}`
   if (!t2v && !job.continueFromPrior && !alreadyAirlock) {
     body += ` ${STILL_ONSET}`
