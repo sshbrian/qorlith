@@ -390,6 +390,14 @@ export function Gallery() {
     [navigate],
   )
 
+  const openWatch = useCallback(
+    (item: GalleryItem) => {
+      const id = String(item.project || '').trim()
+      navigate(id ? `/studio/${encodeURIComponent(id)}/watch` : '/studio')
+    },
+    [navigate],
+  )
+
   useEffect(() => {
     if (!selected && !stackFocus) return
     const onKey = (e: KeyboardEvent) => {
@@ -757,12 +765,14 @@ export function Gallery() {
                     Open the board
                   </button>
                 ) : (
-                  <span
-                    className="text-[10px] uppercase tracking-widest text-ghost border border-line rounded px-3 py-1.5 opacity-60"
-                    title="Pick a still (image) as the I2V start frame"
+                  <button
+                    type="button"
+                    className="text-[10px] uppercase tracking-widest text-void bg-cyan border border-cyan rounded px-3 py-1.5 hover:bg-cyan/90 font-semibold"
+                    title="Open Watch for this film"
+                    onClick={() => openWatch(selected)}
                   >
-                    Video · not a start still
-                  </span>
+                    Open Watch
+                  </button>
                 )}
                 {selected.archived || showArchived ? (
                   <button

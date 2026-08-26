@@ -115,6 +115,8 @@ describe('UI contract — stages, not tools', () => {
     const t = page('Gallery.tsx')
     assert.match(t, /searchParams\.get\('archived'\)/)
     assert.match(t, /archived.*only/)
+    assert.match(t, /Open Watch/)
+    assert.doesNotMatch(t, /not a start still/)
   })
 
   it('Plan hides the unused still field in Straight to video', () => {
