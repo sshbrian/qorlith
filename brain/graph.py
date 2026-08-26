@@ -748,7 +748,7 @@ def _concat_list_line(path: Path) -> str:
 
 def concat_videos(paths: list[Path], dest: Path) -> Path:
     if not paths:
-        raise BrainError(400, "no_videos", "No clip videos to concat", "Run video first.")
+        raise BrainError(400, "no_videos", "No clip videos to join", "Make the clips first.")
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists():
         dest.unlink()
@@ -797,7 +797,7 @@ def concat_videos(paths: list[Path], dest: Path) -> Path:
                 raise BrainError(
                     500,
                     "concat_failed",
-                    err[:400] or "ffmpeg could not concat the clips",
+                    err[:400] or "ffmpeg could not join the clips",
                     "Check the clip videos, then resume finish.",
                 )
         return dest
@@ -951,7 +951,7 @@ def _ffmpeg_join_pair(left: Path, right: Path, dest: Path, *, fade: bool) -> Pat
 def weld_videos(segments: list[tuple[Path, str]], dest: Path) -> Path:
     """Join clips. Continue seams drop the duplicate first frame and 40ms-crossfade audio."""
     if not segments:
-        raise BrainError(400, "no_videos", "No clip videos to concat", "Run video first.")
+        raise BrainError(400, "no_videos", "No clip videos to join", "Make the clips first.")
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists():
         dest.unlink()

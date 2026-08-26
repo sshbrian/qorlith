@@ -1010,6 +1010,15 @@ def test_concat_videos_copies_single_file(tmp_path: Path):
     assert dest.read_bytes() == b"fake-mp4"
 
 
+def test_empty_join_says_join_not_concat(tmp_path: Path):
+    with pytest.raises(BrainError) as err:
+        weld_videos([], tmp_path / "master.mp4")
+    assert err.value.code == "no_videos"
+    assert "join" in str(err.value).lower()
+    assert "concat" not in str(err.value).lower()
+    assert "clips" in (err.value.hint or "").lower()
+
+
 def test_concat_videos_joins_with_ffmpeg(tmp_path: Path):
     import shutil
     import subprocess

@@ -44,7 +44,7 @@ Monitor and Comfy must be up.
 ./bin/brain status --thread harbor
 ```
 
-`--dry-run` asks Monitor for a demo plan (no LLM). Watch the graph in Monitor **Make** (`/studio/<id>/make`). Start stills, **Stop** a run (kills the pid), or **Continue** from the current node — resume does not re-walk health → plan. After video, finish concats the clips into `data/projects/<id>/master.mp4`. Make refuses to queue if Comfy is already busy.
+`--dry-run` asks Monitor for a demo plan (no LLM). Watch the graph in Monitor **Make** (`/studio/<id>/make`). Start, **Stop** a run (kills the pid), or **Continue** from the current node — resume does not re-walk health → plan. After clips, finish joins them into `data/projects/<id>/master.mp4` (hard cuts concat; continue welds). Make refuses to queue if Comfy is already busy.
 
 ```
 ./bin/brain stop --thread harbor
