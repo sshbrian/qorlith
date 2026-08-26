@@ -138,9 +138,9 @@ export function Brain() {
   const idle = !report.started && !loading
 
   return (
-    <div className="page">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <p className="page-lead">
+    <div className="set">
+      <div className="set-slate">
+        <p className="set-call">
           {running
             ? 'Making your movie. You can leave this page.'
             : hasMaster
@@ -149,7 +149,7 @@ export function Brain() {
                 ? 'One button. Straight to video, then the film.'
                 : 'One button. Stills, then the clips.'}
         </p>
-        <div className={`text-[15px] ${statusTone}`}>
+        <div className={`set-status ${statusTone}`}>
           {running ? (
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber mr-2 align-middle pulse-dot" />
           ) : null}
@@ -157,7 +157,7 @@ export function Brain() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 min-h-8">
+      <div className="set-hands">
         {hasMaster && !running ? (
           <Link to={`/studio/${encodeURIComponent(projectId)}/watch`} className="btn btn-primary">
             Watch
@@ -186,7 +186,7 @@ export function Brain() {
       </div>
 
       {more && !t2v ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="set-hands">
           <button
             type="button"
             disabled={!canStart}
@@ -201,14 +201,12 @@ export function Brain() {
       <FailNote error={err} />
       {report.lastError ? <FailNote error={report.lastError} /> : null}
 
-      {idle ? (
+      {idle && !clips.length ? (
         <div className="theater-player theater-empty">
           <div className="play-mark" aria-hidden>
             ▶
           </div>
-          <p className="page-lead mt-5 text-center">
-            {clips.length ? 'The film is not made yet.' : 'Nothing is rendering yet.'}
-          </p>
+          <p className="page-lead mt-5 text-center">Nothing is rendering yet.</p>
           <button
             type="button"
             disabled={!canStart}
@@ -218,44 +216,62 @@ export function Brain() {
             Make movie
           </button>
         </div>
-      ) : (
-        <BrainProgress armed={running} />
-      )}
+      ) : idle ? (
+        <p className="set-call">The film is not made yet.</p>
+      ) : running ? (
+        <div className="set-progress">
+          <BrainProgress armed={running} />
+        </div>
+      ) : null}
 
-      {(running || more) && (report.started || (report.steps || []).length) ? (
-        <div className="card">
-          <div className="flex flex-wrap items-center gap-2" role="list">
-            {steps.map((step, i) => (
-              <div key={step.id} className="flex items-center gap-2" role="listitem">
-                {i > 0 ? <span className="text-ghost/35 text-xs">→</span> : null}
-                <StepNode step={step} />
-              </div>
-            ))}
-          </div>
-          <p className="text-[15px] text-ghost mt-4 min-h-[1.35em]">
-            {report.currentClip ? `Now ${report.currentClip}` : '\u00a0'}
-          </p>
-          {report.status === 'face_qa' && !report.reviewOk && !t2v ? (
-            <p className="text-[17px] text-ghost mt-4">
-              Waiting on the board.{' '}
-              <Link to={`/studio/${encodeURIComponent(projectId)}/board`} className="text-cyan hover:underline">
-                Set picks
-              </Link>
-              , then press Continue.
-            </p>
+      {report.status === 'face_qa' && !report.reviewOk && !t2v ? (
+        <p className="set-board">
+          Waiting on the board.{' '}
+          <Link to={`/studio/${encodeURIComponent(projectId)}/board`} className="text-cyan hover:underline">
+            Set picks
+          </Link>
+          , then press Continue.
+        </p>
+      ) : null}
+
+      {clips.length ? (
+        <div className="set-strip">
+          <Filmstrip clips={clips} currentClip={report.currentClip} t2v={t2v} />
+          {idle ? (
+            <button
+              type="button"
+              disabled={!canStart}
+              onClick={() => void start('film')}
+              className="btn btn-primary btn-xl title-card-go mt-5"
+            >
+              Make movie
+            </button>
           ) : null}
         </div>
       ) : null}
 
-      {clips.length ? <Filmstrip clips={clips} currentClip={report.currentClip} t2v={t2v} /> : null}
-
-      {hasMaster ? (
-        <div className="theater-player">
-          <video src={api.brainMasterUrl(projectId)} controls className="theater-video" />
+      {more && !t2v && (report.started || (report.steps || []).length) ? (
+        <div className="set-steps" role="list">
+          {steps.map((step, i) => (
+            <div key={step.id} className="flex items-center gap-2" role="listitem">
+              {i > 0 ? <span className="text-ghost/35 text-xs">→</span> : null}
+              <StepNode step={step} />
+            </div>
+          ))}
         </div>
       ) : null}
 
-      <details className="card">
+      {hasMaster && !running ? (
+        <Link
+          to={`/studio/${encodeURIComponent(projectId)}/watch`}
+          className="set-print"
+          title="Watch the film"
+        >
+          <video src={api.brainMasterUrl(projectId)} muted playsInline preload="metadata" className="theater-video" />
+        </Link>
+      ) : null}
+
+      <details className="set-craft">
         <summary className="text-[15px] text-ghost cursor-pointer">How it is made</summary>
         <div className="mt-4">
           <BrainGraph brain={report} onOpenNode={openNode} />

@@ -175,6 +175,9 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /Pictures only/)
     assert.match(t, /clipPoster/)
     assert.match(t, /preferBrainComfy/)
+    assert.match(t, /className="set"/)
+    assert.match(t, /set-print/)
+    assert.doesNotMatch(t, /controls className="theater-video"/)
     assert.match(t, /currentClip === c\.id \? 'Now'/)
   })
 
