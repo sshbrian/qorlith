@@ -13,11 +13,12 @@ describe('clipJoinNote', () => {
 })
 
 describe('clipPoster', () => {
-  it('T2V prefers the clip video over a last-frame still', () => {
-    const clip = { still: '/board/S02_from_prev.png', video: '/video/S02.mp4' }
+  it('prefers the made clip; T2V never uses a leftover still', () => {
+    const clip = { still: '/board/S02.png', video: '/video/S02.mp4' }
     assert.deepEqual(clipPoster(clip, 't2v'), { src: '/video/S02.mp4', kind: 'video' })
-    assert.deepEqual(clipPoster(clip, 'stills'), { src: '/board/S02_from_prev.png', kind: 'image' })
-    assert.deepEqual(clipPoster({ still: '/x.png' }, 't2v'), { src: '/x.png', kind: 'image' })
+    assert.deepEqual(clipPoster(clip, 'stills'), { src: '/video/S02.mp4', kind: 'video' })
+    assert.deepEqual(clipPoster({ still: '/x.png' }, 'stills'), { src: '/x.png', kind: 'image' })
+    assert.equal(clipPoster({ still: '/video/S02_from_prev.png' }, 't2v'), null)
     assert.equal(clipPoster({}, 't2v'), null)
   })
 })

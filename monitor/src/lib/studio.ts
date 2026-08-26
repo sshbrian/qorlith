@@ -77,19 +77,16 @@ export function clipJoinNote(index: number, cut?: boolean | null) {
   return cut ? 'cut' : 'continues'
 }
 
-/** Straight to video shows the clip, not a continue last-frame stuffed into still. */
+/** Prefer the made clip. T2V never falls back to a leftover still or last-frame. */
 export function clipPoster(
   clip: { still?: string | null; video?: string | null },
   videoMode?: string | null,
 ): { src: string; kind: 'image' | 'video' } | null {
   const still = clip.still || null
   const video = clip.video || null
-  if (videoMode === 't2v') {
-    if (video) return { src: video, kind: 'video' }
-    return still ? { src: still, kind: 'image' } : null
-  }
-  if (still) return { src: still, kind: 'image' }
-  return video ? { src: video, kind: 'video' } : null
+  if (video) return { src: video, kind: 'video' }
+  if (videoMode === 't2v') return null
+  return still ? { src: still, kind: 'image' } : null
 }
 
 export function projectPath(id: string, stage?: StudioStage) {
