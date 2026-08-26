@@ -282,6 +282,8 @@ describe('UI contract — brain is shipped', () => {
     assert.match(spec, /spliceTicks/)
     assert.match(spec, /nodeOps/)
     assert.match(spec, /Save the plan/)
+    assert.match(spec, /continue trim \+ 40ms crossfade/)
+    assert.doesNotMatch(spec, /concat -c copy/)
     assert.match(spec, /Prompt to MiniMax/)
     assert.match(spec, /t2v && meta.id === 'video' \? 'Clips'/)
     assert.match(spec, /Writer writes the story/)

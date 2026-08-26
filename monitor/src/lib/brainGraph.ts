@@ -50,7 +50,7 @@ export const NODE_OPS: Record<string, NodeOp[]> = {
   ],
   free: [{ id: 'comfy_free', label: 'Unload Comfy models', via: 'comfy', call: 'POST /free' }],
   finish: [
-    { id: 'ffmpeg', label: 'Join clip videos', via: 'ffmpeg', call: 'ffmpeg -f concat -c copy' },
+    { id: 'ffmpeg', label: 'Join clip videos', via: 'ffmpeg', call: 'cut concat · continue trim + 40ms crossfade' },
     { id: 'master', label: 'Write master.mp4', via: 'disk', call: 'projects/<id>/master.mp4' },
   ],
   end: [{ id: 'halt', label: 'Graph halted', via: 'router', call: 'END' }],

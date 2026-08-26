@@ -365,6 +365,8 @@ describe('brain graph — step internals', () => {
       'human',
     )
     assert.equal(markForVia('ffmpeg'), 'splice')
+    assert.match(nodeOps('finish').find((o) => o.id === 'ffmpeg')?.call || '', /crossfade/)
+    assert.doesNotMatch(JSON.stringify(nodeOps('finish')), /concat -c copy/)
     assert.equal(markForVia('comfy', 'video'), 'sprocket')
     assert.equal(viaInk('llm'), '#bf5af2')
     assert.equal(liveOp({ step: 'stills', phase: 'still_wait', running: true })?.via, 'comfy')
