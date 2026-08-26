@@ -23,7 +23,7 @@ const NODE_KINDS = [
 
 const COPY = {
   video: {
-    title: 'Animating the clip',
+    title: 'Making the clip',
     hint: 'This clip takes a few minutes. You can leave this page — it keeps going.',
   },
   still: {

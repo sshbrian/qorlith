@@ -96,10 +96,10 @@ describe('studio session fingerprints', () => {
 
   it('preferBrainComfy uses the named clip title while Brain is live', () => {
     const named = { active: true, title: 'Making Open', kind: 'video' }
-    const raw = { active: true, title: 'Animating the clip', kind: 'video' }
+    const raw = { active: true, title: 'Making the clip', kind: 'video' }
     assert.equal(preferBrainComfy({ running: true, comfy: named }, raw).title, 'Making Open')
-    assert.equal(preferBrainComfy({ running: false, comfy: null }, raw).title, 'Animating the clip')
-    assert.equal(preferBrainComfy(null, raw).title, 'Animating the clip')
+    assert.equal(preferBrainComfy({ running: false, comfy: null }, raw).title, 'Making the clip')
+    assert.equal(preferBrainComfy(null, raw).title, 'Making the clip')
   })
 
   it('idle report is a stable empty document', () => {

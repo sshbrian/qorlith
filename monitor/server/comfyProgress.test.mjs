@@ -56,7 +56,7 @@ describe('comfy progress', () => {
       data: { value: 42, max: 168, node: '136', prompt_id: 'v1' },
     })
     const view = viewComfyProgress(s)
-    assert.equal(view.title, 'Animating the clip')
+    assert.equal(view.title, 'Making the clip')
     assert.match(view.line, /Frame 42 of 168/)
   })
 
@@ -76,7 +76,7 @@ describe('comfy progress', () => {
     assert.equal(view.title, 'Animating Rainy Pursuit')
     assert.match(view.line, /2 of 2/)
     const t2v = decorateProgressForBrain(
-      { active: true, kind: 'video', title: 'Animating the clip', line: 'Frame 4 of 168', hint: 'x' },
+      { active: true, kind: 'video', title: 'Making the clip', line: 'Frame 4 of 168', hint: 'x' },
       {
         step: 'video',
         status: 'video',
