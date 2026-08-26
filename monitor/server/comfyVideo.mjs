@@ -108,11 +108,20 @@ export function expandSoundscape(raw) {
   return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}.`
 }
 
+const STYLE_HEAD_RE =
+  /^(?:2d-animated|live-action(?:\s*,\s*cinematic)?|cinematic|3d cg|claymation|watercolor|vintage film)\s*,\s*/i
+
 function appendMotion(body, motion, alreadyAirlock) {
   const m = stripShotLabel(String(motion || '')).trim()
   if (!m) return body
   if (alreadyAirlock || /^(then\b|the camera\b)/i.test(m)) return `${body} ${m}`
   return `${body} Then ${m}`
+}
+
+function t2vShotBody(style, motion) {
+  const scene = stripShotLabel(String(motion || '')).replace(STYLE_HEAD_RE, '').trim()
+  if (!scene) return `[Shot 1] ${style}`
+  return `[Shot 1] ${style}, ${scene}`
 }
 
 export function isT2vJob(job = {}) {
@@ -152,11 +161,11 @@ export function composeH3Prompt(job = {}) {
   const style = h3ShotStyle(job)
   const lock = t2v ? '' : subjectLock(job)
   const alreadyAirlock = hasAirlockLanguage(motion)
-  let body = `[Shot 1] ${style}${lock ? `, ${lock}` : ''}`
-  if (!job.continueFromPrior && !alreadyAirlock) {
-    body += t2v ? ' Hold the opening for about one second with no new motion.' : ` ${STILL_ONSET}`
+  let body = t2v ? t2vShotBody(style, motion) : `[Shot 1] ${style}${lock ? `, ${lock}` : ''}`
+  if (!t2v && !job.continueFromPrior && !alreadyAirlock) {
+    body += ` ${STILL_ONSET}`
   }
-  body = appendMotion(body, motion, alreadyAirlock)
+  if (!t2v) body = appendMotion(body, motion, alreadyAirlock)
   if (job.continueFromPrior && !alreadyAirlock) {
     body += ` ${AIRLOCK_LANDING}`
   }

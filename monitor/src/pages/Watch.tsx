@@ -14,13 +14,24 @@ function formatRuntime(clips: BrainClip[]) {
   return r ? `${m}m ${r}s` : `${m}m`
 }
 
-function SceneCard({ clip, projectId }: { clip: BrainClip; projectId: string }) {
-  const src = clip.still ? api.mediaUrl(clip.still) : null
+function SceneCard({
+  clip,
+  projectId,
+  t2v,
+}: {
+  clip: BrainClip
+  projectId: string
+  t2v: boolean
+}) {
+  const still = clip.still ? api.mediaUrl(clip.still) : null
+  const video = clip.video ? api.mediaUrl(clip.video) : null
   return (
     <li className="scene-card">
       <div className="scene-card-still">
-        {src ? (
-          <img src={src} alt="" />
+        {still ? (
+          <img src={still} alt="" />
+        ) : video ? (
+          <video src={video} muted playsInline preload="metadata" className="w-full h-full object-cover" />
         ) : (
           <div className="scene-card-empty">Not made yet</div>
         )}
@@ -32,9 +43,11 @@ function SceneCard({ clip, projectId }: { clip: BrainClip; projectId: string }) 
             {clip.durationSec != null ? `${clip.durationSec}s` : clip.id}
           </div>
         </div>
-        <Link to={`/studio/${encodeURIComponent(projectId)}/board`} className="text-[13px] text-cyan shrink-0">
-          Board
-        </Link>
+        {t2v ? null : (
+          <Link to={`/studio/${encodeURIComponent(projectId)}/board`} className="text-[13px] text-cyan shrink-0">
+            Board
+          </Link>
+        )}
       </div>
     </li>
   )
@@ -126,8 +139,15 @@ export function Watch() {
   const { current } = useStudioProjects()
   const { comfy } = useStudioLive()
   const clips = brain?.clips || []
+  const t2v = brain?.videoMode === 't2v'
   const posterStill = clips.find((c) => c.still)?.still
-  const poster = posterStill ? api.mediaUrl(posterStill) : null
+  const posterVideo = clips.find((c) => c.video)?.video
+  const poster = posterStill
+    ? api.mediaUrl(posterStill)
+    : posterVideo
+      ? api.mediaUrl(posterVideo)
+      : null
+  const sceneClips = clips.filter((c) => c.still || c.video)
 
   if (!projectId) {
     return <p className="text-[15px] text-ghost">Open a project to watch the film.</p>
@@ -149,10 +169,14 @@ export function Watch() {
       ) : running ? (
         <div className="theater">
           <div className="theater-player theater-making">
-            {poster ? <img src={poster} alt="" className="theater-poster" /> : null}
+            {posterStill ? (
+              <img src={poster} alt="" className="theater-poster" />
+            ) : posterVideo ? (
+              <video src={poster} muted playsInline loop className="theater-poster" />
+            ) : null}
             <div className="theater-making-scrim" />
             <div className="theater-making-copy">
-              <p className="theater-making-kicker">Making your movie</p>
+              <p className="theater-making-kicker">{t2v ? 'Straight to video' : 'Making your movie'}</p>
               <p className="theater-title">{makingLine}</p>
               {percent != null ? (
                 <p className="theater-runtime tabular-nums">{Math.round(percent)}%</p>
@@ -176,12 +200,12 @@ export function Watch() {
         </div>
       )}
 
-      {clips.length ? (
+      {sceneClips.length ? (
         <div>
           <h2 className="text-[15px] text-ghost mb-3">Scenes</h2>
           <ul className="scene-grid">
-            {clips.map((c) => (
-              <SceneCard key={c.id} clip={c} projectId={projectId} />
+            {sceneClips.map((c) => (
+              <SceneCard key={c.id} clip={c} projectId={projectId} t2v={t2v} />
             ))}
           </ul>
         </div>

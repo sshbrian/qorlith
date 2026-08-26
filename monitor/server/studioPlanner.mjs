@@ -640,7 +640,7 @@ export function draftMoviePlanFromPrompt(userPrompt, { reason = 'draft', videoMo
       stillBrief: mode === 't2v' ? loc : stillCore,
       motionBrief:
         mode === 't2v'
-          ? `${anime ? '2D-animated' : 'Live-action, cinematic'}, a medium-wide shot frames ${loc}. ${motionFromPrompt(prompt, i)}`
+          ? `a medium-wide shot frames ${loc}. ${motionFromPrompt(prompt, i)}`
           : motionFromPrompt(prompt, i),
       dialogue: h.noTalk ? '' : '',
       soundscape: soundFromPrompt(prompt),

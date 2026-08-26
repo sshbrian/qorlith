@@ -788,6 +788,11 @@ select {
   transform: scale(1.08);
 }
 
+.theater-poster video,
+video.theater-poster {
+  object-fit: cover;
+}
+
 .theater-making-scrim {
   position: absolute;
   inset: 0;

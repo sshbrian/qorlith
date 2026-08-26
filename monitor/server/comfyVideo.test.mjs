@@ -138,7 +138,7 @@ describe('MiniMax H3 video plan', () => {
     assert.match(anime, /and heavy rain\./)
     assert.match(anime, /No spoken words/)
     const t2v = composeH3Prompt({
-      motion: 'rain on a neon alley, a woman walks through puddles',
+      motion: '2D-animated, a medium-wide shot frames a neon alley. The camera holds static as rain falls.',
       dialogue: '',
       music: 'N/A',
       lookTrack: 'anime',
@@ -146,7 +146,9 @@ describe('MiniMax H3 video plan', () => {
     })
     assert.match(t2v, /integrated_multimodal_description/)
     assert.doesNotMatch(t2v, /Picture 1/)
-    assert.match(t2v, /Hold the opening/)
+    assert.doesNotMatch(t2v, /Then 2D-animated/)
+    assert.equal((t2v.match(/2D-animated/g) || []).length, 1)
+    assert.match(t2v, /\[Shot 1\] 2D-animated, a medium-wide shot frames a neon alley/)
   })
 
   it('composeH3Prompt ignores anime motionPrefix on live and keeps singing', () => {
