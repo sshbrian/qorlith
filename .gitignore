@@ -16,6 +16,9 @@ monitor/data/gallery-archive.json
 __pycache__/
 *.pyc
 brain/checkpointer.sqlite
+brain/checkpointer.sqlite-*
+brain/*.sqlite-shm
+brain/*.sqlite-wal
 brain/.venv/
 brain/.pytest_cache/
 .env
