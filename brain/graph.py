@@ -275,11 +275,15 @@ def graph_view(
     timings: dict[str, Any],
     current: str,
     status: str = "",
+    video_mode: str | None = None,
 ) -> dict[str, Any]:
     by_id = {s["id"]: s for s in steps}
     begun = any(s.get("state") in {"done", "active", "fail"} for s in steps)
+    skip = T2V_SKIP_STEPS if normalize_video_mode(video_mode) == "t2v" else frozenset()
     nodes = []
     for sid, label, blurb in GRAPH_NODE_META:
+        if sid in skip:
+            continue
         if sid == "start":
             state = "done" if begun else "idle"
         elif sid == "end":
@@ -294,6 +298,8 @@ def graph_view(
         nodes.append({"id": sid, "label": label, "blurb": blurb, "state": state})
     edges = []
     for src, dest, kind in GRAPH_EDGES:
+        if src in skip or dest in skip:
+            continue
         row = timings.get(src) if isinstance(timings.get(src), dict) else None
         seconds = None
         live = False
@@ -378,7 +384,7 @@ def public_report(
         "runId": run_id or None,
         "phase": phase or state.get("phase") or None,
         "timings": timings,
-        "graph": graph_view(steps, timings, now, status),
+        "graph": graph_view(steps, timings, now, status, state.get("video_mode")),
     }
 
 

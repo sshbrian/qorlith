@@ -115,6 +115,13 @@ export const GRAPH_LAYOUT = {
   padY: 40,
 }
 
+const T2V_SKIP = new Set(['stills', 'face_qa'])
+
+export function graphOrder(videoMode?: string | null): readonly string[] {
+  if (videoMode === 't2v') return GRAPH_LAYOUT.order.filter((id) => !T2V_SKIP.has(id))
+  return GRAPH_LAYOUT.order
+}
+
 export type NodeMarkId = 'q' | 'pulse' | 'cursor' | 'frame' | 'print' | 'sprocket' | 'splice' | 'flag' | 'disk'
 
 export const NODE_MARK: Record<string, { mark: NodeMarkId; via: OpVia }> = {
@@ -235,10 +242,16 @@ export function liveSeconds(
   return Math.max(0, (nowMs - t) / 1000)
 }
 
-export function nodeX(id: string): number {
-  const i = GRAPH_LAYOUT.order.indexOf(id as (typeof GRAPH_LAYOUT.order)[number])
+export function nodeX(id: string, videoMode?: string | null): number {
+  const order = graphOrder(videoMode)
+  const i = order.indexOf(id)
   const idx = i < 0 ? 0 : i
   return GRAPH_LAYOUT.padX + idx * (GRAPH_LAYOUT.nodeW + GRAPH_LAYOUT.gap)
+}
+
+export function graphWidth(videoMode?: string | null): number {
+  const n = graphOrder(videoMode).length
+  return GRAPH_LAYOUT.padX * 2 + n * GRAPH_LAYOUT.nodeW + (n - 1) * GRAPH_LAYOUT.gap
 }
 
 export function resumeTarget(timings?: Record<string, StepTiming> | null): string | null {
@@ -252,7 +265,7 @@ export function timeLabelWidth(label: string): number {
 }
 
 export function decorateGraph(
-  report: Pick<BrainReport, 'steps' | 'status' | 'step' | 'timings' | 'graph' | 'running'>,
+  report: Pick<BrainReport, 'steps' | 'status' | 'step' | 'timings' | 'graph' | 'running' | 'videoMode'>,
   nowMs = Date.now(),
 ): { nodes: GraphNodeView[]; edges: GraphEdgeView[] } {
   const timings = report.timings || {}
@@ -261,8 +274,13 @@ export function decorateGraph(
   const steps = report.steps || []
   const byStep = new Map(steps.map((s) => [s.id, s]))
   const begun = steps.some((s) => s.state === 'done' || s.state === 'active' || s.state === 'fail')
+  const t2v = report.videoMode === 't2v'
+  const metas = t2v ? GRAPH_NODE_META.filter((m) => !T2V_SKIP.has(m.id)) : GRAPH_NODE_META
+  const edgeSpecs = t2v
+    ? GRAPH_EDGES.filter((e) => !T2V_SKIP.has(e.from) && !T2V_SKIP.has(e.to))
+    : GRAPH_EDGES
 
-  const nodes: GraphNodeView[] = GRAPH_NODE_META.map((meta) => {
+  const nodes: GraphNodeView[] = metas.map((meta) => {
     if (raw?.nodes?.length) {
       const hit = raw.nodes.find((n) => n.id === meta.id)
       if (hit) return { ...meta, state: hit.state || 'idle' }
@@ -278,7 +296,7 @@ export function decorateGraph(
     return { ...meta, state: byStep.get(meta.id)?.state || 'idle' }
   })
 
-  const edges: GraphEdgeView[] = GRAPH_EDGES.map((spec) => {
+  const edges: GraphEdgeView[] = edgeSpecs.map((spec) => {
     const id = `${spec.from}->${spec.to}:${spec.kind}`
     const rawEdge = raw?.edges?.find((e) => e.from === spec.from && e.to === spec.to && e.kind === spec.kind)
     const row = timings[spec.from]

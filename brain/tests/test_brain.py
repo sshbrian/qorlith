@@ -673,6 +673,10 @@ def test_step_states_t2v_skips_pictures():
     )
     assert [s["id"] for s in report["steps"]] == ["health", "plan", "video", "free", "finish"]
     assert "stills" not in {s["id"] for s in report["steps"]}
+    graph_ids = {n["id"] for n in report["graph"]["nodes"]}
+    assert "stills" not in graph_ids
+    assert "face_qa" not in graph_ids
+    assert ("plan", "video") in {(e["from"], e["to"]) for e in report["graph"]["edges"] if e["kind"] == "flow"}
 
 
 def test_public_report_lists_clip_media():

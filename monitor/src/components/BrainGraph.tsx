@@ -6,6 +6,7 @@ import {
   formatSeconds,
   GRAPH_LAYOUT,
   graphHeadline,
+  graphWidth,
   liveOp,
   liveSeconds,
   liveVia,
@@ -27,10 +28,10 @@ import {
 import { GraphMark } from './GraphMark'
 
 const OPEN_KEY = 'qorlith.make.graphOpen'
-const { nodeW: NODE_W, nodeH: NODE_H, gap: GAP, padX: PAD_X, padY: PAD_Y, order: ORDER } = GRAPH_LAYOUT
+const { nodeW: NODE_W, nodeH: NODE_H, padX: PAD_X, padY: PAD_Y } = GRAPH_LAYOUT
 
-function nodeCenter(id: string) {
-  return { x: nodeX(id) + NODE_W / 2, y: PAD_Y + NODE_H / 2 }
+function nodeCenter(id: string, videoMode?: string) {
+  return { x: nodeX(id, videoMode) + NODE_W / 2, y: PAD_Y + NODE_H / 2 }
 }
 
 function readOpen(running: boolean) {
@@ -198,7 +199,7 @@ function Tile({
     <button
       type="button"
       className={['graph-tile', `is-${node.state}`, selected ? 'is-picked' : ''].join(' ')}
-      style={{ left: nodeX(node.id), top: PAD_Y, width: NODE_W, height: NODE_H }}
+      style={{ left: nodeX(node.id, brain.videoMode), top: PAD_Y, width: NODE_W, height: NODE_H }}
       title={
         node.id === 'plan'
           ? 'Open the storyboard'
@@ -318,7 +319,9 @@ export const BrainGraph = memo(function BrainGraph({
     nodes.find((n) => n.id === 'finish' && n.state === 'done') ||
     [...nodes].reverse().find((n) => n.state === 'done') ||
     nodes[0]
-  const width = PAD_X * 2 + ORDER.length * NODE_W + (ORDER.length - 1) * GAP
+  const mode = brain.videoMode
+  const at = (id: string) => nodeCenter(id, mode)
+  const width = graphWidth(mode)
   const height = PAD_Y + NODE_H + 72
   const flowEdges = edges.filter((e) => e.kind === 'flow')
   const stopEdges = edges.filter((e) => e.kind === 'stop')
@@ -351,8 +354,8 @@ export const BrainGraph = memo(function BrainGraph({
                   </filter>
                 </defs>
                 {stopEdges.map((edge) => {
-                  const a = nodeCenter(edge.from)
-                  const b = nodeCenter(edge.to)
+                  const a = at(edge.from)
+                  const b = at(edge.to)
                   const mid = (a.x + b.x) / 2
                   const d = `M ${a.x} ${a.y + NODE_H / 2 - 8} C ${mid} ${height - 16}, ${mid} ${height - 16}, ${b.x} ${b.y + NODE_H / 2 - 8}`
                   return (
@@ -369,10 +372,10 @@ export const BrainGraph = memo(function BrainGraph({
                 })}
                 {resumeTo ? (
                   <path
-                    d={`M ${nodeCenter('start').x} ${PAD_Y + 8} C ${
-                      (nodeCenter('start').x + nodeCenter(resumeTo).x) / 2
-                    } 14, ${(nodeCenter('start').x + nodeCenter(resumeTo).x) / 2} 14, ${
-                      nodeCenter(resumeTo).x
+                    d={`M ${at('start').x} ${PAD_Y + 8} C ${
+                      (at('start').x + at(resumeTo).x) / 2
+                    } 14, ${(at('start').x + at(resumeTo).x) / 2} 14, ${
+                      at(resumeTo).x
                     } ${PAD_Y + 8}`}
                     fill="none"
                     stroke="#409cff"
@@ -381,8 +384,8 @@ export const BrainGraph = memo(function BrainGraph({
                   />
                 ) : null}
                 {flowEdges.map((edge) => {
-                  const a = nodeCenter(edge.from)
-                  const b = nodeCenter(edge.to)
+                  const a = at(edge.from)
+                  const b = at(edge.to)
                   const color = edgeColor(edge, byId.get(edge.from))
                   return (
                     <g key={edge.id}>

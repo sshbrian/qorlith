@@ -212,6 +212,27 @@ describe('brain graph — decorateGraph', () => {
     }
     assert.deepEqual([...PIPELINE], ['health', 'plan', 'stills', 'face_qa', 'video', 'free', 'finish'])
   })
+
+  it('t2v graph skips pictures and packs left', () => {
+    const view = decorateGraph(
+      report({
+        videoMode: 't2v',
+        status: 'video',
+        step: 'video',
+        running: true,
+        steps: [
+          { id: 'health', label: 'Ready', state: 'done' },
+          { id: 'plan', label: 'Story', state: 'done' },
+          { id: 'video', label: 'Motion', state: 'active' },
+        ],
+      }),
+    )
+    assert.ok(!view.nodes.some((n) => n.id === 'stills' || n.id === 'face_qa'))
+    assert.ok(view.edges.some((e) => e.from === 'plan' && e.to === 'video' && e.kind === 'flow'))
+    assert.ok(!view.edges.some((e) => e.from === 'stills' || e.to === 'stills'))
+    assert.ok(nodeX('video', 't2v') < nodeX('video'))
+    assert.ok(nodeX('end', 't2v') < nodeX('end'))
+  })
 })
 
 describe('brain graph — layout and resume', () => {
