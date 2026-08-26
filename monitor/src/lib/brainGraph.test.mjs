@@ -17,6 +17,7 @@ import {
   markForVia,
   NODE_MARK,
   NODE_OPS,
+  nodeOps,
   nodeThumbs,
   nodeProgress,
   nodeX,
@@ -232,6 +233,7 @@ describe('brain graph — decorateGraph', () => {
     assert.ok(!view.edges.some((e) => e.from === 'stills' || e.to === 'stills'))
     assert.ok(nodeX('video', 't2v') < nodeX('video'))
     assert.ok(nodeX('end', 't2v') < nodeX('end'))
+    assert.equal(view.nodes.find((n) => n.id === 'video')?.blurb, 'Prompt to MiniMax')
   })
 })
 
@@ -316,6 +318,23 @@ describe('brain graph — step internals', () => {
       }) || '',
       /Comfy.*still.*S02.*40%/,
     )
+  })
+
+  it('t2v ops drop board picks and still workflows', () => {
+    const plan = nodeOps('plan', 't2v')
+    const save = plan.find((o) => o.id === 'plan_save')
+    assert.equal(save?.label, 'Save the plan')
+    assert.equal(save?.call, 'plan.json')
+    assert.doesNotMatch(JSON.stringify(plan), /board/)
+    const video = nodeOps('video', 't2v')
+    assert.equal(video.find((o) => o.id === 'video_wait')?.label, 'Comfy makes the clip')
+    assert.equal(video.find((o) => o.id === 'video_queue')?.label, 'Queue MiniMax T2VA')
+    assert.doesNotMatch(JSON.stringify(video), /animates/i)
+    assert.equal(nodeOps('stills', 't2v').length, 0)
+    assert.equal(nodeOps('face_qa', 't2v').length, 0)
+    assert.ok(nodeOps('stills').length > 0)
+    const live = liveOp({ step: 'video', phase: 'video_wait', running: true, videoMode: 't2v' })
+    assert.equal(live?.label, 'Comfy makes the clip')
   })
 
   it('every graph node has at least one documented op', () => {

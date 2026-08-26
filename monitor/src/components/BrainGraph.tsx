@@ -204,9 +204,13 @@ function Tile({
         node.id === 'plan'
           ? 'Open the storyboard'
           : node.id === 'stills'
-            ? 'Open still workflows in Comfy'
+            ? brain.videoMode === 't2v'
+              ? 'Straight to video — no stills'
+              : 'Open still workflows in Comfy'
             : node.id === 'video'
-              ? 'Open video workflows in Comfy'
+              ? brain.videoMode === 't2v'
+                ? 'Open the MiniMax workflow'
+                : 'Open video workflows in Comfy'
               : node.blurb
       }
       onClick={onPick}

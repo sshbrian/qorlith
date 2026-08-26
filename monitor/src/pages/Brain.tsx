@@ -99,16 +99,17 @@ export function Brain() {
     return <p className="text-[15px] text-ghost">Open a project to make the film.</p>
   }
 
-  const openNode = (id: string) => {
-    if (id === 'plan') setSheet('story')
-    else if (id === 'stills') setSheet('stills')
-    else if (id === 'video') setSheet('video')
-    else if (id === 'face_qa') navigate(`/studio/${encodeURIComponent(projectId)}/board`)
-    else if (id === 'finish') navigate(`/studio/${encodeURIComponent(projectId)}/watch`)
-  }
-
   const clips = report.clips || []
   const t2v = report.videoMode === 't2v'
+  const openNode = (id: string) => {
+    if (id === 'plan') setSheet('story')
+    else if (id === 'stills') {
+      if (!t2v) setSheet('stills')
+    } else if (id === 'video') setSheet('video')
+    else if (id === 'face_qa') {
+      if (!t2v) navigate(`/studio/${encodeURIComponent(projectId)}/board`)
+    } else if (id === 'finish') navigate(`/studio/${encodeURIComponent(projectId)}/watch`)
+  }
   const steps = t2v
     ? (report.steps || []).filter((s) => s.id !== 'stills' && s.id !== 'face_qa')
     : report.steps || []

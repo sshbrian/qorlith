@@ -222,6 +222,13 @@ describe('UI contract — brain is shipped', () => {
     assert.match(spec, /NODE_MARK/)
     assert.match(spec, /nodeThumbs/)
     assert.match(spec, /spliceTicks/)
+    assert.match(spec, /nodeOps/)
+    assert.match(spec, /Save the plan/)
+    assert.match(spec, /Prompt to MiniMax/)
+    assert.match(page('Brain.tsx'), /if \(!t2v\) setSheet\('stills'\)/)
+    assert.match(page('Brain.tsx'), /if \(!t2v\) navigate/)
+    assert.match(graph, /Open the MiniMax workflow/)
+    assert.match(graph, /Straight to video — no stills/)
   })
 })
 

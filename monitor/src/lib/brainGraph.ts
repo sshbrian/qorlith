@@ -56,6 +56,22 @@ export const NODE_OPS: Record<string, NodeOp[]> = {
   end: [{ id: 'halt', label: 'Graph halted', via: 'router', call: 'END' }],
 }
 
+const T2V_OP_COPY: Record<string, Partial<NodeOp>> = {
+  plan_save: { label: 'Save the plan', call: 'plan.json' },
+  video_queue: { label: 'Queue MiniMax T2VA' },
+  video_wait: { label: 'Comfy makes the clip' },
+}
+
+export function nodeOps(nodeId: string, videoMode?: string | null): NodeOp[] {
+  if (videoMode === 't2v' && (nodeId === 'stills' || nodeId === 'face_qa')) return []
+  const ops = NODE_OPS[nodeId] || []
+  if (videoMode !== 't2v') return ops
+  return ops.map((op) => {
+    const patch = T2V_OP_COPY[op.id]
+    return patch ? { ...op, ...patch } : op
+  })
+}
+
 export const GRAPH_EDGES = [
   { from: 'start', to: 'health', kind: 'flow' },
   { from: 'health', to: 'plan', kind: 'flow' },
@@ -157,15 +173,15 @@ export function viaInk(via: OpVia): string {
 }
 
 export function liveOp(
-  report: Pick<BrainReport, 'phase' | 'step' | 'running'>,
+  report: Pick<BrainReport, 'phase' | 'step' | 'running' | 'videoMode'>,
 ): NodeOp | null {
-  const ops = NODE_OPS[report.step || ''] || []
+  const ops = nodeOps(report.step || '', report.videoMode)
   return ops.find((o) => o.id === report.phase) || (report.running ? ops[0] || null : null)
 }
 
 export function liveVia(
   nodeId: string,
-  report: Pick<BrainReport, 'step' | 'status' | 'phase' | 'running' | 'reviewOk' | 'clips'>,
+  report: Pick<BrainReport, 'step' | 'status' | 'phase' | 'running' | 'reviewOk' | 'clips' | 'videoMode'>,
   nodeState: string,
 ): OpVia {
   const ops = resolveOps(nodeId, report, nodeState)
@@ -281,19 +297,21 @@ export function decorateGraph(
     : GRAPH_EDGES
 
   const nodes: GraphNodeView[] = metas.map((meta) => {
+    const blurb = t2v && meta.id === 'video' ? 'Prompt to MiniMax' : meta.blurb
+    const base = { id: meta.id, label: meta.label, blurb }
     if (raw?.nodes?.length) {
       const hit = raw.nodes.find((n) => n.id === meta.id)
-      if (hit) return { ...meta, state: hit.state || 'idle' }
+      if (hit) return { ...base, state: hit.state || 'idle' }
     }
-    if (meta.id === 'start') return { ...meta, state: begun ? 'done' : 'idle' }
+    if (meta.id === 'start') return { ...base, state: begun ? 'done' : 'idle' }
     if (meta.id === 'end') {
       const st = report.status
       return {
-        ...meta,
+        ...base,
         state: st === 'done' ? 'done' : st === 'fail' || st === 'stopped' ? 'fail' : 'idle',
       }
     }
-    return { ...meta, state: byStep.get(meta.id)?.state || 'idle' }
+    return { ...base, state: byStep.get(meta.id)?.state || 'idle' }
   })
 
   const edges: GraphEdgeView[] = edgeSpecs.map((spec) => {
@@ -357,10 +375,10 @@ export type ResolvedOp = NodeOp & { state: OpState }
 
 export function resolveOps(
   nodeId: string,
-  report: Pick<BrainReport, 'step' | 'status' | 'phase' | 'running' | 'reviewOk' | 'clips'>,
+  report: Pick<BrainReport, 'step' | 'status' | 'phase' | 'running' | 'reviewOk' | 'clips' | 'videoMode'>,
   nodeState: string,
 ): ResolvedOp[] {
-  const ops = NODE_OPS[nodeId] || []
+  const ops = nodeOps(nodeId, report.videoMode)
   if (!ops.length) return []
   const phase = report.phase || ''
   const idx = ops.findIndex((op) => op.id === phase)
@@ -393,7 +411,7 @@ export function viaLabel(via: OpVia): string {
 }
 
 export function liveOpLine(
-  report: Pick<BrainReport, 'phase' | 'step' | 'currentClip' | 'comfy' | 'running' | 'label'>,
+  report: Pick<BrainReport, 'phase' | 'step' | 'currentClip' | 'comfy' | 'running' | 'label' | 'videoMode'>,
 ): string | null {
   const op = liveOp(report)
   if (!op) return null
