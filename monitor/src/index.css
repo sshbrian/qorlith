@@ -104,8 +104,41 @@ select {
 
 .lobby,
 .screening,
-.set {
+.set,
+.script {
   animation: house-in 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.script {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.script-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.script-cover {
+  padding: 4px 2px 8px;
+}
+
+.script-title {
+  font-size: 32px;
+  font-weight: 620;
+  letter-spacing: -0.038em;
+  line-height: 1.05;
+}
+
+.script-logline {
+  margin: 10px 0 0;
+  max-width: 36rem;
+  font-size: 17px;
+  line-height: 1.4;
+  letter-spacing: -0.022em;
+  color: var(--color-ghost);
 }
 
 .lobby {
@@ -1487,7 +1520,8 @@ video.theater-poster {
 
   .lobby,
   .screening,
-  .set {
+  .set,
+  .script {
     animation: none;
   }
 }

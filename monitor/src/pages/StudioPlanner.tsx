@@ -104,12 +104,12 @@ function PlanVisual({ plan }: { plan: StudioMoviePlan }) {
   const selectedJoin = selected ? clipJoinNote(selectedIndex, selected.cut) : ''
 
   return (
-    <div className="space-y-4">
-      <div className="card">
+    <div className="script-pages">
+      <div className="script-cover">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="text-[22px] font-semibold tracking-tight">{plan.title}</div>
-            <p className="text-[15px] text-ghost mt-1.5 max-w-2xl leading-relaxed">{plan.logline}</p>
+            <div className="script-title">{plan.title}</div>
+            <p className="script-logline">{plan.logline}</p>
           </div>
           <div className="text-[13px] text-ghost">
             {plan.durationTargetSec}s · {plan.clips.length} clips
@@ -329,27 +329,28 @@ export function StudioPlanner() {
   const plan = record?.plan
 
   return (
-    <div className="page">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <p className="page-lead">Type what happens. Press Make movie. That is the whole job.</p>
-        </div>
+    <div className="script">
+      <div className="set-slate">
+        <p className="set-call">Type what happens. Press Make movie. That is the whole job.</p>
         <div className="text-[13px] text-ghost">{writerLabel(health)}</div>
       </div>
 
-      <div className="card space-y-3">
-        <label className="block text-[13px] text-ghost">What happens in the film?</label>
+      <div className="title-card">
+        <label className="sr-live" htmlFor="script-prompt">
+          What happens in the film?
+        </label>
         <textarea
+          id="script-prompt"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void makeMovie()
           }}
-          rows={6}
+          rows={4}
           placeholder={PROMPT_PLACEHOLDER}
-          className="field resize-y min-h-[140px]"
+          className="title-card-field"
         />
-        <div className="flex flex-wrap gap-2">
+        <div className="title-card-starters">
           {PROMPT_STARTERS.map((s) => (
             <button key={s.label} type="button" className="chip" onClick={() => setPrompt(s.text)}>
               {s.label}
@@ -357,9 +358,7 @@ export function StudioPlanner() {
           ))}
         </div>
         <VideoModeToggle value={videoMode} onChange={setVideoMode} />
-        <p className="text-[12px] text-ghost">
-          {VIDEO_MODE_HINT[videoMode]}
-        </p>
+        <p className="title-card-hint">{VIDEO_MODE_HINT[videoMode]}</p>
         {health && !health.ok && health.planner?.provider === 'local' ? (
           <span className="text-[13px] text-amber">
             Local writer is offline — paste a plan under More, or start LM Studio.
@@ -369,7 +368,7 @@ export function StudioPlanner() {
           type="button"
           disabled={busy || (!prompt.trim() && !importText.trim())}
           onClick={() => void makeMovie()}
-          className="btn btn-primary btn-xl w-full"
+          className="btn btn-primary btn-xl title-card-go"
         >
           {busy ? 'Starting…' : 'Make movie'}
         </button>
