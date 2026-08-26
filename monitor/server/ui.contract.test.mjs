@@ -141,6 +141,7 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /more && !t2v/)
     assert.match(t, /Pictures only/)
     assert.match(t, /c\.video/)
+    assert.match(t, /currentClip === c\.id \? 'Now'/)
   })
 
   it('Home posters can use a video cover', () => {

@@ -58,7 +58,7 @@ const Filmstrip = memo(function Filmstrip({
           ) : c.video ? (
             <video src={api.mediaUrl(c.video)} muted playsInline preload="metadata" />
           ) : (
-            <span className="filmstrip-empty" />
+            <span className="filmstrip-empty">{currentClip === c.id ? 'Now' : ''}</span>
           )}
           <span className="filmstrip-id">{c.title || c.id}</span>
         </li>
