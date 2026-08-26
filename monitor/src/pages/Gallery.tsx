@@ -14,7 +14,7 @@ function MetaBlock({ item }: { item: GalleryItem }) {
   if (!m) {
     return (
       <p className="text-sm text-ghost">
-        No extra details for this file. New stills save a small notes file next to the picture.
+        No extra details for this file. New renders save a small notes file next to the media.
       </p>
     )
   }
@@ -538,7 +538,7 @@ export function Gallery() {
             type="search"
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
-            placeholder="Search pictures and clips"
+            placeholder="Search stills and clips"
             className="field flex-1 min-w-[200px] text-[15px]"
           />
           <select
@@ -608,7 +608,7 @@ export function Gallery() {
             <>No archived media. Archive items from the detail modal to hide them from the main gallery.</>
           ) : (
             <>
-              No pictures yet.
+              Nothing in the library yet.
               {archivedTotal > 0 ? (
                 <>
                   {' '}

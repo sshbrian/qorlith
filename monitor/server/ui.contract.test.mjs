@@ -123,6 +123,9 @@ describe('UI contract — stages, not tools', () => {
     assert.match(read(path.join(src, 'lib', 'studio.ts')), /Open Watch/)
     assert.doesNotMatch(t, /sendToBoard/)
     assert.doesNotMatch(t, /not a start still/)
+    assert.match(t, /Nothing in the library yet/)
+    assert.doesNotMatch(t, /No pictures yet/)
+    assert.match(t, /New renders save a small notes file/)
   })
 
   it('Plan hides the unused still field in Straight to video', () => {
