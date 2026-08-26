@@ -153,6 +153,25 @@ describe('project folder', () => {
     assert.equal(coverKindFromPath(still), 'image')
   })
 
+  it('T2V cover prefers the film over a continue last-frame', () => {
+    const { project } = createStudioProject({ title: 'T2V Cover', videoMode: 't2v' })
+    const dir = projectDir(project.id)
+    const board = path.join(dir, 'board', 'S02')
+    fs.mkdirSync(board, { recursive: true })
+    const frame = path.join(board, 'S02_from_prev.png')
+    fs.writeFileSync(frame, Buffer.alloc(3000))
+    assert.equal(findProjectCover(project.id), null)
+    const clip = path.join(dir, 'video', 'S01.mp4')
+    fs.mkdirSync(path.dirname(clip), { recursive: true })
+    fs.writeFileSync(clip, Buffer.alloc(3000))
+    assert.equal(findProjectCover(project.id), clip)
+    assert.equal(coverKindFromPath(clip), 'video')
+    const master = path.join(dir, 'master.mp4')
+    fs.writeFileSync(master, Buffer.alloc(3000))
+    assert.equal(findProjectCover(project.id), master)
+    assert.equal(coverKindFromPath(master), 'video')
+  })
+
   it('migrates a legacy studio_plans json into the project folder', () => {
     fs.writeFileSync(
       path.join(legacyPlans, 'old_film.json'),

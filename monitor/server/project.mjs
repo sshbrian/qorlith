@@ -200,6 +200,7 @@ function collectCoverHits(dir, exts, hits) {
     }
     if (st.isDirectory()) collectCoverHits(p, exts, hits)
     else if (st.isFile() && exts.has(path.extname(name).toLowerCase()) && st.size > 2000) {
+      if (/_from_prev\./i.test(name)) continue
       hits.push({ p, mtime: st.mtimeMs })
     }
   }
@@ -216,14 +217,22 @@ function pickS01(hits) {
   return hits[0].p
 }
 
-/** Board still first (S01 preferred), then master.mp4 for Straight to video. */
+function isT2vRecord(id) {
+  const rec = loadProjectRecord(id)
+  return rec?.plan?.videoMode === 't2v'
+}
+
+/** Stills: board still first (S01 preferred). T2V: the film — last-frame PNGs are not a poster. */
 export function findProjectCover(id) {
   const slug = slugifyProjectId(id)
   const root = projectDir(slug)
-  const stills = []
-  collectCoverHits(path.join(root, 'board'), COVER_IMAGE_EXT, stills)
-  const still = pickS01(stills)
-  if (still) return still
+  const t2v = isT2vRecord(slug)
+  if (!t2v) {
+    const stills = []
+    collectCoverHits(path.join(root, 'board'), COVER_IMAGE_EXT, stills)
+    const still = pickS01(stills)
+    if (still) return still
+  }
   const master = path.join(root, 'master.mp4')
   try {
     const st = fs.statSync(master)
