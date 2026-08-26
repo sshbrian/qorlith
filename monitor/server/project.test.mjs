@@ -75,6 +75,24 @@ describe('project folder', () => {
     assert.equal(man.scenes[0].id, 'C01')
   })
 
+  it('T2V approve does not seed clip scenes on the board', () => {
+    const { project } = createStudioProject({ title: 'T2V Board Skip' })
+    const rec = loadProjectRecord(project.id)
+    rec.plan = {
+      ...rec.plan,
+      videoMode: 't2v',
+      clips: [
+        { id: 'S01', title: 'Open', durationSec: 12 },
+        { id: 'S02', title: 'Press', durationSec: 12 },
+      ],
+    }
+    saveProjectRecord(rec)
+    const result = approvePlan(project.id, { startProduction: true })
+    assert.equal(result.status.phase, 'approved_pending_video')
+    const board = listEpisodePlans().find((b) => b.id === project.id)
+    assert.ok(!board || board.sceneCount === 0)
+  })
+
   it('does not reuse an existing project id', () => {
     const a = createStudioProject({ title: 'Twin Alley' })
     const b = createStudioProject({ title: 'Twin Alley' })

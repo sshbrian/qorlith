@@ -1177,6 +1177,7 @@ export function approvePlan(projectId, { startProduction = true } = {}) {
   }
   const plan = rec.plan
   const id = plan.projectId
+  const t2v = normalizeVideoMode(plan.videoMode) === 't2v'
   const paths = planPaths(id, { lookTrack: plan.lookTrack })
   const now = new Date().toISOString()
 
@@ -1222,7 +1223,7 @@ export function approvePlan(projectId, { startProduction = true } = {}) {
     updatedAt: now,
     approvedAt: now,
     productionRequested: Boolean(startProduction),
-    phase: startProduction ? 'approved_pending_stills' : 'approved',
+    phase: startProduction ? (t2v ? 'approved_pending_video' : 'approved_pending_stills') : 'approved',
     config: {
       lookTrack: plan.lookTrack,
       duration_default: Math.round(
@@ -1277,18 +1278,20 @@ export function approvePlan(projectId, { startProduction = true } = {}) {
   saveProjectRecord(rec)
   logInfo('studio.approve', { projectId: id, clips: plan.clips.length, startProduction })
 
-  try {
-    ensureEpisodePlan(id, {
-      title: plan.title,
-      markdown: plan.markdown,
-      scenes: (plan.clips || []).map((c) => ({
-        id: c.id,
-        title: c.title,
-        heading: `### ${c.id} — ${c.title}`,
-      })),
-    })
-  } catch {
-    /* board is optional if disk is read-only */
+  if (!t2v) {
+    try {
+      ensureEpisodePlan(id, {
+        title: plan.title,
+        markdown: plan.markdown,
+        scenes: (plan.clips || []).map((c) => ({
+          id: c.id,
+          title: c.title,
+          heading: `### ${c.id} — ${c.title}`,
+        })),
+      })
+    } catch {
+      /* board is optional if disk is read-only */
+    }
   }
 
   return {
