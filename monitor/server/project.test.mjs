@@ -19,7 +19,9 @@ process.env.QORLITH_LEGACY_BOARDS = legacyBoards
 process.env.QORLITH_MIGRATE = '1'
 
 const {
+  coverKindFromPath,
   createStudioProject,
+  findProjectCover,
   loadProjectRecord,
   migrateProject,
   planRecordPath,
@@ -78,6 +80,22 @@ describe('project folder', () => {
     const b = createStudioProject({ title: 'Twin Alley' })
     assert.equal(a.project.id, 'twin_alley')
     assert.equal(b.project.id, 'twin_alley_2')
+  })
+
+  it('cover prefers a board still, then master.mp4', () => {
+    const { project } = createStudioProject({ title: 'Cover Film' })
+    const dir = projectDir(project.id)
+    assert.equal(findProjectCover(project.id), null)
+    const master = path.join(dir, 'master.mp4')
+    fs.writeFileSync(master, Buffer.alloc(3000))
+    assert.equal(findProjectCover(project.id), master)
+    assert.equal(coverKindFromPath(master), 'video')
+    const board = path.join(dir, 'board', 'S01')
+    fs.mkdirSync(board, { recursive: true })
+    const still = path.join(board, 'S01.png')
+    fs.writeFileSync(still, Buffer.alloc(3000))
+    assert.equal(findProjectCover(project.id), still)
+    assert.equal(coverKindFromPath(still), 'image')
   })
 
   it('migrates a legacy studio_plans json into the project folder', () => {

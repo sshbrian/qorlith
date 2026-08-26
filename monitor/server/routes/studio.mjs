@@ -171,9 +171,10 @@ export function mountStudio(app) {
     '/api/studio/archive',
     wrap(async (_req, res) => {
       const projects = listArchivedStudioProjects().map((p) => {
-        const { coverPath, ...rest } = p
+        const { coverPath, coverKind, ...rest } = p
         return {
           ...rest,
+          coverKind: coverKind || null,
           coverUrl: coverPath
             ? `/api/studio/projects/${encodeURIComponent(p.id)}/cover`
             : null,
@@ -189,15 +190,15 @@ export function mountStudio(app) {
       const id = String(req.params.id || '').trim()
       const abs = findProjectCover(id)
       if (!abs) {
-        fail(404, 'no_cover', 'No still on this project yet', {
-          hint: 'Restore it, then paint a still.',
+        fail(404, 'no_cover', 'No cover on this project yet', {
+          hint: 'Paint a still, or finish the film so master.mp4 is on disk.',
         })
       }
       const root = path.resolve(projectDir(id))
       const resolved = path.resolve(abs)
       if (resolved !== root && !resolved.startsWith(root + path.sep)) {
         fail(403, 'path_forbidden', 'cover is not in this project', {
-          hint: 'The still must live under the project board.',
+          hint: 'The cover must live under the project folder.',
         })
       }
       const ext = path.extname(resolved).toLowerCase()
@@ -206,6 +207,9 @@ export function mountStudio(app) {
         '.jpg': 'image/jpeg',
         '.jpeg': 'image/jpeg',
         '.webp': 'image/webp',
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.mov': 'video/quicktime',
       }
       res.setHeader('Content-Type', types[ext] || 'application/octet-stream')
       res.setHeader('Cache-Control', 'private, max-age=120')

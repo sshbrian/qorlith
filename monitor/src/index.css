@@ -374,7 +374,8 @@ select {
   overflow: hidden;
 }
 
-.archive-card-still img {
+.archive-card-still img,
+.archive-card-still video {
   display: block;
   width: 100%;
   height: 100%;
@@ -383,7 +384,8 @@ select {
   transition: transform 0.45s ease;
 }
 
-.archive-card:hover .archive-card-still img {
+.archive-card:hover .archive-card-still img,
+.archive-card:hover .archive-card-still video {
   transform: scale(1.06);
 }
 
@@ -851,7 +853,8 @@ video.theater-poster {
   overflow: hidden;
 }
 
-.poster-still img {
+.poster-still img,
+.poster-still video {
   display: block;
   width: 100%;
   height: 100%;
@@ -860,7 +863,8 @@ video.theater-poster {
   transition: transform 0.45s ease;
 }
 
-.poster-card:hover .poster-still img {
+.poster-card:hover .poster-still img,
+.poster-card:hover .poster-still video {
   transform: scale(1.06);
 }
 
@@ -1046,7 +1050,9 @@ video.theater-poster {
   }
   .poster-card,
   .poster-still img,
-  .archive-card-still img {
+  .poster-still video,
+  .archive-card-still img,
+  .archive-card-still video {
     transition: none;
   }
 }

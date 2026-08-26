@@ -325,6 +325,7 @@ export type StudioProject = {
   archived: boolean
   archivedAt?: string | null
   coverUrl?: string | null
+  coverKind?: 'image' | 'video' | string | null
   hasPlan: boolean
   hasBoard: boolean
   hasProduce: boolean

@@ -174,44 +174,66 @@ function summarizeRecord(rec) {
   }
 }
 
-const COVER_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp'])
+const COVER_IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp'])
+const COVER_VIDEO_EXT = new Set(['.mp4', '.webm', '.mov'])
 
-/** First still on the board — S01 preferred. */
-export function findProjectCover(id) {
-  const slug = slugifyProjectId(id)
-  const board = path.join(projectDir(slug), 'board')
-  if (!fs.existsSync(board)) return null
-  const hits = []
-  const walk = (dir) => {
-    let names
+export function coverKindFromPath(abs) {
+  const ext = path.extname(String(abs || '')).toLowerCase()
+  return COVER_VIDEO_EXT.has(ext) ? 'video' : 'image'
+}
+
+function collectCoverHits(dir, exts, hits) {
+  let names
+  try {
+    names = fs.readdirSync(dir)
+  } catch {
+    return
+  }
+  for (const name of names) {
+    const p = path.join(dir, name)
+    let st
     try {
-      names = fs.readdirSync(dir)
+      st = fs.statSync(p)
     } catch {
-      return
+      continue
     }
-    for (const name of names) {
-      const p = path.join(dir, name)
-      let st
-      try {
-        st = fs.statSync(p)
-      } catch {
-        continue
-      }
-      if (st.isDirectory()) walk(p)
-      else if (st.isFile() && COVER_EXT.has(path.extname(name).toLowerCase()) && st.size > 2000) {
-        hits.push({ p, mtime: st.mtimeMs })
-      }
+    if (st.isDirectory()) collectCoverHits(p, exts, hits)
+    else if (st.isFile() && exts.has(path.extname(name).toLowerCase()) && st.size > 2000) {
+      hits.push({ p, mtime: st.mtimeMs })
     }
   }
-  walk(board)
+}
+
+function pickS01(hits) {
   if (!hits.length) return null
   hits.sort((a, b) => {
-    const a01 = /[/\\]S01[/\\]/i.test(a.p) ? 0 : 1
-    const b01 = /[/\\]S01[/\\]/i.test(b.p) ? 0 : 1
+    const a01 = /[/\\]S01[/\\]|[/\\]S01\./i.test(a.p) ? 0 : 1
+    const b01 = /[/\\]S01[/\\]|[/\\]S01\./i.test(b.p) ? 0 : 1
     if (a01 !== b01) return a01 - b01
     return b.mtime - a.mtime
   })
   return hits[0].p
+}
+
+/** Board still first (S01 preferred), then master.mp4 for Straight to video. */
+export function findProjectCover(id) {
+  const slug = slugifyProjectId(id)
+  const root = projectDir(slug)
+  const stills = []
+  collectCoverHits(path.join(root, 'board'), COVER_IMAGE_EXT, stills)
+  const still = pickS01(stills)
+  if (still) return still
+  const master = path.join(root, 'master.mp4')
+  try {
+    const st = fs.statSync(master)
+    if (st.isFile() && st.size > 2000) return master
+  } catch {
+    /* no master yet */
+  }
+  const videos = []
+  collectCoverHits(path.join(root, 'video'), COVER_VIDEO_EXT, videos)
+  collectCoverHits(path.join(root, 'board'), COVER_VIDEO_EXT, videos)
+  return pickS01(videos)
 }
 
 export function suggestedStage(project) {
@@ -356,12 +378,14 @@ export function listStudioProjects(produceSummaries = [], brains = []) {
     boards: listEpisodePlans(),
     produce: produceSummaries,
     brains,
-  }).map((p) => ({
-    ...p,
-    coverUrl: findProjectCover(p.id)
-      ? `/api/studio/projects/${encodeURIComponent(p.id)}/cover`
-      : null,
-  }))
+  }).map((p) => {
+    const cover = findProjectCover(p.id)
+    return {
+      ...p,
+      coverUrl: cover ? `/api/studio/projects/${encodeURIComponent(p.id)}/cover` : null,
+      coverKind: cover ? coverKindFromPath(cover) : null,
+    }
+  })
 }
 
 export function listArchivedStudioProjects() {
@@ -374,10 +398,14 @@ export function listArchivedStudioProjects() {
     includeArchived: true,
   })
     .filter((p) => p.archived)
-    .map((p) => ({
-      ...p,
-      coverPath: findProjectCover(p.id),
-    }))
+    .map((p) => {
+      const coverPath = findProjectCover(p.id)
+      return {
+        ...p,
+        coverPath,
+        coverKind: coverPath ? coverKindFromPath(coverPath) : null,
+      }
+    })
     .sort((a, b) => String(b.archivedAt || b.updatedAt || '').localeCompare(String(a.archivedAt || a.updatedAt || '')))
 }
 

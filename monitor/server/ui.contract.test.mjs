@@ -134,6 +134,15 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /c\.video/)
   })
 
+  it('Home posters can use a video cover', () => {
+    const card = read(path.join(src, 'components', 'PosterCard.tsx'))
+    assert.match(card, /export function CoverThumb/)
+    assert.match(card, /kind === 'video'/)
+    assert.match(page('StudioHome.tsx'), /coverKind/)
+    assert.match(page('Archive.tsx'), /CoverThumb/)
+    assert.match(read(path.join(src, 'components', 'Layout.tsx')), /CoverThumb/)
+  })
+
   it('Home and Plan share the same prompt chips', () => {
     const studio = read(path.join(src, 'lib', 'studio.ts'))
     assert.match(studio, /PROMPT_STARTERS/)

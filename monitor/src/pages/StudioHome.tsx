@@ -101,6 +101,7 @@ export function StudioHome() {
                 <PosterCard
                   title={p.title}
                   coverUrl={p.coverUrl}
+                  coverKind={p.coverKind}
                   live={p.active}
                   meta={p.active ? 'Making now' : p.clipCount ? `${p.clipCount} clips` : 'Draft'}
                   onClick={() => navigate(projectPath(p.id, canonicalStage(p.stage) || 'watch'))}

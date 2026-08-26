@@ -1,13 +1,31 @@
+export function CoverThumb({
+  url,
+  kind,
+  className,
+}: {
+  url?: string | null
+  kind?: string | null
+  className?: string
+}) {
+  if (!url) return null
+  if (kind === 'video') {
+    return <video src={url} muted playsInline preload="metadata" className={className} />
+  }
+  return <img src={url} alt="" className={className} />
+}
+
 export function PosterCard({
   title,
   meta,
   coverUrl,
+  coverKind,
   live,
   onClick,
 }: {
   title: string
   meta?: string
   coverUrl?: string | null
+  coverKind?: string | null
   live?: boolean
   onClick: () => void
 }) {
@@ -15,7 +33,11 @@ export function PosterCard({
   return (
     <button type="button" onClick={onClick} className="poster-card">
       <div className="poster-still">
-        {coverUrl ? <img src={coverUrl} alt="" /> : <div className="poster-empty">{letter}</div>}
+        {coverUrl ? (
+          <CoverThumb url={coverUrl} kind={coverKind} />
+        ) : (
+          <div className="poster-empty">{letter}</div>
+        )}
         <div className="poster-shade" />
         {live ? <span className="poster-live">Making now</span> : null}
       </div>

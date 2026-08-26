@@ -23,6 +23,7 @@ import {
 } from '../lib/studio'
 import { usePinnedScroll } from '../lib/studioScroll'
 import { BrandMark } from './BrandMark'
+import { CoverThumb } from './PosterCard'
 import { VideoModeToggle, type VideoMode } from './VideoModeToggle'
 
 const STAGES: { id: StudioStage; label: string }[] = [
@@ -314,9 +315,9 @@ function LayoutBody({
                     title={p.title}
                   >
                     {p.coverUrl ? (
-                      <img
-                        src={p.coverUrl}
-                        alt=""
+                      <CoverThumb
+                        url={p.coverUrl}
+                        kind={p.coverKind}
                         className="h-7 w-7 shrink-0 rounded-[8px] object-cover bg-black ring-1 ring-white/10"
                       />
                     ) : (

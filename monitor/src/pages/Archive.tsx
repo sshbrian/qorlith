@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FailNote } from '../components/FailNote'
+import { CoverThumb } from '../components/PosterCard'
 import { useStudioProjects } from '../components/StudioSession'
 import { api, type StudioProject } from '../lib/api'
 import { projectPath } from '../lib/studio'
@@ -33,7 +34,7 @@ function ArchiveCard({
     <article className="archive-card group">
       <div className="archive-card-still">
         {project.coverUrl ? (
-          <img src={project.coverUrl} alt="" />
+          <CoverThumb url={project.coverUrl} kind={project.coverKind} />
         ) : (
           <div className="archive-card-empty">{(project.title || project.id).slice(0, 1).toUpperCase()}</div>
         )}
