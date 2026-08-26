@@ -117,7 +117,11 @@ describe('UI contract — stages, not tools', () => {
     const t = page('Gallery.tsx')
     assert.match(t, /searchParams\.get\('archived'\)/)
     assert.match(t, /archived.*only/)
-    assert.match(t, /Open Watch/)
+    assert.match(t, /mediaStudioPath/)
+    assert.match(t, /mediaStudioCta/)
+    assert.match(read(path.join(src, 'lib', 'studio.ts')), /Open Make/)
+    assert.match(read(path.join(src, 'lib', 'studio.ts')), /Open Watch/)
+    assert.doesNotMatch(t, /sendToBoard/)
     assert.doesNotMatch(t, /not a start still/)
   })
 

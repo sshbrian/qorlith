@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, type GalleryImage, type GalleryItem, type GalleryRelated } from '../lib/api'
 import { FailNote } from '../components/FailNote'
+import { useStudioProjects } from '../components/StudioSession'
 import { buildSmartStacks, type GalleryStack } from '../lib/galleryStack'
+import { mediaStudioCta, mediaStudioPath, readLastProject } from '../lib/studio'
 
 const STACK_LS_KEY = 'qorlith.gallery.smartStack'
 const ARCHIVE_VIEW_KEY = 'qorlith.gallery.showArchived'
@@ -265,6 +267,7 @@ function RelatedStrip({
 
 export function Gallery() {
   const navigate = useNavigate()
+  const { projects } = useStudioProjects()
   const [searchParams, setSearchParams] = useSearchParams()
   const [images, setImages] = useState<GalleryImage[]>([])
   const [selected, setSelected] = useState<GalleryItem | null>(null)
@@ -375,28 +378,21 @@ export function Gallery() {
     }
   }, [showArchived])
 
-  const sendToBoard = useCallback(
+  const openInStudio = useCallback(
     (item: GalleryItem) => {
-      if (item.kind === 'video') return
-      const last = (() => {
-        try {
-          return localStorage.getItem('qorlith.studio.lastProject')
-        } catch {
-          return null
-        }
-      })()
-      navigate(last ? `/studio/${encodeURIComponent(last)}/board` : '/studio')
+      navigate(mediaStudioPath(item, projects, readLastProject()))
     },
-    [navigate],
+    [navigate, projects],
   )
 
-  const openWatch = useCallback(
-    (item: GalleryItem) => {
-      const id = String(item.project || '').trim()
-      navigate(id ? `/studio/${encodeURIComponent(id)}/watch` : '/studio')
-    },
-    [navigate],
-  )
+  const studioButton = (item: GalleryItem, className: string) => {
+    const cta = mediaStudioCta(item, projects, readLastProject())
+    return (
+      <button type="button" className={className} title={cta.title} onClick={() => openInStudio(item)}>
+        {cta.label}
+      </button>
+    )
+  }
 
   useEffect(() => {
     if (!selected && !stackFocus) return
@@ -755,24 +751,9 @@ export function Gallery() {
                 <div className="text-sm font-mono text-ink truncate">{selected.name}</div>
               </div>
               <div className="flex shrink-0 items-center gap-2 flex-wrap justify-end">
-                {selected.kind !== 'video' ? (
-                  <button
-                    type="button"
-                    className="text-[10px] uppercase tracking-widest text-void bg-cyan border border-cyan rounded px-3 py-1.5 hover:bg-cyan/90 font-semibold"
-                    title="Open the board so you can pick this still for a clip"
-                    onClick={() => sendToBoard(selected)}
-                  >
-                    Open the board
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="text-[10px] uppercase tracking-widest text-void bg-cyan border border-cyan rounded px-3 py-1.5 hover:bg-cyan/90 font-semibold"
-                    title="Open Watch for this film"
-                    onClick={() => openWatch(selected)}
-                  >
-                    Open Watch
-                  </button>
+                {studioButton(
+                  selected,
+                  'text-[10px] uppercase tracking-widest text-void bg-cyan border border-cyan rounded px-3 py-1.5 hover:bg-cyan/90 font-semibold',
                 )}
                 {selected.archived || showArchived ? (
                   <button
@@ -871,16 +852,10 @@ export function Gallery() {
                   />
                 </div>
                 <div className="mt-2 text-[10px] font-mono text-ghost break-all">{selected.path}</div>
-                {selected.kind !== 'video' ? (
-                  <button
-                    type="button"
-                    className="mt-3 w-full sm:w-auto text-[10px] uppercase tracking-widest text-void bg-cyan border border-cyan rounded-lg px-4 py-2 hover:bg-cyan/90 font-semibold"
-                    title="Open the board so you can pick this still for a clip"
-                    onClick={() => sendToBoard(selected)}
-                  >
-                    Open the board
-                  </button>
-                ) : null}
+                {studioButton(
+                  selected,
+                  'mt-3 w-full sm:w-auto text-[10px] uppercase tracking-widest text-void bg-cyan border border-cyan rounded-lg px-4 py-2 hover:bg-cyan/90 font-semibold',
+                )}
               </div>
               <div>
                 <h2 className="text-xs uppercase tracking-[0.3em] text-ghost mb-3">

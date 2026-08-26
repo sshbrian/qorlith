@@ -92,6 +92,42 @@ export function projectPath(id: string, stage?: StudioStage) {
   return stage ? `${base}/${stage}` : base
 }
 
+type MediaStudioItem = { project?: string | null; kind?: string | null }
+type MediaStudioProject = { id: string; videoMode?: string | null }
+
+function projectVideoMode(
+  id: string,
+  projects: MediaStudioProject[] = [],
+): string {
+  return projects.find((p) => p.id === id)?.videoMode === 't2v' ? 't2v' : 'stills'
+}
+
+/** All media → the owning film. T2V has no Board. Item project wins over the last-opened one. */
+export function mediaStudioPath(
+  item: MediaStudioItem,
+  projects: MediaStudioProject[] = [],
+  lastProject?: string | null,
+): string {
+  const id = String(item.project || lastProject || '').trim()
+  if (!id) return '/studio'
+  if (item.kind === 'video') return projectPath(id, 'watch')
+  if (projectVideoMode(id, projects) === 't2v') return projectPath(id, 'make')
+  return projectPath(id, 'board')
+}
+
+export function mediaStudioCta(
+  item: MediaStudioItem,
+  projects: MediaStudioProject[] = [],
+  lastProject?: string | null,
+): { label: string; title: string } {
+  if (item.kind === 'video') return { label: 'Open Watch', title: 'Open Watch for this film' }
+  const id = String(item.project || lastProject || '').trim()
+  if (id && projectVideoMode(id, projects) === 't2v') {
+    return { label: 'Open Make', title: 'Straight to video — no board' }
+  }
+  return { label: 'Open the board', title: 'Open the board so you can pick this still for a clip' }
+}
+
 export function stageFromPath(pathname: string): StudioStage | '' {
   const parts = pathname.split('/').filter(Boolean)
   if (parts[0] !== 'studio') return ''
