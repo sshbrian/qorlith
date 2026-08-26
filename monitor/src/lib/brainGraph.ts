@@ -7,6 +7,7 @@ export const GRAPH_NODE_META = [
   { id: 'stills', label: 'Pictures', blurb: 'Paint each still' },
   { id: 'face_qa', label: 'Your picks', blurb: 'You choose the frames' },
   { id: 'video', label: 'Motion', blurb: 'Animate the picks' },
+  { id: 'free', label: 'Clear', blurb: 'Unload Comfy models' },
   { id: 'finish', label: 'Film', blurb: 'Join the clips' },
   { id: 'end', label: 'End', blurb: 'Stop or done' },
 ] as const
@@ -47,6 +48,7 @@ export const NODE_OPS: Record<string, NodeOp[]> = {
     { id: 'video_queue', label: 'Queue MiniMax video', via: 'http', call: 'POST /api/director/video/run' },
     { id: 'video_wait', label: 'Comfy animates the clip', via: 'comfy', call: 'WS /ws + find .mp4' },
   ],
+  free: [{ id: 'comfy_free', label: 'Unload Comfy models', via: 'comfy', call: 'POST /free' }],
   finish: [
     { id: 'ffmpeg', label: 'Join clip videos', via: 'ffmpeg', call: 'ffmpeg -f concat -c copy' },
     { id: 'master', label: 'Write master.mp4', via: 'disk', call: 'projects/<id>/master.mp4' },
@@ -60,17 +62,20 @@ export const GRAPH_EDGES = [
   { from: 'plan', to: 'stills', kind: 'flow' },
   { from: 'stills', to: 'face_qa', kind: 'flow' },
   { from: 'face_qa', to: 'video', kind: 'flow' },
-  { from: 'video', to: 'finish', kind: 'flow' },
+  { from: 'video', to: 'free', kind: 'flow' },
+  { from: 'free', to: 'finish', kind: 'flow' },
   { from: 'finish', to: 'end', kind: 'flow' },
   { from: 'health', to: 'end', kind: 'stop' },
   { from: 'plan', to: 'end', kind: 'stop' },
   { from: 'stills', to: 'end', kind: 'stop' },
   { from: 'face_qa', to: 'end', kind: 'stop' },
   { from: 'video', to: 'end', kind: 'stop' },
+  { from: 'free', to: 'end', kind: 'stop' },
   { from: 'start', to: 'plan', kind: 'resume' },
   { from: 'start', to: 'stills', kind: 'resume' },
   { from: 'start', to: 'face_qa', kind: 'resume' },
   { from: 'start', to: 'video', kind: 'resume' },
+  { from: 'start', to: 'free', kind: 'resume' },
   { from: 'start', to: 'finish', kind: 'resume' },
 ] as const
 
@@ -98,11 +103,11 @@ export type StepTiming = {
   seconds?: number | null
 }
 
-export const PIPELINE = ['health', 'plan', 'stills', 'face_qa', 'video', 'finish'] as const
+export const PIPELINE = ['health', 'plan', 'stills', 'face_qa', 'video', 'free', 'finish'] as const
 
 export const GRAPH_LAYOUT = {
-  order: ['start', 'health', 'plan', 'stills', 'face_qa', 'video', 'finish', 'end'] as const,
-  nodeW: 100,
+  order: ['start', 'health', 'plan', 'stills', 'face_qa', 'video', 'free', 'finish', 'end'] as const,
+  nodeW: 88,
   nodeH: 122,
   gap: 8,
   padX: 10,
@@ -118,6 +123,7 @@ export const NODE_MARK: Record<string, { mark: NodeMarkId; via: OpVia }> = {
   stills: { mark: 'frame', via: 'comfy' },
   face_qa: { mark: 'print', via: 'human' },
   video: { mark: 'sprocket', via: 'comfy' },
+  free: { mark: 'pulse', via: 'comfy' },
   finish: { mark: 'splice', via: 'ffmpeg' },
   end: { mark: 'flag', via: 'router' },
 }

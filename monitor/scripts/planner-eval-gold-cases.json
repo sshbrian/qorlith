@@ -101,5 +101,19 @@
       "dialogue": false,
       "notes": "Photoreal office. One or two clips."
     }
+  },
+  {
+    "id": "gold_silent_named_score",
+    "prompt": "24 second Ghost in the Shell anime, rated R. Silent, no dialogue, no radio, no people talking. Two 12 second takes.\n\nS01: medium close-up of the Major Motoko Kusanagi on a rain-wet skybridge. Frozen pose.\nCUT to S02: neon alley, she raises an SMG and fires a short burst.\nMusic: sparse taiko and distorted cello at moderate tempo, staccato dynamics, no vocals. Adults only.",
+    "expect": {
+      "lookTrack": "anime",
+      "durationSec": 24,
+      "minClips": 2,
+      "maxClips": 3,
+      "dialogue": false,
+      "music": true,
+      "allowMotoko": true,
+      "notes": "Silent speech only. Named taiko/cello score must stay. Motoko lock ON."
+    }
   }
 ]

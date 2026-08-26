@@ -94,6 +94,15 @@ describe('comfy progress', () => {
     assert.equal(s.max, 20)
   })
 
+  it('idle GPU is Ready, not Working', () => {
+    const view = viewComfyProgress({ ...emptyState(), connected: true, updatedAt: Date.now() })
+    assert.equal(view.active, false)
+    assert.equal(view.title, 'Ready')
+    assert.equal(view.percent, null)
+    assert.match(view.line, /free/i)
+    assert.match(view.hint, /free/i)
+  })
+
   it('shows a wait message when the queue is ahead and nothing is ticking', () => {
     let s = emptyState()
     s = applyComfyEvent(s, { type: 'status', data: { status: { exec_info: { queue_remaining: 2 } } } })

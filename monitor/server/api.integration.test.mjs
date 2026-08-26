@@ -193,6 +193,16 @@ describe('Qorlith API integration (synthetic Kohya pipes)', () => {
     assert.equal(archived.status, 200)
     const after = await getJson(port, '/api/produce/pipelines')
     assert.ok(!after.body.pipelines.some((p) => p.id === id))
+
+    const live = await getJson(port, '/api/studio/projects')
+    assert.ok(!(live.body.projects || []).some((p) => p.id === id))
+    const vault = await getJson(port, '/api/studio/archive')
+    assert.ok((vault.body.projects || []).some((p) => p.id === id))
+
+    const restored = await postJson(port, `/api/studio/plans/${id}/unarchive`, {})
+    assert.equal(restored.status, 200)
+    const liveAgain = await getJson(port, '/api/studio/projects')
+    assert.ok((liveAgain.body.projects || []).some((p) => p.id === id))
   })
 
   it('unknown produce pipeline returns error + code + hint', async () => {

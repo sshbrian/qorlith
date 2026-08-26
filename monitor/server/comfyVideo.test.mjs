@@ -3,7 +3,16 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { describe, it } from 'node:test'
-import { applyMinimaxJob, composeH3Prompt, findMp4, loadVideoTemplate } from './comfyVideo.mjs'
+import {
+  applyMinimaxJob,
+  composeH3Prompt,
+  expandSoundscape,
+  findMp4,
+  h3ShotStyle,
+  loadVideoTemplate,
+  stripShotLabel,
+  subjectLock,
+} from './comfyVideo.mjs'
 import { getVideoWorkflowPath } from './studioConfig.mjs'
 import { dryRunVideoPlan } from './director.mjs'
 
@@ -47,13 +56,24 @@ describe('MiniMax H3 video plan', () => {
     assert.equal(prompt['137'].inputs.image, 'staged.png')
     assert.ok(report.some((r) => r.field === 'prompt'))
     assert.ok(report.some((r) => r.field === 'length_frames'))
+    const live = applyMinimaxJob(graph, {
+      motion: 'he turns',
+      lookTrack: 'live',
+      durationSec: 6,
+      fps: 24,
+    })
+    assert.match(live.prompt['136'].inputs.prompt, /Live-action, cinematic/)
+    assert.doesNotMatch(live.prompt['136'].inputs.prompt, /2D-animated/)
+    assert.match(live.h3Prompt, /Live-action, cinematic/)
   })
 
   it('composeH3Prompt uses official H3 fields and keeps silent clips silent', () => {
     const cut = composeH3Prompt({ motion: 'she turns', dialogue: '', music: 'N/A' })
     assert.match(cut, /integrated_multimodal_description/)
-    assert.match(cut, /overall_soundscape/)
-    assert.match(cut, /lips remain completely closed/)
+    assert.match(cut, /overall_soundscape: N\/A/)
+    assert.match(cut, /On-screen lips remain completely closed/)
+    assert.match(cut, /No singing/)
+    assert.doesNotMatch(cut, /Her lips/)
     assert.doesNotMatch(cut, /^No dialogue\.$/m)
     assert.doesNotMatch(cut, /^dialogue:/m)
     const spoken = composeH3Prompt({
@@ -63,7 +83,7 @@ describe('MiniMax H3 video plan', () => {
       soundscape: 'wind, distant gunfire',
     })
     assert.match(spoken, /<d>\[English\] Copy\.<\/d>/)
-    assert.match(spoken, /overall_soundscape: wind, distant gunfire/)
+    assert.match(spoken, /overall_soundscape: wind, and distant gunfire\./)
     assert.match(spoken, /non_diegetic_music: low cello drone/)
     const cont = composeH3Prompt({
       motion: 'she turns',
@@ -71,8 +91,62 @@ describe('MiniMax H3 video plan', () => {
       music: 'N/A',
       continueFromPrior: true,
     })
-    assert.match(cont, /Continue the action from this pose/)
+    assert.match(cont, /seamless continuation/)
+    assert.match(cont, /first couple of seconds/)
+    assert.match(cont, /about two seconds spare/)
+    assert.match(cont, /Then she turns/)
     assert.doesNotMatch(cont, /last frame of the previous shot/)
+    const spokenCont = composeH3Prompt({
+      motion: 'she turns',
+      dialogue: 'the adult woman (S1) says: <d>[English] Copy.</d>',
+      continueFromPrior: true,
+    })
+    assert.match(spokenCont, /After the opening hold/)
+    assert.match(spokenCont, /<d>\[English\] Copy\.<\/d>/)
+  })
+
+  it('composeH3Prompt styles live vs anime and never stacks [Shot 1]', () => {
+    const live = composeH3Prompt({
+      motion: '[Shot 1] The camera pushes in as he turns',
+      dialogue: '',
+      music: 'N/A',
+      lookTrack: 'live',
+      characters: [
+        { id: 'S1', name: 'Ben' },
+        { id: 'S2', name: 'Cal' },
+      ],
+    })
+    assert.match(live, /\[Shot 1\] Live-action, cinematic/)
+    assert.match(live, /Ben and Cal shown in <Picture 1> remain/)
+    assert.doesNotMatch(live, /2D-animated/)
+    assert.doesNotMatch(live, /\[Shot 1\].*\[Shot 1\]/)
+    const anime = composeH3Prompt({
+      motion: 'The camera holds static as she raises the SMG',
+      lookTrack: 'anime',
+      characters: [{ id: 'S1', name: 'Major Motoko Kusanagi' }],
+      music: 'sparse taiko and distorted cello at moderate tempo',
+      soundscape: 'SMG gunfire, brass casings clattering on wet pavement, heavy rain',
+    })
+    assert.match(anime, /\[Shot 1\] 2D-animated,/)
+    assert.match(anime, /Major Motoko Kusanagi shown in <Picture 1> remains/)
+    assert.match(anime, /non_diegetic_music: sparse taiko/)
+    assert.match(anime, /and heavy rain\./)
+    assert.match(anime, /No spoken words/)
+  })
+
+  it('composeH3Prompt ignores anime motionPrefix on live and keeps singing', () => {
+    assert.equal(h3ShotStyle({ lookTrack: 'live', motionPrefix: '2D-animated, cinematic anime' }), 'Live-action, cinematic')
+    assert.equal(h3ShotStyle({ lookTrack: 'anime', motionPrefix: '2D-animated, cinematic anime' }), '2D-animated, cinematic anime')
+    const sung = composeH3Prompt({
+      motion: 'She steps into the chorus and sings',
+      lookTrack: 'anime',
+      music: 'synth bass at 120 BPM',
+    })
+    assert.match(sung, /sings/)
+    assert.doesNotMatch(sung, /No singing/)
+    assert.equal(stripShotLabel('[Shot 1] she turns'), 'she turns')
+    assert.equal(expandSoundscape(''), 'N/A')
+    assert.match(subjectLock({ characters: [{ name: 'Ava' }] }), /Ava shown/)
   })
 
   it('applyMinimaxJob sets motion, dialogue, and music on named inputs', () => {

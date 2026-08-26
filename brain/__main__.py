@@ -34,7 +34,8 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--project", dest="project_id", default="")
     start.add_argument("--title", default="")
     start.add_argument("--prompt", default="")
-    start.add_argument("--stop-after", choices=["plan", "stills"], default="stills")
+    start.add_argument("--stop-after", choices=["plan", "stills", "film"], default="stills")
+    start.add_argument("--auto-pick", action="store_true")
     start.add_argument("--quality", choices=["draft", "standard", "hero"], default="standard")
     start.add_argument("--dry-run", action="store_true")
     start.add_argument("--no-persist", action="store_true")
@@ -55,11 +56,13 @@ def main(argv: list[str] | None = None) -> int:
     studio = Studio(cfg)
     try:
         if args.cmd == "start":
+            stop_after = "" if args.stop_after == "film" else args.stop_after
             state = empty_state(
                 project_id=args.project_id,
                 title=args.title,
                 prompt=args.prompt,
-                stop_after=args.stop_after,
+                stop_after=stop_after,
+                auto_pick=bool(args.auto_pick) or args.stop_after == "film",
                 quality=args.quality,
                 dry_run=args.dry_run,
                 thread_id=args.project_id or "",

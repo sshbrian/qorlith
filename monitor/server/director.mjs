@@ -7,6 +7,7 @@ import { queueStillBatch, comfyHealth } from './comfyStill.mjs'
 import { assertComfyIdle } from './comfyClient.mjs'
 import { queueVideoAndWait } from './comfyVideo.mjs'
 import { clipDurationBounds, getCheckpoint, getLoraInventory, getVideoWorkflowPath, loadStudio } from './studioConfig.mjs'
+import { isGitsLora, textWantsGits } from './gitsLock.mjs'
 import { info as logInfo } from './log.mjs'
 import { fail } from './errors.mjs'
 
@@ -114,6 +115,8 @@ export function directorConfigFromApp() {
     planIdentifier: String(p.identifier || 'qorlith-planner'),
     plannerSystem: String(p.system || ''),
     plannerStyle: String(p.style || ''),
+    plannerProvider: String(p.provider || 'local'),
+    plannerApiKey: String(p.api_key || ''),
     stillQuality: (() => {
       const q = String(studio.stills?.quality || DEFAULT_DIRECTOR_CFG.stillQuality).toLowerCase()
       return q === 'draft' || q === 'hero' || q === 'standard' ? q : 'standard'
@@ -172,7 +175,7 @@ function clamp(n, lo, hi, fallback) {
  * Convert Danbooru-style underscores to Pony/SDXL spaces, keep score_* + source_anime.
  * Strip meta resolution tags and over-aggressive weight syntax.
  */
-export function sanitizePonyPositive(positive) {
+export function sanitizePonyPositive(positive, extra = {}) {
   const cfg = stillPrompts()
   let p = String(positive || '').trim()
   if (!p) p = String(cfg.prefix || '').trim()
@@ -183,9 +186,17 @@ export function sanitizePonyPositive(positive) {
   // Protect tokens that legitimately use underscores (placeholders must NOT contain _)
   const protectedMap = new Map()
   let pi = 0
+  const triggerProtect = getLoraInventory().flatMap((l) =>
+    (l.triggers || [])
+      .map((tok) => String(tok).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .filter((tok) => tok.includes('_')),
+  )
   const protect = [
     'score_\\d+(?:_up)?',
+    'source_\\w+',
+    'rating_\\w+',
     ...((cfg.protect_tokens || []).map((tok) => String(tok).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))),
+    ...triggerProtect,
   ]
   const protectRe = new RegExp(`\\b(${protect.join('|')})\\b`, 'gi')
   p = p.replace(protectRe, (m) => {
@@ -214,12 +225,14 @@ export function sanitizePonyPositive(positive) {
     .trim()
 
   const lower = p.toLowerCase()
+  const wantGits = textWantsGits(`${p} ${extra.userText || ''}`)
   const need = []
   const prefix = String(cfg.prefix || '').trim()
   if (prefix && !lower.includes(prefix.toLowerCase().split(',')[0].trim())) {
     need.push(prefix)
   }
   for (const lora of getLoraInventory()) {
+    if (isGitsLora(lora) && !wantGits) continue
     for (const trig of lora.triggers || []) {
       if (trig && !lower.includes(String(trig).toLowerCase())) need.push(String(trig))
     }
@@ -227,12 +240,15 @@ export function sanitizePonyPositive(positive) {
   if (need.length) p = `${need.join(', ')}, ${p}`
   const suffix = String(cfg.suffix || '').trim()
   if (suffix && !p.toLowerCase().includes(suffix.toLowerCase())) p = `${p}, ${suffix}`
+  if (/\b1girl\b/i.test(p) && !/\b(?:[2-9]girls|solo)\b/i.test(p)) {
+    p = p.replace(/\b1girl\b/i, '1girl, solo')
+  }
 
   return p
 }
 
-function ensurePositiveTags(positive) {
-  return sanitizePonyPositive(positive)
+function ensurePositiveTags(positive, userText = '') {
+  return sanitizePonyPositive(positive, { userText })
 }
 
 /** Always-on face/hand artifact block. Merged into every still negative. */
@@ -264,15 +280,19 @@ function ensureNegative(negative, _userText = '') {
 }
 
 function normalizeIpadapter(raw) {
-  if (!raw || typeof raw !== 'object') return { enabled: false, image: '', weight: 0.5 }
+  if (!raw || typeof raw !== 'object') return { enabled: false, image: '', weight: 0.28 }
   const image = String(raw.image || raw.guidePath || '').trim()
   const enabled = Boolean((raw.enabled ?? Boolean(image)) && image)
   const weight = Number(raw.weight)
+  const startAt = Number(raw.start_at)
+  const endAt = Number(raw.end_at)
   return {
     enabled,
     image: enabled ? image : '',
-    weight: Number.isFinite(weight) ? Math.min(1.2, Math.max(0.15, weight)) : 0.5,
-    weight_type: String(raw.weight_type || 'linear'),
+    weight: Number.isFinite(weight) ? Math.min(1.2, Math.max(0.15, weight)) : 0.28,
+    weight_type: String(raw.weight_type || 'ease out'),
+    start_at: Number.isFinite(startAt) ? Math.min(1, Math.max(0, startAt)) : 0,
+    end_at: Number.isFinite(endAt) ? Math.min(1, Math.max(0.2, endAt)) : 0.62,
   }
 }
 
@@ -391,7 +411,7 @@ export function validatePlan(raw, { userText = '', sizeHint = '' } = {}) {
     throw new Error('plan must be an object')
   }
 
-  const positive = ensurePositiveTags(raw.positive)
+  const positive = ensurePositiveTags(raw.positive, userText)
   if (positive !== String(raw.positive || '').trim()) {
     warnings.push('Sanitized positive (spaces not underscores, stripped meta tags)')
   }
@@ -812,6 +832,10 @@ export async function runDirectorPipeline(args) {
  *   motion: string,
  *   dialogue: string,
  *   music: string,
+ *   soundscape?: string,
+ *   lookTrack?: string,
+ *   characters?: { id: string, name: string }[],
+ *   allowSinging?: boolean,
  *   durationSec: number,
  *   megapixels: number,
  *   fps: number,
@@ -820,28 +844,55 @@ export async function runDirectorPipeline(args) {
  *   notes?: string
  * }} DirectorVideoPlan */
 
+const VIDEO_SING_RE = /\b(sings?|singing|chorus|lyrics?)\b/i
+
+function inferVideoLook(text, rawLook) {
+  const explicit = String(rawLook || '').toLowerCase()
+  if (explicit === 'live' || explicit === 'anime') return explicit
+  const t = String(text || '')
+  const liveHit =
+    /\b(live|found-?footage|photoreal|real_movie|camcorder|hidden\s*cam|kitchen|office|hotel|handshake|documentary)\b/i.test(
+      t,
+    )
+  const animeHit = /\b(anime|gits|ghost in the shell|2d|cel[- ]?shad)\b/i.test(t)
+  if (liveHit && !animeHit) return 'live'
+  if (animeHit) return 'anime'
+  return ''
+}
+
 export function buildVideoSystemPrompt() {
   const studio = loadStudio()
   const dur = Number(studio.video.duration_sec) || 12
   return `You are Qorlith Video Director for MiniMax H3 image-to-video-audio.
-Convert free-form intent into a STRICT JSON plan. The start still already has identity and scene.
+Convert free-form intent into a STRICT JSON plan. The start still IS frame 0. The app wraps I2VA + style + identity lock. You write only what CHANGES.
 
 RULES:
 1. Output ONLY one JSON object. No markdown fences.
 2. Adult characters only. Never minors.
-3. motion describes camera and body action only. Do not rename models or LoRAs.
-4. dialogue is spoken lines, or empty.
-5. music is a short non-diegetic cue, or "N/A".
-6. durationSec should be ${dur} unless the user asks otherwise (keep 6–12).
-7. megapixels default 0.6.
+3. motion is camera + body action only. Do not rename models or LoRAs. Do not write [Shot 1].
+4. Camera as prose: push in / pull out / pan / truck / tilt / tracking / static / shake slightly, plus optional "with small amplitude" / "at slow speed".
+5. dialogue is spoken lines with H3 markup, or empty:
+   the adult with a dry mid voice (S1) says: <d>[English] Copy.</d>
+   Inside <d>: [English] or [Japanese] then the exact words. No quotes.
+   If the user did not ask for speech, dialogue is empty.
+6. soundscape is 1–4 diegetic sentences (rain, footsteps, gunfire, breath). Never dialogue or score. N/A if truly silent.
+7. music is non_diegetic_music: named instruments + tempo + dynamics, or "N/A". Never only "soft" / "loud" / "epic".
+8. lookTrack is "anime" or "live". Honor the user. Kitchen / office / hotel / found-footage / photoreal → live.
+9. Silent / no dialogue means no speech. Keep music if the user named instruments or a score.
+10. durationSec should be ${dur} unless the user asks otherwise (keep 6–15; continue takes ≥10).
+11. If this take continues the previous last frame: hold that pose ~2 s (breath / weight shift, no speech), then the action, then settle ~2 s. Do not start or end on a spoken line.
+12. megapixels default 0.6.
 
 JSON SCHEMA:
 {
-  "motion": "string",
-  "dialogue": "string",
-  "music": "string",
+  "motion": "camera + body action only",
+  "dialogue": "H3 spoken line or empty",
+  "soundscape": "diegetic sentences or N/A",
+  "music": "instruments + tempo + dynamics, or N/A",
+  "lookTrack": "anime" | "live",
   "durationSec": ${dur},
   "megapixels": 0.6,
+  "continueFromPrior": false,
   "notes": "string"
 }`
 }
@@ -855,12 +906,30 @@ export function validateVideoPlan(raw, { userText = '' } = {}) {
   const dialogue = String(raw.dialogue || '').trim()
   const music = String(raw.music || raw.non_diegetic_music || vp.music_default || 'N/A').trim() || 'N/A'
   const soundscape = String(raw.soundscape || raw.overall_soundscape || '').trim()
+  const lookTrack = inferVideoLook(userText, raw.lookTrack || raw.look)
+  const characters = Array.isArray(raw.characters)
+    ? raw.characters
+        .slice(0, 8)
+        .map((c, i) => ({
+          id: String(c?.id || `S${i + 1}`).slice(0, 16),
+          name: String(c?.name || '').slice(0, 64),
+        }))
+        .filter((c) => c.name)
+    : []
+  const allowSinging =
+    Boolean(raw.allowSinging || raw.singing) || VIDEO_SING_RE.test(`${motion} ${dialogue} ${userText}`)
   const bounds = clipDurationBounds()
   let durationSec = Number(raw.durationSec ?? raw.duration_sec ?? bounds.fallback)
+  const continueFromPrior = Boolean(raw.continueFromPrior)
   if (!Number.isFinite(durationSec) || durationSec < 4) durationSec = bounds.fallback
   if (durationSec > bounds.max) {
     warnings.push(`durationSec capped at ${bounds.max}`)
     durationSec = bounds.max
+  }
+  const continueMin = Number(bounds.continueMin) > 0 ? Number(bounds.continueMin) : 10
+  if (continueFromPrior && durationSec < continueMin) {
+    warnings.push(`continue take raised to ${continueMin}s`)
+    durationSec = Math.min(continueMin, bounds.max)
   }
   let megapixels = Number(raw.megapixels ?? studio.video.megapixels ?? 0.6)
   if (!Number.isFinite(megapixels) || megapixels <= 0) megapixels = 0.6
@@ -869,7 +938,10 @@ export function validateVideoPlan(raw, { userText = '' } = {}) {
     dialogue,
     music,
     soundscape,
-    continueFromPrior: Boolean(raw.continueFromPrior),
+    lookTrack,
+    characters,
+    allowSinging,
+    continueFromPrior,
     durationSec,
     megapixels,
     fps: 24,
@@ -905,7 +977,7 @@ export async function generateVideoPlan({ instruction, directorCfg }) {
       { role: 'system', content: buildVideoSystemPrompt() },
       {
         role: 'user',
-        content: `Motion intent for I2V (start image already set):\n${userText}\n\nReturn the JSON video plan now.`,
+        content: `Motion intent for I2VA (start image already set). Do not write [Shot 1].\n${userText}\n\nReturn the JSON video plan now.`,
       },
     ],
   }
@@ -1022,6 +1094,10 @@ export async function runVideoPipeline(args) {
       dialogue: planResult.plan.dialogue,
       music: planResult.plan.music,
       soundscape: planResult.plan.soundscape,
+      lookTrack: planResult.plan.lookTrack || args.lookTrack,
+      characters: planResult.plan.characters,
+      allowSinging: planResult.plan.allowSinging,
+      instruction: args.instruction,
       durationSec: planResult.plan.durationSec,
       megapixels: planResult.plan.megapixels,
       seed: planResult.plan.seed,
@@ -1030,6 +1106,7 @@ export async function runVideoPipeline(args) {
       comfyRoot: cfg.comfyRoot,
       comfyOutputRoot: args.comfyOutputRoot,
       filenamePrefix: args.filenamePrefix || `qorlith/video/dir_${Date.now().toString(36)}`,
+      keepModels: Boolean(args.keepModels),
       onProgress: track,
     })
     track({ stage: 'done', detail: genResult.videoPath })

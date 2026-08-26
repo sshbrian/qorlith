@@ -48,7 +48,7 @@ export function ComfyProgress({
           <div className="progress-pulse" />
         </div>
         <span className="text-[12px] tabular-nums text-ghost shrink-0">
-          {known ? `${Math.round(percent || 0)}%` : '…'}
+          {known && (percent || 0) >= 1 ? `${Math.round(percent || 0)}%` : '…'}
         </span>
       </div>
     )

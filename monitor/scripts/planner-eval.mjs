@@ -351,20 +351,23 @@ export function scorePlan(rawText, userPrompt, expect = {}) {
 
   let audio = 10
   const palette = plan.musicPalette || ''
-  if (expect.silent) {
+  const wantNoMusic =
+    expect.noMusic === true || expect.music === false || (expect.silent && expect.music !== true)
+  const wantNoTalk = expect.dialogue === false || (expect.silent && expect.dialogue !== true)
+  if (wantNoMusic) {
     const musicBad = clips.some((c) => c.musicNote && !/^n\/a$/i.test(c.musicNote.trim()))
-    const talkBad = expect.dialogue
-      ? false
-      : clips.some((c) => String(c.dialogue || '').trim())
     if (musicBad) {
       audio -= 4
-      notes.push('silent request but musicNote not N/A')
+      notes.push('silent/no-music request but musicNote not N/A')
     }
-    if (talkBad) {
+  }
+  if (wantNoTalk) {
+    if (clips.some((c) => String(c.dialogue || '').trim())) {
       audio -= 2
       notes.push('silent/no-talk request but dialogue present')
     }
-  } else if (expect.music !== false) {
+  }
+  if (!wantNoMusic && expect.music !== false) {
     if (!INSTRUMENT.test(palette) && !TEMPO.test(palette)) {
       audio -= 3
       notes.push('musicPalette missing instruments/tempo')
@@ -616,6 +619,13 @@ async function main() {
       maxClips: 13,
       mustSplit: true,
     })
+    const named = inferPlanHints(
+      'Silent, no dialogue. Music: sparse taiko and distorted cello at moderate tempo.',
+    )
+    if (named.noMusic || !named.namedScore || !named.noTalk) {
+      console.error('silent + named score should keep music', named)
+      process.exit(1)
+    }
     if (g.total < 80) {
       console.error('gold plan scored too low', g)
       process.exit(1)
@@ -683,6 +693,8 @@ async function main() {
     (wantModel && listed.includes(wantModel) && wantModel) ||
     wantModel ||
     (dcfg.planModelKey && listed.includes(dcfg.planModelKey) && dcfg.planModelKey) ||
+    listed.find((id) => /qwen3\.8-27b-uncensored/i.test(id)) ||
+    listed.find((id) => /qwen3\.8/i.test(id)) ||
     listed.find((id) => /qwen3\.6.*hauhaucs|qwen3\.6-27b-uncensored/i.test(id)) ||
     listed.find((id) => /qwen3\.6/i.test(id)) ||
     listed.find((id) => /qorlith-planner/i.test(id)) ||

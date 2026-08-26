@@ -85,6 +85,15 @@ class Studio:
         pending = q.get("queue_pending") or []
         return bool(running or pending)
 
+    def comfy_free(self) -> dict[str, Any]:
+        r = self.http.post(
+            f"{self.cfg.comfy_url}/free",
+            json={"unload_models": True, "free_memory": True},
+        )
+        if r.status_code >= 400:
+            _raise_http(r, "Comfy /free failed")
+        return {"ok": True}
+
     def wait_comfy_idle(self, timeout_s: float = 1800, poll_s: float = 2.0, should_stop: Any = None) -> None:
         deadline = time.time() + timeout_s
         while time.time() < deadline:
@@ -148,7 +157,7 @@ class Studio:
         return self._post_when_idle(f"{self.cfg.monitor_url}/api/director/queue", body)
 
     def queue_video(self, source_image: str, plan: dict[str, Any], **extra: Any) -> dict[str, Any]:
-        body = {"sourceImage": source_image, "plan": plan, "async": True, **extra}
+        body = {"sourceImage": source_image, "plan": plan, "async": True, "keepModels": True, **extra}
         return self._post_when_idle(f"{self.cfg.monitor_url}/api/director/video/run", body)
 
     def job(self, job_id: str) -> dict[str, Any]:

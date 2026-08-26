@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  buildVideoSystemPrompt,
   dryRunPlan,
   dryRunVideoPlan,
   parsePlanJson,
   sanitizePonyPositive,
   stripThinkTags,
   validatePlan,
+  validateVideoPlan,
 } from './director.mjs'
+import { getLoraInventory } from './studioConfig.mjs'
 
 describe('sanitizePonyPositive', () => {
   it('converts underscores and strips device meta', () => {
@@ -16,6 +19,27 @@ describe('sanitizePonyPositive', () => {
     assert.ok(!p.includes('blue_hair'))
     assert.ok(!/iphone/i.test(p))
     assert.ok(!p.includes('1.2'))
+  })
+
+  it('keeps source_anime across a second sanitize pass', () => {
+    const once = sanitizePonyPositive('score_9, source_anime, 1girl, standing')
+    const twice = sanitizePonyPositive(once)
+    assert.match(twice, /source_anime/)
+    assert.doesNotMatch(twice, /source anime/)
+    assert.match(twice, /\bsolo\b/)
+    assert.equal(twice, sanitizePonyPositive(twice))
+  })
+
+  it('only prepends gitsstyl when the brief or user text is GitS', () => {
+    const inv = getLoraInventory()
+    const hasGits = inv.some((l) => (l.triggers || []).includes('gitsstyl') || String(l.role) === 'gits')
+    if (!hasGits) return
+    const plain = sanitizePonyPositive('1girl, standing')
+    assert.doesNotMatch(plain, /gitsstyl/)
+    const fromUser = sanitizePonyPositive('1girl, standing', { userText: 'Ghost in the Shell Motoko' })
+    assert.match(fromUser, /gitsstyl/)
+    const fromBrief = sanitizePonyPositive('1girl, motoko, thermoptic bodysuit')
+    assert.match(fromBrief, /gitsstyl/)
   })
 })
 
@@ -85,6 +109,7 @@ describe('director validatePlan', () => {
     assert.equal(plan.ipadapter.enabled, true)
     assert.equal(plan.ipadapter.image, '/tmp/hero.png')
     assert.equal(plan.ipadapter.weight, 0.8)
+    assert.equal(plan.ipadapter.weight_type, 'ease out')
   })
 
   it('drops unknown loras not listed in yaml', () => {
@@ -116,5 +141,34 @@ describe('director video plan', () => {
   it('does not attach motion LoRA packs', () => {
     const { plan } = dryRunVideoPlan('anything')
     assert.equal(plan.motionLoras, undefined)
+  })
+
+  it('keeps lookTrack, characters, and singing on a provided plan', () => {
+    const { plan } = validateVideoPlan(
+      {
+        motion: 'he turns toward the counter',
+        dialogue: '',
+        music: 'N/A',
+        lookTrack: 'live',
+        characters: [
+          { id: 'S1', name: 'Ben' },
+          { id: 'S2', name: 'Cal' },
+        ],
+      },
+      { userText: '24s kitchen argument, two adult men' },
+    )
+    assert.equal(plan.lookTrack, 'live')
+    assert.equal(plan.characters[0].name, 'Ben')
+    assert.equal(plan.allowSinging, false)
+    const sung = validateVideoPlan({ motion: 'she hits the chorus' }, { userText: 'music video chorus' })
+    assert.equal(sung.plan.allowSinging, true)
+  })
+
+  it('buildVideoSystemPrompt teaches official H3 markup', () => {
+    const p = buildVideoSystemPrompt()
+    assert.match(p, /<d>/)
+    assert.match(p, /lookTrack/)
+    assert.match(p, /Do not write \[Shot 1\]/)
+    assert.match(p, /named instruments/)
   })
 })

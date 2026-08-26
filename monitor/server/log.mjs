@@ -5,7 +5,7 @@
  */
 import fs from 'fs'
 
-const RANK = { silent: 0, error: 1, warn: 2, info: 3 }
+const RANK = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 }
 
 function levelName() {
   const forced = String(process.env.QORLITH_LOG_LEVEL || process.env.LOG_LEVEL || '').toLowerCase()
@@ -39,6 +39,7 @@ export function log(level, event, fields = {}) {
   }
 }
 
+export const debug = (event, fields) => log('debug', event, fields)
 export const info = (event, fields) => log('info', event, fields)
 export const warn = (event, fields) => log('warn', event, fields)
 export const error = (event, fields) => log('error', event, fields)

@@ -24,6 +24,7 @@ export const BRAIN_STEPS = [
   { id: 'stills', label: 'Pictures' },
   { id: 'face_qa', label: 'Your picks' },
   { id: 'video', label: 'Motion' },
+  { id: 'free', label: 'Clear' },
   { id: 'finish', label: 'Film' },
 ]
 
@@ -182,7 +183,7 @@ export function stopBrain(id) {
   return { ok: true, pid, killed: result.killed, brain: loadBrain(id) }
 }
 
-export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk = false } = {}) {
+export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk = false, autoPick = false } = {}) {
   if (!fs.existsSync(BRAIN_BIN)) {
     fail(500, 'brain_missing', 'bin/brain is not installed', {
       hint: 'Run from the Qorlith repo so ./bin/brain exists.',
@@ -193,9 +194,19 @@ export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk 
       hint: 'Wait for the current run, or check the Brain page.',
     })
   }
+  const film = stopAfter === 'film' || stopAfter === '' || stopAfter === 'finish'
   const args = resume
     ? ['resume', '--thread', id, ...(reviewOk ? ['--review-ok'] : [])]
-    : ['start', '--project', id, '--stop-after', stopAfter, '--quality', stillQualityFromYaml()]
+    : [
+        'start',
+        '--project',
+        id,
+        '--stop-after',
+        film ? 'film' : stopAfter || 'stills',
+        '--quality',
+        stillQualityFromYaml(),
+        ...((autoPick || film) ? ['--auto-pick'] : []),
+      ]
   const child = spawn(BRAIN_BIN, args, {
     cwd: REPO,
     detached: true,

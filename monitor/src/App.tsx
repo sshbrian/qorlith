@@ -8,6 +8,7 @@ import { EpisodePlan } from './pages/EpisodePlan'
 import { Brain } from './pages/Brain'
 import { Watch } from './pages/Watch'
 import { StudioHome } from './pages/StudioHome'
+import { Archive } from './pages/Archive'
 import { projectPath, readLastProject, type StudioStage } from './lib/studio'
 
 function HomeRedirect() {
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="studio/:projectId/watch" element={<Watch />} />
           <Route path="studio/:projectId/brain" element={<StageRedirect to="make" />} />
           <Route path="studio/:projectId/run" element={<StageRedirect to="watch" />} />
+          <Route path="archive" element={<Archive />} />
           <Route path="media" element={<Gallery />} />
           <Route path="train" element={<Training />} />
           <Route path="train/runs/:id" element={<RunDetail />} />

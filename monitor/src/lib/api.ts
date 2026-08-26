@@ -322,6 +322,8 @@ export type StudioProject = {
   approved: boolean
   produceRegistered: boolean
   archived: boolean
+  archivedAt?: string | null
+  coverUrl?: string | null
   hasPlan: boolean
   hasBoard: boolean
   hasProduce: boolean
@@ -565,19 +567,30 @@ export const api = {
     get<{
       ok: boolean
       lmstudio?: StudioWriterHealth
+      planner?: {
+        provider?: string
+        url?: string
+        model?: string | null
+        local?: boolean
+        needsKey?: boolean
+        hasKey?: boolean
+        style?: string
+      }
       guidePath?: string
       projectsDir?: string
       error?: string
     }>('/api/studio/health'),
   studioProjects: () =>
     get<{ projects: StudioProject[]; polledAt: string }>('/api/studio/projects'),
+  studioArchiveList: () =>
+    get<{ ok: boolean; projects: StudioProject[]; polledAt: string }>('/api/studio/archive'),
   brain: (id: string) =>
     get<{ ok: boolean; brain: BrainReport; polledAt: string }>(
       `/api/brain/${encodeURIComponent(id)}`,
     ),
   brains: () => get<{ brains: BrainReport[]; polledAt: string }>('/api/brain'),
-  brainStart: (id: string, body?: { stopAfter?: 'plan' | 'stills' }) =>
-    post<{ ok: boolean; pid: number; stopAfter?: string; brain: BrainReport }>(
+  brainStart: (id: string, body?: { stopAfter?: 'plan' | 'stills' | 'film'; oneClick?: boolean; autoPick?: boolean }) =>
+    post<{ ok: boolean; pid: number; stopAfter?: string; autoPick?: boolean; brain: BrainReport }>(
       `/api/brain/${encodeURIComponent(id)}/start`,
       body || {},
     ),
@@ -627,14 +640,33 @@ export const api = {
         videoWorkflow: { workflowPath: string | null; apiPath: string | null }
       }[]
     }>(`/api/studio/plans/${encodeURIComponent(id)}/workflows`),
-  studioPlan: (body: { prompt: string; dryRun?: boolean; projectId?: string }) =>
+  studioPlan: (body: { prompt?: string; dryRun?: boolean; projectId?: string; plan?: StudioMoviePlan }) =>
     post<{
       ok: boolean
       record: StudioPlanRecord
       plan: StudioMoviePlan
       dryRun: boolean
       model: string | null
+      provider?: string | null
     }>('/api/studio/plan', body),
+  studioFilm: (body: {
+    prompt?: string
+    title?: string
+    projectId?: string
+    dryRun?: boolean
+    plan?: StudioMoviePlan
+  }) =>
+    post<{
+      ok: boolean
+      oneClick?: boolean
+      dryRun?: boolean
+      projectId: string
+      pid?: number
+      record: StudioPlanRecord
+      plan: StudioMoviePlan
+      model?: string | null
+      provider?: string | null
+    }>('/api/studio/film', body),
   studioPlanApprove: (id: string, body?: { startProduction?: boolean }) =>
     post<{
       ok: boolean
@@ -656,6 +688,17 @@ export const api = {
       message: string
       record?: StudioPlanRecord
     }>(`/api/studio/plans/${encodeURIComponent(id)}/archive`, {}),
+  studioPlanUnarchive: (id: string) =>
+    post<{
+      ok: boolean
+      projectId: string
+      title?: string
+      mediaCount: number
+      removedCount: number
+      archivedTotal: number
+      message: string
+      record?: StudioPlanRecord
+    }>(`/api/studio/plans/${encodeURIComponent(id)}/unarchive`, {}),
   galleryItem: (filePath: string) =>
     get<GalleryItem>(`/api/gallery/item?path=${encodeURIComponent(filePath)}`),
   galleryArchive: (paths: string | string[]) =>

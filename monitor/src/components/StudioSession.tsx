@@ -24,7 +24,7 @@ export type StudioSessionValue = {
   busy: boolean
   openNew: () => void
   refreshProjects: () => Promise<void>
-  start: (stopAfter: 'plan' | 'stills') => Promise<void>
+  start: (stopAfter?: 'plan' | 'stills' | 'film') => Promise<void>
   resume: () => Promise<void>
   stop: () => Promise<void>
 }
@@ -175,12 +175,15 @@ export function StudioSessionProvider({
   }, [projectId, applyBrain])
 
   const start = useCallback(
-    async (stopAfter: 'plan' | 'stills') => {
+    async (stopAfter: 'plan' | 'stills' | 'film' = 'stills') => {
       if (!projectId) return
       setBusy(true)
       setErr(null)
       try {
-        const r = await api.brainStart(projectId, { stopAfter })
+        const r = await api.brainStart(projectId, {
+          stopAfter,
+          oneClick: stopAfter === 'film',
+        })
         applyBrain(r.brain)
         await refreshProjects()
       } catch (e) {

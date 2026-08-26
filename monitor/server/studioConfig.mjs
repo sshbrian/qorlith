@@ -19,8 +19,10 @@ function emptyStudio() {
     comfy: { url: 'http://127.0.0.1:8188', root: '', output: '' },
     monitor: { api_port: 3921, web_port: 5173 },
     planner: {
+      provider: 'local',
       url: 'http://127.0.0.1:1234/v1',
       model: '',
+      api_key: '',
       prefer: [],
       temperature: 0.35,
       max_tokens: 4096,
@@ -40,6 +42,7 @@ function emptyStudio() {
       clip_skip: -2,
       quality: 'standard',
       loras: [],
+      locks: [],
       controlnet: { openpose: '', canny: '' },
       upscale: '',
       detailer: { enabled: false, face: '', hand: '', denoise: 0.32, guide_size: 512 },
@@ -53,7 +56,8 @@ function emptyStudio() {
       megapixels: 0.6,
       duration_sec: 12,
       duration_min: 6,
-      duration_max: 12,
+      duration_max: 15,
+      continue_min: 10,
       prompts: { motion_prefix: '', negative: '', music_default: 'N/A' },
     },
     train: {
@@ -96,6 +100,8 @@ export function mergePlanner(base, pub = {}, loc = {}) {
     ...loc,
     prefer: Array.isArray(prefer) ? prefer.map(String) : [],
     model: String(loc.model ?? pub.model ?? base.model ?? '').trim(),
+    provider: String(loc.provider ?? pub.provider ?? base.provider ?? 'local').trim(),
+    api_key: String(loc.api_key ?? pub.api_key ?? base.api_key ?? '').trim(),
   }
 }
 
@@ -120,6 +126,7 @@ export function loadStudio() {
         ...base.stills,
         ...stills,
         loras: Array.isArray(stills.loras) ? stills.loras.map(asLora).filter(Boolean) : [],
+        locks: Array.isArray(stills.locks) ? stills.locks : [],
         controlnet: { ...base.stills.controlnet, ...cn },
         detailer: { ...base.stills.detailer, ...(stills.detailer || {}) },
         ipadapter: { ...base.stills.ipadapter, ...(stills.ipadapter || {}) },
@@ -150,10 +157,14 @@ export function clipDurationBounds() {
   const fallback = Number(v.duration_sec)
   const min = Number(v.duration_min)
   const max = Number(v.duration_max)
+  const continueMin = Number(v.continue_min)
+  const hi = Number.isFinite(max) && max > 0 ? max : 15
+  const floor = Number.isFinite(continueMin) && continueMin > 0 ? continueMin : 10
   return {
     fallback: Number.isFinite(fallback) && fallback > 0 ? fallback : 12,
     min: Number.isFinite(min) && min > 0 ? min : 6,
-    max: Number.isFinite(max) && max > 0 ? max : 12,
+    max: hi,
+    continueMin: Math.min(floor, hi),
   }
 }
 

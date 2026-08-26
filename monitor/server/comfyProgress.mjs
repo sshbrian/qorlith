@@ -74,6 +74,10 @@ const COPY = {
     title: 'Working',
     hint: 'Comfy is busy on this job.',
   },
+  idle: {
+    title: 'Ready',
+    hint: 'The GPU is free.',
+  },
 }
 
 const graphs = new Map()
@@ -326,6 +330,24 @@ export function viewComfyProgress(snap = state, now = Date.now()) {
   let kind = working || recentlyDone ? kindForClass(snap.nodeClass, snap.max) : queued ? 'wait' : 'work'
   if (graphLooksLikeVideo(snap.promptId) && (kind === 'still' || kind === 'develop' || kind === 'work')) {
     kind = 'video'
+  }
+  if (!active) {
+    const idle = COPY.idle
+    return {
+      connected: Boolean(snap.connected),
+      active: false,
+      kind: 'idle',
+      title: idle.title,
+      line: idle.hint,
+      hint: idle.hint,
+      percent: null,
+      value: 0,
+      max: 0,
+      queueRemaining,
+      promptId: snap.promptId,
+      nodeClass: snap.nodeClass,
+      updatedAt: snap.updatedAt ? new Date(snap.updatedAt).toISOString() : null,
+    }
   }
   const copy = COPY[kind] || COPY.work
   const percent = hasBar ? Math.max(0, Math.min(100, (snap.value / snap.max) * 100)) : recentlyDone ? 100 : null

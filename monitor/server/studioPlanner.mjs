@@ -7,6 +7,12 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { directorConfigFromApp, lmstudioHealth, parsePlanJson } from './director.mjs'
 import { ensureServer, preparePlanModel, releasePlanModel, resolveLmsPath } from './lms.mjs'
+import {
+  chatCompletions,
+  normalizePlannerProvider,
+  plannerNeedsLms,
+  resolvePlanner,
+} from './plannerProvider.mjs'
 import { clipDurationBounds, loadStudio } from './studioConfig.mjs'
 import { ensureEpisodePlan } from './episodePlan.mjs'
 import { slugifyProjectId } from './ids.mjs'
@@ -15,6 +21,7 @@ import { loadStudioProducePipelines, saveStudioProducePipelines } from './produc
 import { info as logInfo } from './log.mjs'
 import { fail } from './errors.mjs'
 import { writeStoryboard } from './storyboard.mjs'
+import { applyHouseLockToPlan, textWantsGits } from './gitsLock.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -28,7 +35,8 @@ export const CORE_PLANNER_RULES = `PIPELINE
 Stills-first: each clip is (1) one SDXL/Pony-family start still, then (2) MiniMax H3 image-to-video-audio from that still. You do not queue Comfy. You only write the plan JSON.
 
 CLIP MATH (hard)
-- Each MiniMax take is 6–12 s. Default 12. Shorter when the beat is a punch-in or hold. Never lock every clip to 8.
+- Each MiniMax take is 6–15 s. Default 12. First clip and cut=true may be 6–15 (punch-in / hold may be 6–8).
+- cut=false continue takes are 10–15 s (prefer 12). Never 6–8 on a continue — the join needs ~2 s quiet + ~2 s settle.
 - n ≈ ceil(durationTargetSec / 10). Never one 30–120 s MiniMax job.
 - ids are stable S01, S02, … (used as resume keys).
 - t_start / t_end are consecutive on the master timeline. sum(durationSec) ≈ durationTargetSec.
@@ -38,6 +46,8 @@ CONTINUITY
 - Default cut=false. Video N+1 starts from the last frame of video N (same body, costume, space).
 - Set cut=true only for a purposeful hard cut: new location, time jump, or a still the previous last frame cannot continue.
 - Do not mark every clip as a cut. A chase or fight in one space is one continue chain.
+- Continue airlock (cut=false, not S01): the app holds the previous closing pose for ~2 s (breath / weight shift only, no speech), then your motionBrief, then ~2 s settle. Write the action AFTER that hold. Do not start or end a spoken line on the weld. Never split one line across two clips.
+- Each continue take must change a physical, irreversible world state (not only a look or a camera move).
 
 LOOK
 - lookTrack is only "anime" or "live".
@@ -63,8 +73,9 @@ The app prepends the house quality prefix and LoRA triggers. You write only the 
 - Do NOT put negatives in stillBrief.
 - Pose words that freeze a frame are ok (crouched, standing, seated, holding). Motion paragraphs are not.
 - Anime stills: booru-like tags + 2D lighting. Live stills: camera + practical light + real-world location.
-- First clip (S01) is a medium shot or closer with the lead face clearly visible (head and shoulders or medium close-up). Do not open on a distant figure or a wide establishing where the face is a few pixels.
-- Later clips may go wider, but if a person is in frame keep the face readable unless the beat is landscape-only.
+- Action stills (weapon, rooftop, alley, chase, raid): medium-wide from the thighs up. Face readable, body, weapon, and location in frame. Never a head-and-shoulders crop.
+- Talk or portrait stills: medium shot or closer with the lead face clearly visible.
+- Do not open on a distant figure where the face is a few pixels. Do not make every still a face close-up.
 
 MOTION BRIEF = MiniMax H3 I2VA motion only
 The start still IS frame 0. The app wraps your text as I2VA + identity lock. You write only what CHANGES.
@@ -74,7 +85,7 @@ The start still IS frame 0. The app wraps your text as I2VA + identity lock. You
   Amplitude: with small amplitude / with large amplitude. Speed: at slow speed / at fast speed. Omit medium.
 - Keep identity, costume, colors, props, and space consistent with the still.
 - Do NOT re-describe wardrobe or the set. Do NOT use Wan "At 0 seconds / At 1 second" beat lists. Do NOT name video models or LoRAs.
-- Prefer one [Shot 1] worth of action. If you must cut: "the camera cuts to".
+- Do NOT write [Shot 1] — the app wraps I2VA + style + identity lock. Prefer one continuous shot. If you must cut inside a take: "the camera cuts to".
 
 DIALOGUE (H3 spoken field)
 - If the user did not ask for speech, a line, a shout, or radio talk, every dialogue field is empty.
@@ -89,8 +100,8 @@ DIALOGUE (H3 spoken field)
 - NEVER output curly braces { } or leftover template tokens in any field.
 
 SOUNDSCAPE
-- Diegetic only: rain, footsteps, gunfire, servos, breath, radio hiss.
-- Never dialogue, never audience score. N/A only if the clip is truly silent.
+- 1–4 English sentences. Ambient + physical action + non-verbal human sound (rain, footsteps, gunfire, breath).
+- Never dialogue, never audience score. N/A only if the clip has no diegetic sound.
 
 MUSIC
 - musicPalette = global non_diegetic_music: at least two named instruments + tempo + dynamics. No vocals. Drops under dialogue.
@@ -99,19 +110,20 @@ MUSIC
 - Never write only "soft" / "loud" / "epic" / "emotional" / "orchestral" / "dynamic".
 - If the user named drums, piano, guitar, etc., those instruments MUST appear in musicPalette and musicNote.
 - Diegetic radio/TV/phone music belongs in dialogue or motion, not musicNote.
-- If the user asked for silent / no music / no score: musicPalette is N/A AND every musicNote is N/A. This overrides house style.
+- Silent / no dialogue means no speech. Do not clear the score unless they also said no music / no score, or said silent without naming instruments or a score.
+- If the user asked for no music / no score, or silent with no named score: musicPalette is N/A AND every musicNote is N/A. This overrides house style.
 
 DEFAULTS when the user is vague
 - 30 s · R · look from STYLE or live · MiniMax score · 10–12 s clips.
 - Invent a tight logline and label assumed defaults in markdown. Do not ask questions.
 
 DURATION
-- durationSec is 6–12 (prefer 10–12). Never 4 or 5. Hard max 12.
-- A 24 s beat is 12+12, not 3×8. A 20 s beat is 12+8.
+- durationSec is 6–15 (prefer 10–12). Never 4 or 5. Hard max 15.
+- A 24 s beat is 12+12, not 3×8. A 20 s continue chain is 10+10, not 12+8.
 - sum(durationSec) must match durationTargetSec (off by at most 1 second).
 
 TEMPLATES (fill from the USER request — do not invent a leftover example cast)
-stillBrief: adult lock, outfit, frozen pose, location, lighting, framing (S01 = medium/close, face visible)
+stillBrief: adult lock, outfit, frozen pose, location, lighting, framing (action = medium-wide thighs up; talk = medium/close)
 motionBrief: The camera VERB with small amplitude at slow speed as BODY ACTION.
 musicNote: two named instruments at a TEMPO, DYNAMICS, music drops under dialogue
 Never copy a character, location, or spoken line that the user did not ask for.
@@ -141,7 +153,7 @@ export const PLAN_JSON_SCHEMA = `{
     "stillBrief": "frozen start-frame prompt body (no motion, no score tags)",
     "motionBrief": "camera + body action only",
     "dialogue": "H3 spoken line or empty",
-    "soundscape": "diegetic SFX only",
+    "soundscape": "1-4 diegetic sentences or N/A",
     "musicNote": "instruments + tempo + dynamics, or N/A"
   }],
   "markdown": "short production notes: defaults assumed, clip math, risks"
@@ -161,7 +173,7 @@ ${CORE_PLANNER_RULES}
 CRITICAL OUTPUT
 - JSON only, matching this schema:
 ${PLAN_JSON_SCHEMA}
-- Each clip durationSec MUST be 6–12 (max 12). cut defaults to false.
+- Each clip durationSec MUST be 6–15 (max 15). Continue (cut=false) takes MUST be ≥10. cut defaults to false.
 - stillBrief ≤ 800 characters. motionBrief ≤ 800 characters.
 - Adults only.
 - If the user asked for graphic sex: rating X. stillBrief is a frozen explicit frame that names the act (mouth, tongue, vulva, penetration). motionBrief continues that act. No fade-to-black, no silhouette, no "intimacy" euphemism.
@@ -178,13 +190,28 @@ const SFX_TALK_RE = /\b(radio(?:\s+communication)?|voices?|cheers?|communication
 const CURLY_RE = /\{[^}]+\}/g
 const FACE_FRAME_RE =
   /\b(close[- ]?up|closeup|medium close|medium shot|portrait|head and shoulders|face (?:visible|clear|large)|bust shot|from the chest|looking (?:at|toward) (?:the )?(?:viewer|camera))\b/i
+const ACTION_FRAME_RE =
+  /\b(smg|rifle|pistol|shotgun|gun|weapon|rooftop|alley|chase|raid|fight|combat)\b/i
+const WIDE_FRAME_RE =
+  /\b(medium-wide|wide shot|from the thighs|full body|environment visible|cowboy shot)\b/i
 
-/** S01 must name a readable face. Wide-only first stills get a medium close-up prefix. */
+/** S01 must keep a readable face. Action stills go medium-wide, talk stills go closer. */
 export function ensureLeadFaceFraming(plan, warnings = []) {
   const first = Array.isArray(plan?.clips) ? plan.clips[0] : null
   if (!first) return plan
-  const brief = String(first.stillBrief || '')
-  if (!brief.trim() || FACE_FRAME_RE.test(brief)) return plan
+  let brief = String(first.stillBrief || '')
+  if (!brief.trim()) return plan
+  if (ACTION_FRAME_RE.test(brief)) {
+    if (!WIDE_FRAME_RE.test(brief)) {
+      first.stillBrief = `medium-wide shot, from the thighs up, face readable, environment visible, ${brief}`.slice(
+        0,
+        800,
+      )
+      warnings.push(`${first.id || 'S01'}: prepended medium-wide action frame`)
+    }
+    return plan
+  }
+  if (FACE_FRAME_RE.test(brief)) return plan
   first.stillBrief = `medium close-up, face clearly visible, looking toward camera, ${brief}`.slice(0, 800)
   warnings.push(`${first.id || 'S01'}: prepended face-visible medium close-up`)
   return plan
@@ -192,16 +219,19 @@ export function ensureLeadFaceFraming(plan, warnings = []) {
 
 export function inferPlanHints(userPrompt) {
   const t = String(userPrompt || '')
-  const gitsAsked = /\b(motoko|major|gits|section\s*9|ghost in the shell)\b/i.test(t)
-  const gitsDenied = /\b(not motoko|no motoko|not ghost in the shell|not gits|no gits)\b/i.test(t)
-  const gits = gitsAsked && !gitsDenied
+  const gits = textWantsGits(t)
   const liveHit =
     /\b(live|found-?footage|photoreal|real_movie|camcorder|hidden\s*cam|kitchen|office|hotel|handshake|documentary)\b/i.test(
       t,
     )
   const animeHit = /\b(anime|gits|ghost in the shell|2d|cel[- ]?shad)\b/i.test(t)
   const silentWord = /\bsilent\b/i.test(t)
-  const noMusic = /\bno music\b|\bno score\b/i.test(t) || silentWord
+  const namedScore =
+    /\bminimax\s+music\b/i.test(t) ||
+    (/\bmusic\b/i.test(t) && !/\bno music\b/i.test(t)) ||
+    (/\bscore\b/i.test(t) && !/\bno score\b/i.test(t)) ||
+    /\b(taiko|cello|piano|guitar|drums?|synth|bass|strings?|violin|brass|snare|organ|harp|flute)\b/i.test(t)
+  const noMusic = /\bno music\b|\bno score\b/i.test(t) || (silentWord && !namedScore)
   const wantsTalk =
     /\b(dialogue|talking|\btalk\b|one line|shout|radio|says|dirty talk|japanese|任務)\b/i.test(t) &&
     !/\bno dialogue\b|\bno (?:people )?talk/i.test(t)
@@ -225,6 +255,7 @@ export function inferPlanHints(userPrompt) {
     look,
     gits,
     noMusic,
+    namedScore,
     noTalk,
     wantsTalk,
     wantsX,
@@ -244,8 +275,8 @@ export function buildPlanUserMessage(userPrompt) {
       ? 'write real spoken lines with (S1) says: <d>[lang] words</d>'
       : 'dialogue empty unless the user asked for a line, shout, or radio talk'
   const gitsLine = h.gits
-    ? 'ON — repeat the Motoko visual lock on every still'
-    : 'OFF — invent a NEW adult lock; do not use Motoko, thermoptic, gitsstyl, or red-violet eyes'
+    ? 'ON — repeat the house visual lock on every still. Comma-separated tags. If a second adult is in frame, mark two people. Deny phrases on extras do not turn this off.'
+    : 'OFF — invent a NEW adult lock; do not paste a house character lock'
   const xLine = h.wantsX
     ? '- rating X. stillBrief names the explicit act (mouth, tongue, vulva, fingers, strap-on). motionBrief is that act continuing. No "intimacy", no fade-to-black, no "lowers her head toward her lap" euphemism.\n'
     : ''
@@ -254,13 +285,13 @@ export function buildPlanUserMessage(userPrompt) {
 ${userPrompt}
 
 REQUEST CHECKLIST (follow exactly)
-- durationTargetSec: ${h.durationSec}; about ${h.clipCount} takes of 6–12s (prefer 10–12). Never pad by repeating beats with _2 titles.${h.durationSec >= 60 ? ' Keep each stillBrief under 350 characters so the JSON fits.' : ''}
+- durationTargetSec: ${h.durationSec}; about ${h.clipCount} takes of 6–15s (prefer 10–12). Continue (cut=false) takes are 10–15s. Never pad by repeating beats with _2 titles.${h.durationSec >= 60 ? ' Keep each stillBrief under 350 characters so the JSON fits.' : ''}
 - lookTrack: ${h.look}
 - music: ${musicLine}
 - dialogue: ${talkLine}
-- GitS Motoko lock: ${gitsLine}
+- House character lock: ${gitsLine}
 - cut=false continues the same space from the last frame; cut=true only on location or time jumps
-- S01 stillBrief is a medium or close shot with the lead face clearly visible
+- Action S01 stillBrief is medium-wide from the thighs up with the face, weapon, and location readable. Talk S01 is medium or close with the lead face clearly visible.
 - adults only. One new beat per clip.
 ${xLine}- Reply with ONE JSON object. No <think>. No prose outside JSON.
 
@@ -303,7 +334,7 @@ export function sanitizeMoviePlanFields(plan, userPrompt, warnings) {
         .replace(/,\s*,/g, ',')
         .replace(/^\s*,|,\s*$/g, '')
         .trim()
-      if (!c.soundscape) c.soundscape = 'Distant wind and light debris.'
+      if (!c.soundscape) c.soundscape = ''
       warnings.push(`${c.id}: stripped talk-like sfx from soundscape`)
     }
     for (const field of ['stillBrief', 'motionBrief', 'dialogue']) {
@@ -315,6 +346,7 @@ export function sanitizeMoviePlanFields(plan, userPrompt, warnings) {
       }
     }
   }
+  applyHouseLockToPlan(plan, userPrompt, warnings)
   ensureLeadFaceFraming(plan, warnings)
   return plan
 }
@@ -332,53 +364,36 @@ function looksLikePlanJson(text) {
  * Chat the planner model. Sends enable_thinking=false; retries without it on 400.
  * If the model dumps a think-essay with no JSON, one hard retry: JSON only.
  */
-export async function plannerChat({ baseUrl, model, system, user, temperature, maxTokens, timeoutMs }) {
-  const url = `${String(baseUrl || '').replace(/\/$/, '')}/chat/completions`
-
-  async function once(userContent, budgetMs) {
-    const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), budgetMs)
-    const baseBody = {
-      model,
-      temperature: temperature ?? 0.2,
-      max_tokens: maxTokens || 8192,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: userContent },
-      ],
-    }
-    try {
-      let r = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...baseBody, enable_thinking: false }),
-        signal: ctrl.signal,
-      })
-      if (r.status === 400) {
-        r = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(baseBody),
-          signal: ctrl.signal,
-        })
-      }
-      if (!r.ok) {
-        const errText = await r.text().catch(() => '')
-        throw new Error(`LMS ${r.status} ${errText.slice(0, 300)}`)
-      }
-      const data = await r.json()
-      const msg = data?.choices?.[0]?.message || {}
-      return String(msg.content || msg.text || msg.reasoning_content || '')
-    } finally {
-      clearTimeout(t)
+export async function plannerChat({
+  baseUrl,
+  model,
+  system,
+  user,
+  temperature,
+  maxTokens,
+  timeoutMs,
+  apiKey,
+  tryDisableThinking = true,
+}) {
+  const args = { baseUrl, apiKey, model, system, user, temperature, maxTokens, timeoutMs }
+  async function once(userContent, extraBody) {
+    return chatCompletions({ ...args, user: userContent, extraBody })
+  }
+  let first
+  try {
+    first = tryDisableThinking
+      ? await once(user, { enable_thinking: false })
+      : await once(user)
+  } catch (e) {
+    if (tryDisableThinking && /PLANNER 400/.test(String(e?.message || ''))) {
+      first = await once(user)
+    } else {
+      throw e
     }
   }
-
-  const budget = timeoutMs || 180_000
-  const first = await once(user, budget)
   if (looksLikePlanJson(first)) return first
   const retryUser = `${user}\n\nSTOP. Your last reply was not JSON. Reply with ONE JSON object only. No thinking. No prose.`
-  return once(retryUser, Math.min(budget, 180_000))
+  return once(retryUser, tryDisableThinking ? { enable_thinking: false } : undefined)
 }
 
 export function validateMoviePlan(raw, { userPrompt = '' } = {}) {
@@ -438,8 +453,14 @@ export function validateMoviePlan(raw, { userPrompt = '' } = {}) {
       warnings.push(`${id}: durationSec ${durationSec} > ${bounds.max}, capped`)
       durationSec = bounds.max
     }
+    const cut = Boolean(c.cut)
+    const continueMin = Number(bounds.continueMin) > 0 ? Number(bounds.continueMin) : 10
+    if (i > 0 && !cut && durationSec < continueMin) {
+      warnings.push(`${id}: continue take ${durationSec}s < ${continueMin}s, raised`)
+      durationSec = Math.min(continueMin, bounds.max)
+    }
     const t_start = Number.isFinite(Number(c.t_start)) ? Number(c.t_start) : cursor
-    const t_end = Number.isFinite(Number(c.t_end)) ? Number(c.t_end) : t_start + durationSec
+    const t_end = t_start + durationSec
     clips.push({
       id,
       title: String(c.title || id).slice(0, 64),
@@ -521,9 +542,9 @@ export function dryRunMoviePlan(userPrompt) {
           id: 'S01',
           title: 'setup',
           t_start: 0,
-          t_end: 8,
-          durationSec: 8,
-          stillBrief: 'Handheld night street, adult lead walks',
+          t_end: 12,
+          durationSec: 12,
+          stillBrief: 'Handheld night street, adult lead standing, face visible',
           motionBrief: 'Walk toward camera, small shake',
           dialogue: 'S1: Stay on me.',
           soundscape: 'traffic, footsteps',
@@ -532,26 +553,14 @@ export function dryRunMoviePlan(userPrompt) {
         {
           id: 'S02',
           title: 'turn',
-          t_start: 8,
-          t_end: 16,
-          durationSec: 8,
-          stillBrief: 'Doorway, flash light',
+          t_start: 12,
+          t_end: 24,
+          durationSec: 12,
+          stillBrief: 'Doorway, flash light, adult lead',
           motionBrief: 'Turn and run',
           dialogue: 'S1: Go!',
           soundscape: 'door, breath',
           musicNote: 'Low pulsing synth bass at moderate tempo, dry snare hits, louder',
-        },
-        {
-          id: 'S03',
-          title: 'tag',
-          t_start: 16,
-          t_end: 24,
-          durationSec: 8,
-          stillBrief: 'Car interior, night',
-          motionBrief: 'Sit, look back',
-          dialogue: 'S1: We are clear.',
-          soundscape: 'engine idle',
-          musicNote: 'Sparse synth bass, fade out',
         },
       ],
       markdown: `# Demo Plan\n\nDry-run for: ${String(userPrompt || '').slice(0, 200)}`,
@@ -561,52 +570,99 @@ export function dryRunMoviePlan(userPrompt) {
   return plan
 }
 
-export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig }) {
+export function plannerSpec() {
+  const studio = loadStudio()
+  const resolved = resolvePlanner(studio.planner)
+  return {
+    provider: resolved.provider,
+    url: resolved.url,
+    model: resolved.model || null,
+    local: resolved.local,
+    system: buildMoviePlanSystemPrompt({
+      system: studio.planner.system,
+      style: studio.planner.style,
+    }),
+    userTemplate: buildPlanUserMessage('YOUR PROMPT HERE'),
+    schema: PLAN_JSON_SCHEMA,
+    howTo:
+      'POST /api/studio/plan with { prompt, plan } to skip the LLM, or POST /api/studio/film for one-click stills+video. GET this spec, write JSON matching the schema, then POST it back.',
+  }
+}
+
+export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig, plan: imported } = {}) {
   const prompt = String(userPrompt || '').trim()
-  if (!prompt) {
+  const hasImport = imported && typeof imported === 'object'
+  if (!prompt && !hasImport) {
     fail(400, 'missing_prompt', 'prompt required', {
-      hint: 'Describe the short, then generate.',
+      hint: 'Describe the short, or POST a plan JSON.',
     })
+  }
+
+  if (hasImport) {
+    const plan = validateMoviePlan(imported, { userPrompt: prompt || String(imported.logline || imported.title || '') })
+    logInfo('director.plan', { kind: 'movie', projectId: plan.projectId, dryRun: false, model: 'imported' })
+    return { plan, dryRun: false, model: 'imported', provider: 'none', rawModelText: null }
   }
 
   if (dryRun) {
     const plan = dryRunMoviePlan(prompt)
     logInfo('director.plan', { kind: 'movie', projectId: plan.projectId, dryRun: true })
-    return { plan, dryRun: true, model: null, rawModelText: null }
+    return { plan, dryRun: true, model: null, provider: 'none', rawModelText: null }
   }
 
   const dcfg = directorConfigFromApp()
-  let prepared = null
-  if (dcfg.autoManageModels !== false) {
-    try {
-      prepared = await preparePlanModel(dcfg)
-      dcfg.apiModel = prepared.apiModel
-      dcfg.planModelKey = prepared.modelKey
-    } catch {
-      try {
-        const lmsPath = resolveLmsPath(dcfg)
-        await ensureServer(lmsPath, { port: dcfg.serverPort || 1234 })
-      } catch {
-        /* health will fail clearly */
-      }
-    }
-  }
+  const resolved = resolvePlanner({
+    provider: dcfg.plannerProvider,
+    url: dcfg.lmstudioBaseUrl,
+    model: dcfg.planModelKey || dcfg.model,
+    api_key: dcfg.plannerApiKey,
+  })
+  const provider = resolved.provider
 
-  const health = await lmstudioHealth(dcfg)
-  if (!health.ok) {
-    fail(503, 'lms_offline', health.error || 'LM Studio not available — enable server or use dryRun', {
-      hint: 'Start LM Studio on :1234, or check dry-run.',
-      health,
+  if (provider === 'none') {
+    fail(400, 'planner_none', 'No planner backend is configured', {
+      hint: 'POST a plan JSON, set planner.provider to local/openai/xai, or use dry-run.',
     })
   }
 
-  const model =
-    dcfg.apiModel ||
-    dcfg.planModelKey ||
-    dcfg.model ||
-    health.loadedHint ||
-    health.models?.[0] ||
-    'local-model'
+  if (resolved.needsKey && !resolved.apiKey) {
+    fail(503, 'planner_key', 'Planner API key missing', {
+      hint: 'Set planner.api_key or QORLITH_PLANNER_KEY / XAI_API_KEY / OPENAI_API_KEY.',
+    })
+  }
+
+  let prepared = null
+  let model = resolved.model || 'planner'
+  if (plannerNeedsLms(provider)) {
+    if (dcfg.autoManageModels !== false) {
+      try {
+        prepared = await preparePlanModel(dcfg)
+        dcfg.apiModel = prepared.apiModel
+        dcfg.planModelKey = prepared.modelKey
+      } catch {
+        try {
+          const lmsPath = resolveLmsPath(dcfg)
+          await ensureServer(lmsPath, { port: dcfg.serverPort || 1234 })
+        } catch {
+          /* health will fail clearly */
+        }
+      }
+    }
+    const health = await lmstudioHealth(dcfg)
+    if (!health.ok) {
+      fail(503, 'lms_offline', health.error || 'LM Studio not available — enable server, switch planner.provider, or import a plan', {
+        hint: 'Start LM Studio on :1234, set planner.provider: xai, or POST a plan JSON.',
+        health,
+      })
+    }
+    model =
+      dcfg.apiModel ||
+      dcfg.planModelKey ||
+      dcfg.model ||
+      health.loadedHint ||
+      health.models?.[0] ||
+      'local-model'
+  }
 
   const system = buildMoviePlanSystemPrompt({
     system: dcfg.plannerSystem,
@@ -616,13 +672,15 @@ export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig 
   let rawText = ''
   try {
     rawText = await plannerChat({
-      baseUrl: dcfg.lmstudioBaseUrl,
+      baseUrl: resolved.url,
+      apiKey: resolved.apiKey,
       model,
       system,
       user,
       temperature: dcfg.temperature ?? 0.2,
       maxTokens: dcfg.maxTokens || 8192,
       timeoutMs: dcfg.timeoutMs || 180_000,
+      tryDisableThinking: plannerNeedsLms(provider),
     })
 
     let parsed
@@ -630,23 +688,23 @@ export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig 
       parsed = parsePlanJson(rawText)
     } catch (e) {
       fail(502, 'bad_model_json', `Model returned non-JSON plan: ${e instanceof Error ? e.message : e}`, {
-        hint: 'Use dry-run, or try generate again.',
+        hint: 'Use dry-run, import a plan JSON, or generate again.',
         raw: rawText.slice(0, 3000),
       })
     }
 
     const plan = validateMoviePlan(parsed, { userPrompt: prompt })
-    logInfo('director.plan', { kind: 'movie', projectId: plan.projectId, dryRun: false, model })
-    return { plan, dryRun: false, model, rawModelText: rawText.slice(0, 50_000) }
+    logInfo('director.plan', { kind: 'movie', projectId: plan.projectId, dryRun: false, model, provider })
+    return { plan, dryRun: false, model, provider, rawModelText: rawText.slice(0, 50_000) }
   } catch (e) {
     if (e?.name === 'AbortError') {
-      fail(504, 'lms_timeout', 'LM Studio request timed out', {
+      fail(504, 'planner_timeout', 'Planner request timed out', {
         hint: 'Raise planner.timeout_ms in qorlith.yaml, or shorten the prompt.',
       })
     }
-    if (e instanceof Error && /^LMS \d+/.test(e.message)) {
-      fail(502, 'lms_chat', `LM Studio chat failed: ${e.message}`, {
-        hint: 'Check planner.model in qorlith.yaml / qorlith.local.yaml, and that LM Studio can load it.',
+    if (e instanceof Error && /^(LMS|PLANNER) \d+/.test(e.message)) {
+      fail(502, 'planner_chat', `Planner chat failed: ${e.message}`, {
+        hint: 'Check planner.provider / model / api_key, or POST a plan JSON instead.',
       })
     }
     throw e
@@ -845,6 +903,45 @@ export function archivePlanProject(projectId) {
   }
 }
 
+/** Bring an archived project back to the rail. Media paths go back to Gallery. */
+export function unarchivePlanProject(projectId) {
+  const id = slugifyProjectId(projectId)
+  const rec = loadProjectRecord(id)
+  if (!rec?.plan && !rec?.projectId) {
+    fail(404, 'plan_not_found', 'plan not found', {
+      hint: 'Open Archive and pick a project that is still on disk.',
+    })
+  }
+  const collected = collectProjectMediaPaths(id, { lookTrack: rec?.plan?.lookTrack })
+  const now = new Date().toISOString()
+  rec.archived = false
+  rec.archivedAt = null
+  if (rec.status === 'archived' || !rec.status) {
+    rec.status = rec.approved ? 'approved' : 'draft'
+  }
+  rec.updatedAt = now
+  rec.archive = {
+    ...(rec.archive || {}),
+    restoredAt: now,
+  }
+  saveProjectRecord(rec)
+  try {
+    const logPath = rec.paths?.logPath || planPaths(id).logPath
+    fs.appendFileSync(logPath, `[${now}] restored from Archive\n`, 'utf8')
+  } catch {
+    /* ignore */
+  }
+  return {
+    projectId: id,
+    title: rec.plan?.title || id,
+    mediaPaths: collected.media,
+    mediaCount: collected.media.length,
+    roots: collected.roots,
+    record: rec,
+    message: `Restored ${rec.plan?.title || id} to the project rail.`,
+  }
+}
+
 /**
  * Approve plan: lock the story, write shotlist + board, register the project
  * for archive/floor. Does not queue Comfy — Make (Brain) is the factory.
@@ -886,6 +983,8 @@ export function approvePlan(projectId, { startProduction = true } = {}) {
       stillBrief: c.stillBrief,
       motionBrief: c.motionBrief,
       dialogue: c.dialogue,
+      soundscape: c.soundscape,
+      musicNote: c.musicNote,
     })),
   }
   fs.mkdirSync(path.dirname(paths.shotlistPath), { recursive: true })
@@ -975,6 +1074,6 @@ export function approvePlan(projectId, { startProduction = true } = {}) {
     paths,
     producePipelineId: id,
     status,
-    message: 'Plan locked. Open Make and press Make the film when you are ready.',
+    message: 'Plan locked. Press Make movie when you are ready.',
   }
 }

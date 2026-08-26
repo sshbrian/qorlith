@@ -12,6 +12,7 @@ monitor/data/projects/
 monitor/data/director-jobs/
 monitor/data/produce_archived.json
 monitor/data/produce_pipelines_studio.json
+monitor/data/gallery-archive.json
 __pycache__/
 *.pyc
 brain/checkpointer.sqlite

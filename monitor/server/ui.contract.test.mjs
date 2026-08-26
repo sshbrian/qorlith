@@ -34,6 +34,7 @@ describe('UI contract — App routes & nav', () => {
     assert.match(t, /EpisodePlan/)
     assert.match(t, /Watch/)
     assert.match(t, /Brain/)
+    assert.match(t, /path="archive"/)
     assert.match(t, /path="media"/)
     assert.match(t, /path="train"/)
     assert.doesNotMatch(t, /path="produce"/)
@@ -47,6 +48,7 @@ describe('UI contract — App routes & nav', () => {
     assert.match(t, /studio-rail/)
     assert.match(t, /New project/)
     assert.match(t, /All media/)
+    assert.match(t, /Archive/)
     assert.match(t, /Plan/)
     assert.match(t, /Make/)
     assert.match(t, /Board/)
@@ -80,6 +82,7 @@ describe('UI contract — stages, not tools', () => {
       'System.tsx',
       'Watch.tsx',
       'Brain.tsx',
+      'Archive.tsx',
     ]) {
       assert.match(page(f), /FailNote/, f)
     }
@@ -140,6 +143,14 @@ describe('UI contract — brain is shipped', () => {
     assert.doesNotMatch(t, /sketch only/)
     assert.match(t, /route_start/)
     assert.match(t, /concat_videos/)
+  })
+
+  it('Watch is a theater, not a clip dump', () => {
+    const t = page('Watch.tsx')
+    assert.match(t, /theater-player/)
+    assert.match(t, /Tap for sound/)
+    assert.match(t, /Make movie/)
+    assert.doesNotMatch(t, /setInterval/)
   })
 
   it('Brain page can stop and show a master', () => {

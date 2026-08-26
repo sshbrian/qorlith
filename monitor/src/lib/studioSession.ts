@@ -58,7 +58,7 @@ export function projectsFingerprint(list: StudioProject[] | null | undefined): s
   return (list || [])
     .map(
       (p) =>
-        `${p.id}:${p.title}:${p.active ? '1' : '0'}:${p.clipCount}:${p.sceneCount}:${p.stage}:${p.status}:${p.updatedAt || ''}`,
+        `${p.id}:${p.title}:${p.active ? '1' : '0'}:${p.clipCount}:${p.sceneCount}:${p.stage}:${p.status}:${p.updatedAt || ''}:${p.coverUrl || ''}`,
     )
     .join(';')
 }

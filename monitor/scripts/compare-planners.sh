@@ -28,8 +28,8 @@ run_pair() {
 load muse-glimmer-30b
 run_pair muse-glimmer-30b muse
 
-load qwen3.6-27b-uncensored-hauhaucs-balanced
-run_pair qwen3.6-27b-uncensored-hauhaucs-balanced qwen
+load qwen3.8-27b-uncensored
+run_pair qwen3.8-27b-uncensored qwen38
 
 echo "=== done ==="
 ls -1 data/_planner-eval/*-latest.md

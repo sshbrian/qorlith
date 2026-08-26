@@ -32,6 +32,16 @@ export function writeLastProject(id: string) {
   }
 }
 
+export function clearLastProject(id?: string) {
+  try {
+    if (!id || localStorage.getItem(LAST_PROJECT_KEY) === id) {
+      localStorage.removeItem(LAST_PROJECT_KEY)
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export function readRailCollapsed(): boolean {
   try {
     return localStorage.getItem(RAIL_COLLAPSED_KEY) === '1'
@@ -59,8 +69,9 @@ export function stageFromPath(pathname: string): StudioStage | '' {
   return canonicalStage(parts[2])
 }
 
-export function areaFromPath(pathname: string): 'studio' | 'media' | 'train' {
+export function areaFromPath(pathname: string): 'studio' | 'media' | 'train' | 'archive' {
   if (pathname === '/media' || pathname.startsWith('/media/')) return 'media'
   if (pathname === '/train' || pathname.startsWith('/train/')) return 'train'
+  if (pathname === '/archive' || pathname.startsWith('/archive/')) return 'archive'
   return 'studio'
 }

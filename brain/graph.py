@@ -1,9 +1,14 @@
-"""Stills-first LangGraph: health → plan → stills → board → video → done."""
+"""Stills-first LangGraph: health → plan → stills → board → video → done.
+
+Clip media on disk and plan.json are the resume protocol. LangGraph only
+checkpoints at node boundaries; stills/video loops skip finished files.
+"""
 
 from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -24,7 +29,7 @@ from .studio import (
 )
 
 Status = Literal["pending", "stills", "face_qa", "video", "recut", "done", "fail", "stopped"]
-GRAPH_NODES = ("health", "plan", "stills", "face_qa", "video", "finish")
+GRAPH_NODES = ("health", "plan", "stills", "face_qa", "video", "free", "finish")
 _STOP = threading.Event()
 
 
@@ -40,6 +45,7 @@ class BrainState(TypedDict, total=False):
     hero_paths: dict[str, str]
     video_paths: dict[str, str]
     review_ok: bool
+    auto_pick: bool
     last_error: str
     thread_id: str
     stop_after: str
@@ -66,6 +72,7 @@ def empty_state(**kwargs: Any) -> BrainState:
         "hero_paths": {},
         "video_paths": {},
         "review_ok": False,
+        "auto_pick": False,
         "last_error": "",
         "thread_id": "",
         "stop_after": "",
@@ -97,6 +104,7 @@ STEPS = (
     ("stills", "Pictures"),
     ("face_qa", "Your picks"),
     ("video", "Motion"),
+    ("free", "Clear"),
     ("finish", "Film"),
 )
 
@@ -108,6 +116,7 @@ GRAPH_NODE_META = (
     ("stills", "Pictures", "Paint each still"),
     ("face_qa", "Your picks", "You choose the frames"),
     ("video", "Motion", "Animate the picks"),
+    ("free", "Clear", "Unload Comfy models"),
     ("finish", "Film", "Join the clips"),
     ("end", "End", "Stop or done"),
 )
@@ -117,17 +126,20 @@ GRAPH_EDGES = (
     ("plan", "stills", "flow"),
     ("stills", "face_qa", "flow"),
     ("face_qa", "video", "flow"),
-    ("video", "finish", "flow"),
+    ("video", "free", "flow"),
+    ("free", "finish", "flow"),
     ("finish", "end", "flow"),
     ("health", "end", "stop"),
     ("plan", "end", "stop"),
     ("stills", "end", "stop"),
     ("face_qa", "end", "stop"),
     ("video", "end", "stop"),
+    ("free", "end", "stop"),
     ("start", "plan", "resume"),
     ("start", "stills", "resume"),
     ("start", "face_qa", "resume"),
     ("start", "video", "resume"),
+    ("start", "free", "resume"),
     ("start", "finish", "resume"),
 )
 
@@ -136,7 +148,7 @@ STATUS_STEP = {
     "stills": "stills",
     "face_qa": "face_qa",
     "video": "video",
-    "recut": "finish",
+    "recut": "free",
     "done": "finish",
     "fail": "health",
     "stopped": "health",
@@ -297,6 +309,11 @@ def public_report(
                 "title": clip.get("title") or cid,
                 "durationSec": clip.get("durationSec"),
                 "cut": bool(clip.get("cut")),
+                "stillBrief": clip.get("stillBrief"),
+                "motionBrief": clip.get("motionBrief"),
+                "dialogue": clip.get("dialogue"),
+                "soundscape": clip.get("soundscape"),
+                "musicNote": clip.get("musicNote"),
                 "still": stills.get(cid) if cid else None,
                 "video": videos.get(cid) if cid else None,
                 "pick": picks.get(cid) if cid else None,
@@ -392,15 +409,17 @@ def _raise_if_stopped(extra: dict[str, Any] | None = None) -> None:
 
 
 def infer_step(state: BrainState) -> str:
-    step = str(state.get("step") or "")
-    if step in GRAPH_NODES:
-        return step
     status = str(state.get("status") or "pending")
+    step = str(state.get("step") or "")
     clips = state.get("clips") or []
     stills = state.get("still_paths") or {}
     videos = state.get("video_paths") or {}
     if status == "done":
         return "finish"
+    if clips and videos and len(videos) >= len(clips) and not state.get("comfy_freed"):
+        return "free"
+    if step in GRAPH_NODES:
+        return step
     if clips and videos and len(videos) >= len(clips):
         return "finish"
     if clips and stills and (state.get("review_ok") or status == "video"):
@@ -459,10 +478,29 @@ def merge_report(state: BrainState, report: dict[str, Any] | None) -> BrainState
                 "id": c.get("id"),
                 "title": c.get("title") or c.get("id"),
                 "durationSec": c.get("durationSec"),
+                "cut": bool(c.get("cut")),
+                "stillBrief": c.get("stillBrief") or "",
+                "motionBrief": c.get("motionBrief") or "",
+                "dialogue": c.get("dialogue") or "",
+                "soundscape": c.get("soundscape") or "",
+                "musicNote": c.get("musicNote") or "",
             }
             for c in report["clips"]
             if c.get("id")
         ]
+    elif out.get("clips") and report.get("clips"):
+        by_id = {str(c.get("id")): c for c in report["clips"] if c.get("id")}
+        filled = []
+        for clip in out["clips"]:
+            src = by_id.get(str(clip.get("id"))) or {}
+            row = dict(clip)
+            for key in ("stillBrief", "motionBrief", "dialogue", "soundscape", "musicNote", "title", "durationSec"):
+                if row.get(key) in (None, "") and src.get(key) not in (None, ""):
+                    row[key] = src[key]
+            if "cut" not in row and "cut" in src:
+                row["cut"] = bool(src.get("cut"))
+            filled.append(row)
+        out["clips"] = filled
     if report.get("step") in GRAPH_NODES and (
         report.get("status") in {"stopped", "fail", "stills", "face_qa", "video", "recut"}
         or not state.get("step")
@@ -496,26 +534,47 @@ def master_dest(cfg: BrainConfig, project_id: str) -> Path:
     return cfg.project_dir / project_id / "master.mp4"
 
 
+def media_ok(path: str | Path | None, *, kind: str) -> bool:
+    """True when a clip file is on disk. Videos must be large enough to be a finished render."""
+    if not path:
+        return False
+    dest = Path(str(path))
+    minimum = 50_000 if kind == "video" else 1
+    try:
+        return dest.is_file() and dest.stat().st_size >= minimum
+    except OSError:
+        return False
+
+
 def collect_disk_media(cfg: BrainConfig, state: BrainState) -> BrainState:
-    """Pull stills/videos already on disk into state so resume does not re-queue them."""
+    """Disk is the clip-level checkpointer. Drop stale paths and refill from Comfy output."""
     look = str(state.get("look_track") or "live")
     project_id = str(state.get("project_id") or "")
     stills = dict(state.get("still_paths") or {})
-    videos = dict(state.get("video_paths") or {})
+    videos = {k: v for k, v in (state.get("video_paths") or {}).items() if media_ok(v, kind="video")}
+    looks = [look]
+    alt = "live" if look == "anime" else "anime"
+    if alt not in looks:
+        looks.append(alt)
     for clip in state.get("clips") or []:
         cid = clip.get("id")
         if not cid:
             continue
-        if not stills.get(cid):
-            found = find_clip_output(cfg, look, project_id, str(cid), "still", 0)
-            if found:
-                stills[str(cid)] = found
-        if stills.get(cid):
-            copy_still_to_board(cfg, project_id, str(cid), stills[str(cid)])
-        if not videos.get(cid):
-            found = find_clip_output(cfg, look, project_id, str(cid), "video", 0)
-            if found:
-                videos[str(cid)] = found
+        key = str(cid)
+        if not stills.get(key):
+            for track in looks:
+                found = find_clip_output(cfg, track, project_id, key, "still", 0)
+                if found:
+                    stills[key] = found
+                    break
+        if stills.get(key):
+            copy_still_to_board(cfg, project_id, key, stills[key])
+        if not videos.get(key):
+            for track in looks:
+                found = find_clip_output(cfg, track, project_id, key, "video", 0)
+                if found:
+                    videos[key] = found
+                    break
     return {**state, "still_paths": stills, "video_paths": videos}
 
 
@@ -645,6 +704,193 @@ def concat_videos(paths: list[Path], dest: Path) -> Path:
             pass
 
 
+WELD_FADE_SEC = 0.04
+CONTINUE_TRIM_FRAMES = 1
+
+
+def _has_audio_stream(path: Path) -> bool:
+    probe = shutil.which("ffprobe")
+    if not probe:
+        return False
+    ran = subprocess.run(
+        [
+            probe,
+            "-v",
+            "error",
+            "-select_streams",
+            "a",
+            "-show_entries",
+            "stream=index",
+            "-of",
+            "csv=p=0",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    return bool((ran.stdout or "").strip())
+
+
+def _normalize_join_clip(src: Path, dest: Path, *, trim_frames: int = 0) -> Path:
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise BrainError(500, "ffmpeg_missing", "ffmpeg is not installed", "Install ffmpeg, then resume finish.")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    vf = "setpts=PTS-STARTPTS,fps=24,format=yuv420p"
+    if trim_frames > 0:
+        vf = f"trim=start_frame={trim_frames},{vf}"
+    if _has_audio_stream(src):
+        cmd = [
+            ffmpeg,
+            "-y",
+            "-i",
+            str(src),
+            "-vf",
+            vf,
+            "-af",
+            "aresample=32000,aformat=sample_fmts=fltp:channel_layouts=stereo,asetpts=PTS-STARTPTS",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-ar",
+            "32000",
+            "-ac",
+            "2",
+            "-shortest",
+            str(dest),
+        ]
+    else:
+        cmd = [
+            ffmpeg,
+            "-y",
+            "-i",
+            str(src),
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=channel_layout=stereo:sample_rate=32000",
+            "-map",
+            "0:v:0",
+            "-map",
+            "1:a:0",
+            "-vf",
+            vf,
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-ar",
+            "32000",
+            "-ac",
+            "2",
+            "-shortest",
+            str(dest),
+        ]
+    ran = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    if ran.returncode != 0 or not dest.is_file() or dest.stat().st_size == 0:
+        err = (ran.stderr or ran.stdout or "ffmpeg normalize failed").strip()
+        raise BrainError(500, "weld_normalize", err[:400], "Check the clip videos, then resume finish.")
+    return dest
+
+
+def _ffmpeg_join_pair(left: Path, right: Path, dest: Path, *, fade: bool) -> Path:
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise BrainError(500, "ffmpeg_missing", "ffmpeg is not installed", "Install ffmpeg, then resume finish.")
+    if fade:
+        filt = (
+            f"[0:v][1:v]concat=n=2:v=1:a=0[v];"
+            f"[0:a][1:a]acrossfade=d={WELD_FADE_SEC}:c1=tri:c2=tri[a]"
+        )
+    else:
+        filt = "[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[v][a]"
+    cmd = [
+        ffmpeg,
+        "-y",
+        "-i",
+        str(left),
+        "-i",
+        str(right),
+        "-filter_complex",
+        filt,
+        "-map",
+        "[v]",
+        "-map",
+        "[a]",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-ar",
+        "32000",
+        "-ac",
+        "2",
+        "-movflags",
+        "+faststart",
+        str(dest),
+    ]
+    ran = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    if ran.returncode != 0 or not dest.is_file() or dest.stat().st_size == 0:
+        err = (ran.stderr or ran.stdout or "ffmpeg weld failed").strip()
+        raise BrainError(500, "weld_failed", err[:400], "Check the clip videos, then resume finish.")
+    return dest
+
+
+def weld_videos(segments: list[tuple[Path, str]], dest: Path) -> Path:
+    """Join clips. Continue seams drop the duplicate first frame and 40ms-crossfade audio."""
+    if not segments:
+        raise BrainError(400, "no_videos", "No clip videos to concat", "Run video first.")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists():
+        dest.unlink()
+    if len(segments) == 1:
+        shutil.copy2(segments[0][0], dest)
+        return dest
+    if all(kind == "cut" for _, kind in segments[1:]):
+        return concat_videos([path for path, _ in segments], dest)
+    tmp = dest.parent / f".weld_{dest.stem}"
+    if tmp.exists():
+        shutil.rmtree(tmp, ignore_errors=True)
+    tmp.mkdir(parents=True)
+    try:
+        norms: list[Path] = []
+        for i, (path, kind) in enumerate(segments):
+            trim = CONTINUE_TRIM_FRAMES if i > 0 and kind == "continue" else 0
+            norms.append(_normalize_join_clip(path, tmp / f"n{i:02d}.mp4", trim_frames=trim))
+        acc = norms[0]
+        for i in range(1, len(norms)):
+            nxt = tmp / f"j{i:02d}.mp4"
+            _ffmpeg_join_pair(acc, norms[i], nxt, fade=segments[i][1] == "continue")
+            acc = nxt
+        shutil.copy2(acc, dest)
+        return dest
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def weld_clip_videos(clips: list[dict[str, Any]], video_paths: dict[str, Any], dest: Path) -> Path:
+    segments: list[tuple[Path, str]] = []
+    for i, clip in enumerate(clips or []):
+        cid = clip.get("id")
+        raw = video_paths.get(cid) if cid else None
+        if not raw:
+            continue
+        path = Path(str(raw))
+        if not path.is_file():
+            continue
+        kind = "continue" if i > 0 and not clip.get("cut") else "cut"
+        segments.append((path, kind))
+    return weld_videos(segments, dest)
+
+
 def node_health(studio: Studio, state: BrainState) -> BrainState:
     live = {**state, "status": "pending", "step": "health"}
     write_report(studio.cfg, live, phase="monitor_get")
@@ -715,6 +961,30 @@ def node_plan(studio: Studio, state: BrainState) -> BrainState:
     }
 
 
+_GITS_DENY = re.compile(
+    r"\b(?:not|no)\s+(?:ghost in the shell|gits|section\s*9|motoko|kusanagi|the major)"
+    r"(?:\s+copies(?:\s+of\s+motoko)?)?\b",
+    re.I,
+)
+_GITS_ASK = re.compile(
+    r"\b(?:ghost in the shell|section\s*9|gitsstyl|\bgits\b|motoko|kusanagi|thermoptic|the major)\b",
+    re.I,
+)
+
+
+def _text_wants_gits(text: str) -> bool:
+    stripped = _GITS_DENY.sub(" ", text or "")
+    return bool(_GITS_ASK.search(stripped))
+
+
+def _lora_is_gits(item: dict[str, Any]) -> bool:
+    name = str(item.get("name") or "").lower()
+    role = str(item.get("role") or "").lower()
+    if role == "gits" or "gitsstyl" in name:
+        return True
+    return any(str(t).lower() == "gitsstyl" for t in item.get("triggers") or [])
+
+
 def _still_plan(
     studio: Studio,
     brief: str,
@@ -724,10 +994,13 @@ def _still_plan(
     ipadapter_image: str | None = None,
 ) -> dict[str, Any]:
     inv = studio.inventory()
+    want_gits = _text_wants_gits(brief)
     loras = []
     for item in inv.get("loras") or []:
         name = item.get("name")
         if not name:
+            continue
+        if _lora_is_gits(item) and not want_gits:
             continue
         strength = item.get("default_strength", 0.65)
         loras.append({"name": name, "strength_model": strength, "strength_clip": strength})
@@ -751,8 +1024,45 @@ def _still_plan(
         "notes": defaults.get("checkpoint") or "",
     }
     if ipadapter_image:
-        plan["ipadapter"] = {"enabled": True, "image": ipadapter_image, "weight": 0.5}
+        # Last-resort identity only. Scene clips should not pass a hero
+        # portrait — plus-face IPAdapter copies MCU composition.
+        plan["ipadapter"] = {
+            "enabled": True,
+            "image": ipadapter_image,
+            "weight": 0.28,
+            "weight_type": "ease out",
+            "start_at": 0.0,
+            "end_at": 0.62,
+        }
     return plan
+
+
+_ACTION_FRAME_RE = re.compile(
+    r"\b(smg|rifle|pistol|shotgun|gun|weapon|rooftop|alley|chase|raid|fight|combat)\b",
+    re.I,
+)
+_WIDE_FRAME_RE = re.compile(
+    r"\b(medium-wide|wide shot|from the thighs|full body|environment visible|cowboy shot)\b",
+    re.I,
+)
+_MCU_FRAME_RE = re.compile(
+    r"\b(close[- ]?up|closeup|portrait|head and shoulders|looking toward camera)\b",
+    re.I,
+)
+
+
+def widen_action_brief(brief: str) -> str:
+    """Keep action stills as a readable body + set, not a face crop."""
+    s = str(brief or "").strip()
+    if not s or not _ACTION_FRAME_RE.search(s):
+        return s
+    s = _MCU_FRAME_RE.sub(" ", s)
+    if not _WIDE_FRAME_RE.search(s):
+        s = "medium-wide shot, from the thighs up, face readable, environment visible, " + s
+    s = re.sub(r"\s+", " ", s)
+    s = re.sub(r"\s*,\s*", ", ", s)
+    s = re.sub(r"(?:,\s*){2,}", ", ", s).strip(" ,")
+    return s[:800]
 
 
 def _plan_characters(studio: Studio, project_id: str) -> list[dict[str, Any]]:
@@ -816,6 +1126,7 @@ def _ipadapter_enabled(studio: Studio) -> bool:
 
 
 def node_stills(studio: Studio, state: BrainState) -> BrainState:
+    state = hydrate_production_state(studio, state)
     write_report(studio.cfg, {**state, "status": "stills", "step": "stills"}, phase="comfy_idle")
     if hasattr(studio, "wait_comfy_idle"):
         studio.wait_comfy_idle(should_stop=stopping)
@@ -842,71 +1153,6 @@ def node_stills(studio: Studio, state: BrainState) -> BrainState:
     }
     write_report(studio.cfg, live, phase="comfy_idle")
 
-    if _ipadapter_enabled(studio):
-        for character in _plan_characters(studio, project_id):
-            hid = str(character.get("id") or character.get("name") or "").strip()
-            if not hid:
-                continue
-            existing = heroes.get(hid) or _existing_hero(studio.cfg, project_id, hid)
-            if existing:
-                heroes[hid] = existing
-                live["hero_paths"] = heroes
-                continue
-            progress = {
-                "still_paths": stills,
-                "hero_paths": heroes,
-                "job_ids": jobs,
-                "current_clip": hid,
-                "step": "stills",
-                "status": "stills",
-            }
-            _raise_if_stopped(progress)
-            live["current_clip"] = hid
-            write_report(studio.cfg, live, current_clip=hid, phase="hero_queue")
-            brief = _hero_brief(look, character)
-            prefix = f"qorlith/{look}/{project_id}/heroes/{hid}"
-            if hasattr(studio, "wait_comfy_idle"):
-                studio.wait_comfy_idle(should_stop=stopping)
-            queued = studio.queue_still(
-                _still_plan(
-                    studio,
-                    brief,
-                    quality,
-                    size={"width": 1024, "height": 1024, "aspectRatio": "1:1"},
-                ),
-                instruction=brief,
-                sizeHint="1:1",
-                quality=quality,
-                filenamePrefix=prefix,
-                count=1,
-            )
-            job_id = queued.get("jobId")
-            if not job_id:
-                raise BrainError(502, "no_job", "Monitor did not return a hero still job", "Retry stills.", state=progress)
-            jobs.append(job_id)
-            started = time.time()
-            write_report(studio.cfg, {**live, "job_ids": jobs}, current_clip=hid, phase="hero_wait")
-            try:
-                done = studio.wait_job(
-                    job_id,
-                    should_stop=stopping,
-                    find_output=lambda hid=hid: find_clip_output(
-                        studio.cfg, look, project_id, hid, "hero", started
-                    ),
-                )
-            except BrainError as err:
-                err.state = {**progress, "job_ids": jobs}
-                raise
-            path = still_path_from_job(done)
-            if not path:
-                raise BrainError(502, "no_still", f"Hero job {job_id} produced no still", "Check Comfy output.", state=progress)
-            copied = copy_hero_to_board(studio.cfg, project_id, hid, path)
-            heroes[hid] = copied or path
-            live["hero_paths"] = heroes
-            live["job_ids"] = jobs
-            write_report(studio.cfg, live, current_clip=hid, phase="hero_copy")
-
-    lead_hero = next((p for p in heroes.values() if p), None)
     for clip in state.get("clips") or []:
         cid = clip.get("id")
         if not cid or stills.get(cid):
@@ -915,13 +1161,13 @@ def node_stills(studio: Studio, state: BrainState) -> BrainState:
         _raise_if_stopped(progress)
         live["current_clip"] = cid
         write_report(studio.cfg, live, current_clip=cid, phase="comfy_idle")
-        brief = (clip.get("stillBrief") or clip.get("title") or cid).strip()
+        brief = widen_action_brief((clip.get("stillBrief") or clip.get("title") or cid).strip())
         prefix = f"qorlith/{look}/{project_id}/stills/{cid}"
         if hasattr(studio, "wait_comfy_idle"):
             studio.wait_comfy_idle(should_stop=stopping)
         write_report(studio.cfg, live, current_clip=cid, phase="still_queue")
         queued = studio.queue_still(
-            _still_plan(studio, brief, quality, ipadapter_image=lead_hero),
+            _still_plan(studio, brief, quality),
             instruction=brief,
             sizeHint="16:9",
             quality=quality,
@@ -970,8 +1216,17 @@ def node_face_qa(studio: Studio, state: BrainState) -> BrainState:
     picks = _picks_from_board(studio, state["project_id"])
     stills = state.get("still_paths") or {}
     clips = state.get("clips") or []
+    if state.get("auto_pick"):
+        for clip in clips:
+            cid = str(clip.get("id") or "")
+            if cid and cid not in picks and stills.get(cid):
+                picks[cid] = str(stills[cid])
     have_all = bool(clips) and all(c.get("id") in stills for c in clips)
-    review_ok = bool(state.get("review_ok") or (have_all and len(picks) >= len(clips)))
+    review_ok = bool(
+        state.get("review_ok")
+        or state.get("auto_pick")
+        or (have_all and len(picks) >= len(clips))
+    )
     status: Status = "video" if review_ok else "face_qa"
     phase = "wait_picks" if not review_ok else "board_get"
     write_report(studio.cfg, {**state, "step": "face_qa" if not review_ok else "video"}, phase=phase)
@@ -1028,19 +1283,70 @@ def extract_last_frame(video_path: str | Path, dest: str | Path) -> Path:
     return out
 
 
-def clip_take_seconds(clip: dict[str, Any], cfg: BrainConfig | None) -> int:
+def clip_take_seconds(
+    clip: dict[str, Any],
+    cfg: BrainConfig | None,
+    *,
+    continue_from_prior: bool = False,
+) -> int:
     fallback = int(getattr(cfg, "video_duration_sec", 12) or 12)
     lo = int(getattr(cfg, "video_duration_min", 6) or 6)
-    hi = int(getattr(cfg, "video_duration_max", 12) or 12)
+    hi = int(getattr(cfg, "video_duration_max", 15) or 15)
+    floor = int(getattr(cfg, "video_continue_min", 10) or 10)
     try:
         n = int(clip.get("durationSec") or fallback)
     except (TypeError, ValueError):
         n = fallback
+    if continue_from_prior:
+        lo = max(lo, min(floor, hi))
     if n < lo:
         return lo
     if n > hi:
         return hi
     return n
+
+
+def hydrate_production_state(studio: Studio, state: BrainState) -> BrainState:
+    """Plan.json owns clip briefs. Disk owns finished media. LangGraph does not."""
+    project_id = str(state.get("project_id") or "")
+    plan: dict[str, Any] = {}
+    if project_id and hasattr(studio, "get_plan"):
+        try:
+            rec = studio.get_plan(project_id)
+            plan = ((rec or {}).get("record") or {}).get("plan") or {}
+        except Exception:
+            plan = {}
+    plan_clips = [c for c in (plan.get("clips") or []) if isinstance(c, dict) and c.get("id")]
+    by_id = {str(c["id"]): c for c in plan_clips}
+    clips = [c for c in (state.get("clips") or []) if isinstance(c, dict) and c.get("id")]
+    if not clips:
+        clips = plan_clips
+    else:
+        filled = []
+        for clip in clips:
+            src = by_id.get(str(clip["id"])) or {}
+            row = {**src, **clip}
+            for key in (
+                "motionBrief",
+                "dialogue",
+                "soundscape",
+                "musicNote",
+                "stillBrief",
+                "durationSec",
+                "title",
+            ):
+                if src.get(key) not in (None, ""):
+                    row[key] = src[key]
+            filled.append(row)
+        clips = filled
+    if plan.get("lookTrack") or plan.get("look"):
+        look = _look(plan)
+    else:
+        look = state.get("look_track") or "live"
+    out: BrainState = {**state, "clips": clips, "look_track": look or "live"}
+    if plan.get("title") and not out.get("title"):
+        out["title"] = str(plan["title"])
+    return collect_disk_media(studio.cfg, out)
 
 
 def resolve_video_source(
@@ -1064,6 +1370,7 @@ def resolve_video_source(
 def node_video(studio: Studio, state: BrainState) -> BrainState:
     if not state.get("review_ok"):
         raise BrainError(403, "need_review", "Board review is not done", "Set picks, then resume --review-ok.")
+    state = hydrate_production_state(studio, state)
     write_report(studio.cfg, {**state, "status": "video", "step": "video"}, phase="comfy_idle")
     if hasattr(studio, "wait_comfy_idle"):
         studio.wait_comfy_idle(should_stop=stopping)
@@ -1076,6 +1383,10 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
         )
     look = state.get("look_track") or "live"
     project_id = state["project_id"]
+    characters = [
+        {"id": c.get("id"), "name": c.get("name")}
+        for c in _plan_characters(studio, project_id)
+    ]
     stills = state.get("still_paths") or {}
     videos = dict(state.get("video_paths") or {})
     jobs = list(state.get("job_ids") or [])
@@ -1086,9 +1397,10 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
         cid = clip.get("id")
         if not cid:
             continue
-        if videos.get(cid):
+        if media_ok(videos.get(cid), kind="video"):
             prev_video = videos[cid]
             continue
+        videos.pop(cid, None)
         progress = {"video_paths": videos, "job_ids": jobs, "current_clip": cid, "step": "video", "status": "video"}
         _raise_if_stopped(progress)
         live["current_clip"] = cid
@@ -1106,13 +1418,22 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
         )
         if hasattr(studio, "wait_comfy_idle"):
             studio.wait_comfy_idle(should_stop=stopping)
-        duration = clip_take_seconds(clip, studio.cfg)
+        duration = clip_take_seconds(
+            clip,
+            studio.cfg,
+            continue_from_prior=source_kind == "continue",
+        )
         motion = (clip.get("motionBrief") or clip.get("title") or cid).strip()
+        dialogue = clip.get("dialogue") or ""
         plan = {
             "motion": motion,
-            "dialogue": clip.get("dialogue") or "",
+            "dialogue": dialogue,
             "music": clip.get("musicNote") or "N/A",
             "soundscape": clip.get("soundscape") or "",
+            "lookTrack": look,
+            "characters": characters,
+            "allowSinging": bool(clip.get("allowSinging") or clip.get("singing"))
+            or bool(re.search(r"\b(sings?|singing|chorus|lyrics?)\b", f"{motion} {dialogue}", re.I)),
             "durationSec": duration,
             "megapixels": float(getattr(studio.cfg, "video_megapixels", None) or 0.6),
             "continueFromPrior": source_kind == "continue",
@@ -1154,10 +1475,31 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
         "video_paths": videos,
         "job_ids": jobs,
         "status": "recut",
-        "step": "finish",
+        "step": "free",
+        "comfy_freed": False,
         "current_clip": "",
         "last_error": "",
         "phase": "video_wait",
+    }
+
+
+def node_free(studio: Studio, state: BrainState) -> BrainState:
+    """Unload Comfy models after every video take is on disk. Soft-fail so the film still joins."""
+    live = {**state, "step": "free", "status": state.get("status") or "recut"}
+    write_report(studio.cfg, live, phase="comfy_free")
+    phase = "comfy_free"
+    try:
+        studio.comfy_free()
+    except Exception:
+        phase = "comfy_free_error"
+    ok = _ok(state)
+    return {
+        **state,
+        "comfy_freed": True,
+        "status": state.get("status") or "recut",
+        "step": "finish" if ok else "free",
+        "phase": phase,
+        "last_error": state.get("last_error") or "",
     }
 
 
@@ -1169,7 +1511,7 @@ def node_finish(cfg: BrainConfig, state: BrainState) -> BrainState:
     master = str(state.get("master_path") or "")
     if clips and len(files) == len(clips):
         dest = master_dest(cfg, state["project_id"])
-        concat_videos(files, dest)
+        weld_clip_videos(clips, state.get("video_paths") or {}, dest)
         master = str(dest)
     done = {**state, "status": "done", "step": "finish", "master_path": master, "last_error": "", "phase": "master"}
     write_report(cfg, done, phase="master")
@@ -1195,7 +1537,9 @@ def after_stills(state: BrainState) -> str:
 
 
 def after_qa(state: BrainState) -> str:
-    if not _ok(state) or state.get("stop_after") in {"plan", "stills"}:
+    if not _ok(state) or state.get("stop_after") == "plan":
+        return "end"
+    if state.get("stop_after") == "stills" and not state.get("auto_pick"):
         return "end"
     if state.get("review_ok") and state.get("status") == "video":
         return "video"
@@ -1203,6 +1547,10 @@ def after_qa(state: BrainState) -> str:
 
 
 def after_video(state: BrainState) -> str:
+    return "free"
+
+
+def after_free(state: BrainState) -> str:
     return "finish" if _ok(state) else "end"
 
 
@@ -1230,6 +1578,7 @@ def build_graph(studio: Studio, cfg: BrainConfig | None = None, checkpointer=Non
     graph.add_node("stills", _safe(lambda s: node_stills(studio, s), cfg))
     graph.add_node("face_qa", _safe(lambda s: node_face_qa(studio, s), cfg))
     graph.add_node("video", _safe(lambda s: node_video(studio, s), cfg))
+    graph.add_node("free", _safe(lambda s: node_free(studio, s), cfg))
     graph.add_node("finish", _safe(lambda s: node_finish(cfg, s), cfg))
 
     graph.add_conditional_edges(
@@ -1241,6 +1590,7 @@ def build_graph(studio: Studio, cfg: BrainConfig | None = None, checkpointer=Non
             "stills": "stills",
             "face_qa": "face_qa",
             "video": "video",
+            "free": "free",
             "finish": "finish",
             "end": END,
         },
@@ -1249,7 +1599,8 @@ def build_graph(studio: Studio, cfg: BrainConfig | None = None, checkpointer=Non
     graph.add_conditional_edges("plan", after_plan, {"stills": "stills", "end": END})
     graph.add_conditional_edges("stills", after_stills, {"face_qa": "face_qa", "end": END})
     graph.add_conditional_edges("face_qa", after_qa, {"video": "video", "end": END})
-    graph.add_conditional_edges("video", after_video, {"finish": "finish", "end": END})
+    graph.add_conditional_edges("video", after_video, {"free": "free"})
+    graph.add_conditional_edges("free", after_free, {"finish": "finish", "end": END})
     graph.add_edge("finish", END)
     return graph.compile(checkpointer=checkpointer)
 
@@ -1366,7 +1717,7 @@ def run(
             **state,
             "run_id": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f"),
         }
-    state = collect_disk_media(cfg, state)
+    state = hydrate_production_state(studio, state)
     prev = _install_stop_signals() if persist else None
     if persist:
         write_pid(cfg, thread)
@@ -1398,7 +1749,7 @@ def resume(
     if not values:
         raise BrainError(404, "no_thread", f"No checkpoint for {thread_id}", "Start the graph first.")
     values = merge_report(values, report)
-    values = collect_disk_media(studio.cfg, values)
+    values = hydrate_production_state(studio, values)
     if review_ok is not None:
         values["review_ok"] = review_ok
     if review_ok:

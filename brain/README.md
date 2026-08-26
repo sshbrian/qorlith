@@ -8,11 +8,13 @@ you → Make (Brain) → Monitor API → Comfy
 
 Process:
 
-`health → plan → stills → face_qa (you pick) → video → done`
+`health → plan → stills → face_qa (you pick) → video → free (unload Comfy) → finish → done`
 
 - Plan and jobs go through Monitor. Brain never `POST`s Comfy `/prompt`.
 - Stills finish before video starts.
 - Video waits until the board has picks or you pass `--review-ok`.
+- Resume is clip-level on disk (`plan.json` + Comfy stills/video files), not LangGraph mid-node. A crash after S07 wrote an mp4 will skip S07 on the next resume.
+- Continue joins (`cut=false`) weld like H3 Multishot: drop the duplicate first frame and 40 ms audio crossfade. Hard cuts stay a concat.
 - URLs come from `qorlith.yaml`. Model names stay in that file.
 
 ## Install

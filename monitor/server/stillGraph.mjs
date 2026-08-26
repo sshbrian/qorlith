@@ -51,13 +51,17 @@ export function resolveIpadapterConfig(opts = {}, plan = {}) {
   const model = String(o.model ?? y.model ?? '').trim()
   const clipVision = String(o.clip_vision ?? o.clipVision ?? y.clip_vision ?? '').trim()
   const weight = Number(o.weight ?? p.weight ?? y.weight ?? 0.72)
+  const startAt = Number(o.start_at ?? p.start_at ?? y.start_at ?? 0)
+  const endAt = Number(o.end_at ?? p.end_at ?? y.end_at ?? 1)
   return {
     enabled: Boolean(yamlOn && image && model && clipVision),
     image,
     model,
     clipVision,
-    weight: Number.isFinite(weight) ? Math.min(1.2, Math.max(0.15, weight)) : 0.5,
-    weightType: String(o.weight_type ?? p.weight_type ?? y.weight_type ?? 'linear'),
+    weight: Number.isFinite(weight) ? Math.min(1.2, Math.max(0.15, weight)) : 0.28,
+    weightType: String(o.weight_type ?? p.weight_type ?? y.weight_type ?? 'ease out'),
+    startAt: Number.isFinite(startAt) ? Math.min(1, Math.max(0, startAt)) : 0,
+    endAt: Number.isFinite(endAt) ? Math.min(1, Math.max(0.2, endAt)) : 1,
   }
 }
 
@@ -450,8 +454,8 @@ export function buildStillGraph(plan, opts = {}) {
           weight: ipCfg.weight,
           weight_type: ipCfg.weightType,
           combine_embeds: 'concat',
-          start_at: 0.0,
-          end_at: 1.0,
+          start_at: ipCfg.startAt,
+          end_at: ipCfg.endAt,
           embeds_scaling: 'V only',
           clip_vision: ['51', 0],
         },

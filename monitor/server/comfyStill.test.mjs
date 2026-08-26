@@ -82,6 +82,8 @@ describe('comfyStill yaml contract', () => {
     assert.equal(built.graph['20'].class_type, 'UpscaleModelLoader')
     assert.equal(built.graph['52'].class_type, 'IPAdapterModelLoader')
     assert.equal(built.graph['53'].class_type, 'IPAdapterAdvanced')
+    assert.equal(built.graph['53'].inputs.weight_type, 'ease out')
+    assert.ok(built.graph['53'].inputs.end_at <= 1)
     assert.equal(built.graph['60'].class_type, 'UltralyticsDetectorProvider')
     assert.equal(built.graph['61'].class_type, 'FaceDetailer')
     assert.equal(built.graph['61'].inputs.bbox_crop_factor, 1.6)

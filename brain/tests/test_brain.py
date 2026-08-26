@@ -9,7 +9,12 @@ import yaml
 from brain.config import BrainConfig, load_config
 from brain.graph import (
     clip_take_seconds,
+    collect_disk_media,
     extract_last_frame,
+    hydrate_production_state,
+    widen_action_brief,
+    media_ok,
+    weld_videos,
     resolve_video_source,
     GRAPH_EDGES,
     GRAPH_NODE_META,
@@ -18,7 +23,6 @@ from brain.graph import (
     after_qa,
     apply_step_timing,
     build_graph,
-    collect_disk_media,
     concat_videos,
     empty_state,
     infer_step,
@@ -30,6 +34,7 @@ from brain.graph import (
     route_start,
     step_states,
     node_face_qa,
+    node_free,
     node_finish,
     node_health,
     node_plan,
@@ -76,6 +81,10 @@ class FakeStudio:
 
     def comfy_busy(self):
         return self.busy
+
+    def comfy_free(self):
+        self.calls.append(("comfy_free",))
+        return {"ok": True}
 
     def wait_comfy_idle(self, timeout_s=1800, poll_s=2.0, should_stop=None):
         if self.busy:
@@ -128,8 +137,10 @@ class FakeStudio:
     def queue_still(self, plan, **extra):
         assert extra.get("filenamePrefix")
         assert plan["sampler"]["scheduler"] == "normal"
-        ip = (plan.get("ipadapter") or {}).get("image")
-        self.calls.append(("still", extra.get("filenamePrefix"), plan.get("size"), ip))
+        ip = plan.get("ipadapter") or {}
+        self.calls.append(
+            ("still", extra.get("filenamePrefix"), plan.get("size"), ip.get("image"), ip, plan.get("positive"))
+        )
         jid = f"still-{self.next_job}"
         self.next_job += 1
         self.jobs[jid] = {
@@ -204,6 +215,22 @@ def test_stills_queue_one_job_per_clip():
     assert len(out["job_ids"]) == 2
 
 
+def test_face_qa_auto_pick_uses_stills():
+    s = FakeStudio()
+    out = node_face_qa(
+        s,
+        empty_state(
+            project_id="harbor",
+            auto_pick=True,
+            clips=[{"id": "S01"}, {"id": "S02"}],
+            still_paths={"S01": "/tmp/a.png", "S02": "/tmp/b.png"},
+        ),
+    )
+    assert out["review_ok"] is True
+    assert out["status"] == "video"
+    assert out["picks"]["S01"] == "/tmp/a.png"
+
+
 def test_face_qa_waits_without_picks():
     s = FakeStudio()
     out = node_face_qa(
@@ -271,6 +298,11 @@ def test_clip_take_seconds_uses_yaml_max():
     assert clip_take_seconds({"durationSec": 12}, cfg) == 12
     assert clip_take_seconds({"durationSec": 20}, cfg) == 12
     assert clip_take_seconds({}, cfg) == 12
+    object.__setattr__(cfg, "video_duration_max", 15)
+    object.__setattr__(cfg, "video_continue_min", 10)
+    assert clip_take_seconds({"durationSec": 8}, cfg, continue_from_prior=True) == 10
+    assert clip_take_seconds({"durationSec": 8}, cfg, continue_from_prior=False) == 8
+    assert clip_take_seconds({"durationSec": 20}, cfg) == 15
 
 
 def test_resolve_video_source_continues_unless_cut(tmp_path: Path):
@@ -341,10 +373,31 @@ def test_video_feeds_last_frame_into_next_clip(tmp_path: Path, monkeypatch):
     assert sources[2] == str(still_c)
     plans = [c[2] for c in s.calls if c and c[0] == "video"]
     assert plans[0]["durationSec"] == 12
-    assert plans[1]["durationSec"] == 8
+    assert plans[1]["durationSec"] == 10
     assert plans[0]["continueFromPrior"] is False
     assert plans[1]["continueFromPrior"] is True
     assert plans[2]["continueFromPrior"] is False
+    assert plans[0]["lookTrack"] == "anime"
+    assert plans[0]["characters"] == []
+
+
+def test_video_passes_look_characters_and_singing():
+    s = FakeStudio()
+    s.plans["harbor"] = {"plan": {"characters": [{"id": "S1", "name": "Ava"}]}}
+    node_video(
+        s,
+        empty_state(
+            project_id="harbor",
+            look_track="live",
+            review_ok=True,
+            clips=[{"id": "S01", "motionBrief": "she hits the chorus", "durationSec": 7}],
+            still_paths={"S01": "/tmp/a.png"},
+        ),
+    )
+    plans = [c[2] for c in s.calls if c and c[0] == "video"]
+    assert plans[0]["lookTrack"] == "live"
+    assert plans[0]["characters"][0]["name"] == "Ava"
+    assert plans[0]["allowSinging"] is True
 
 
 def test_video_queues_from_still():
@@ -361,6 +414,34 @@ def test_video_queues_from_still():
     )
     assert out["video_paths"]["S01"].endswith(".mp4")
     assert out["status"] == "recut"
+    assert out["step"] == "free"
+    assert out["comfy_freed"] is False
+
+
+def test_free_unloads_comfy_after_videos():
+    s = FakeStudio()
+    out = node_free(
+        s,
+        empty_state(
+            project_id="harbor",
+            status="recut",
+            step="free",
+            clips=[{"id": "S01"}],
+            video_paths={"S01": "/tmp/a.mp4"},
+        ),
+    )
+    assert out["comfy_freed"] is True
+    assert out["step"] == "finish"
+    assert ("comfy_free",) in s.calls
+    assert infer_step(out) == "finish"
+    stuck = empty_state(
+        project_id="harbor",
+        status="recut",
+        step="",
+        clips=[{"id": "S01"}],
+        video_paths={"S01": "/tmp/a.mp4"},
+    )
+    assert infer_step(stuck) == "free"
 
 
 def test_stop_after_plan_does_not_enter_stills():
@@ -368,6 +449,7 @@ def test_stop_after_plan_does_not_enter_stills():
     assert after_plan(empty_state(status="stills")) == "stills"
     assert after_qa(empty_state(status="face_qa", review_ok=False)) == "end"
     assert after_qa(empty_state(status="video", review_ok=True)) == "video"
+    assert after_qa(empty_state(status="video", review_ok=True, auto_pick=True, stop_after="stills")) == "video"
 
 
 def test_graph_plan_only(tmp_path: Path):
@@ -381,6 +463,20 @@ def test_graph_plan_only(tmp_path: Path):
     assert out["status"] == "stills"
     assert out["clips"]
     assert "queue_still" not in str(s.calls)
+
+
+def test_graph_one_click_auto_picks_through_video():
+    s = FakeStudio()
+    out = run(
+        s,
+        empty_state(prompt="30s anime", stop_after="", auto_pick=True, quality="draft"),
+        checkpointer=memory_saver(),
+        persist=False,
+    )
+    assert out["status"] == "done"
+    assert out["review_ok"] is True
+    assert len(out["still_paths"]) == 2
+    assert len(out["video_paths"]) == 2
 
 
 def test_graph_stops_at_board():
@@ -400,14 +496,22 @@ def test_empty_state_defaults_to_standard_quality():
     assert empty_state()["quality"] == "standard"
 
 
-def test_stills_paint_hero_then_condition_clips():
+def test_widen_action_brief_opens_the_frame():
+    wide = widen_action_brief("1girl, holding compact SMG, rain-slick rooftop")
+    assert "medium-wide" in wide
+    assert "thighs up" in wide
+    talk = widen_action_brief("1girl, standing in a kitchen, looking at viewer")
+    assert "medium-wide" not in talk
+
+
+def test_stills_skip_hero_ipadapter_on_clips():
     s = FakeStudio()
     s.ipadapter = True
     plan = {
         "projectId": "harbor",
         "characters": [{"id": "S1", "name": "Ava", "look": "adult short dark hair, red eyes"}],
         "clips": [
-            {"id": "S01", "title": "Approach", "stillBrief": "rain alley", "durationSec": 12},
+            {"id": "S01", "title": "Approach", "stillBrief": "rain alley, compact SMG", "durationSec": 12},
             {"id": "S02", "title": "Lookout", "stillBrief": "rooftop", "durationSec": 12},
         ],
     }
@@ -417,11 +521,11 @@ def test_stills_paint_hero_then_condition_clips():
         empty_state(project_id="harbor", clips=plan["clips"], look_track="anime", quality="standard"),
     )
     still_calls = [c for c in s.calls if isinstance(c, tuple) and c[0] == "still"]
-    assert any(c[1] and "heroes/S1" in str(c[1]) for c in still_calls)
+    assert not any(c[1] and "heroes/" in str(c[1]) for c in still_calls)
     clip_calls = [c for c in still_calls if c[1] and "stills/S01" in str(c[1])]
     assert clip_calls
-    assert clip_calls[0][3]
-    assert out["hero_paths"]["S1"]
+    assert not clip_calls[0][3]
+    assert "medium-wide" in str(clip_calls[0][5])
     assert len(out["still_paths"]) == 2
 
 
@@ -469,9 +573,9 @@ def test_graph_compiles():
 
 def test_step_states_mark_current_and_done():
     steps = step_states("stills", "stills")
-    assert [s["state"] for s in steps] == ["done", "done", "active", "idle", "idle", "idle"]
+    assert [s["state"] for s in steps] == ["done", "done", "active", "idle", "idle", "idle", "idle"]
     stopped = step_states("stills", "stills", "plan")
-    assert [s["state"] for s in stopped] == ["done", "done", "idle", "idle", "idle", "idle"]
+    assert [s["state"] for s in stopped] == ["done", "done", "idle", "idle", "idle", "idle", "idle"]
     done = step_states("done", "finish")
     assert all(s["state"] == "done" for s in done)
     failed = step_states("fail", "stills")
@@ -697,6 +801,132 @@ def test_concat_videos_joins_with_ffmpeg(tmp_path: Path):
     concat_videos(clips, master)
     assert master.is_file()
     assert master.stat().st_size > 0
+
+
+def test_weld_videos_trims_continue_and_hard_cuts(tmp_path: Path):
+    import shutil
+    import subprocess
+
+    if not shutil.which("ffmpeg"):
+        pytest.skip("ffmpeg not installed")
+
+    def make_clip(name: str) -> Path:
+        dest = tmp_path / f"{name}.mp4"
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=32x32:d=0.4:r=24",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=0.4:sample_rate=32000",
+                "-pix_fmt",
+                "yuv420p",
+                "-shortest",
+                str(dest),
+            ],
+            check=True,
+            capture_output=True,
+        )
+        return dest
+
+    a = make_clip("a")
+    b = make_clip("b")
+    c = make_clip("c")
+    cont = tmp_path / "continue.mp4"
+    weld_videos([(a, "cut"), (b, "continue")], cont)
+    assert cont.is_file() and cont.stat().st_size > 0
+    cut = tmp_path / "cut.mp4"
+    weld_videos([(a, "cut"), (c, "cut")], cut)
+    assert cut.is_file() and cut.stat().st_size > 0
+
+
+def test_hydrate_fills_briefs_from_plan():
+    s = FakeStudio()
+    s.plans["harbor"] = {
+        "plan": {
+            "lookTrack": "anime",
+            "clips": [
+                {
+                    "id": "S01",
+                    "motionBrief": "hold",
+                    "dialogue": "",
+                    "cut": False,
+                    "durationSec": 12,
+                },
+                {
+                    "id": "S02",
+                    "motionBrief": "keep walking",
+                    "cut": False,
+                    "durationSec": 12,
+                },
+            ],
+        }
+    }
+    out = hydrate_production_state(
+        s,
+        empty_state(project_id="harbor", clips=[{"id": "S01"}, {"id": "S02"}]),
+    )
+    assert out["clips"][1]["motionBrief"] == "keep walking"
+    assert out["look_track"] == "anime"
+
+
+def test_hydrate_plan_briefs_win_over_stale_state():
+    s = FakeStudio()
+    s.plans["harbor"] = {
+        "plan": {
+            "lookTrack": "anime",
+            "clips": [
+                {
+                    "id": "S01",
+                    "stillBrief": "1girl, motoko, SMG raised, neon alley",
+                    "motionBrief": "she fires",
+                    "durationSec": 12,
+                }
+            ],
+        }
+    }
+    out = hydrate_production_state(
+        s,
+        empty_state(
+            project_id="harbor",
+            clips=[{"id": "S01", "stillBrief": "sable, amber eyes", "motionBrief": "old"}],
+        ),
+    )
+    assert out["clips"][0]["stillBrief"] == "1girl, motoko, SMG raised, neon alley"
+    assert out["clips"][0]["motionBrief"] == "she fires"
+
+
+def test_collect_disk_media_drops_stale_paths(tmp_path: Path):
+    from brain.config import BrainConfig
+
+    out = tmp_path / "comfy" / "output"
+    dest = out / "qorlith" / "anime" / "harbor" / "video"
+    dest.mkdir(parents=True)
+    clip = dest / "S01_00001_.mp4"
+    clip.write_bytes(b"x" * 60_000)
+    cfg = BrainConfig(
+        root=tmp_path,
+        monitor_url="http://127.0.0.1:3921",
+        comfy_url="http://127.0.0.1:8188",
+        planner_url="http://127.0.0.1:1234/v1",
+        checkpoint_path=tmp_path / "ck.sqlite",
+        comfy_output=out,
+    )
+    state = empty_state(
+        project_id="harbor",
+        look_track="anime",
+        clips=[{"id": "S01"}],
+        video_paths={"S01": str(tmp_path / "missing.mp4")},
+    )
+    merged = collect_disk_media(cfg, state)
+    assert merged["video_paths"]["S01"] == str(clip)
+    assert media_ok(clip, kind="video")
+    assert not media_ok(tmp_path / "missing.mp4", kind="video")
 
 
 def test_stop_flag_aborts_stills():

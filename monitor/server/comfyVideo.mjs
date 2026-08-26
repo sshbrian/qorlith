@@ -8,38 +8,119 @@ import { saveWorkflowSnapshot } from './comfyWorkflow.mjs'
 import { getVideoWorkflowPath, loadStudio } from './studioConfig.mjs'
 import { fail } from './errors.mjs'
 import { info as logInfo } from './log.mjs'
-import { comfyApi, comfyHealth } from './comfyClient.mjs'
+import { comfyApi, comfyFreeMemory, comfyHealth } from './comfyClient.mjs'
 import { COMFY_CLIENT_ID, rememberPromptGraph } from './comfyProgress.mjs'
 
 const DEFAULT_COMFY = 'http://127.0.0.1:8188'
+const SING_RE = /\b(sings?|singing|chorus|lyrics?)\b/i
+const SHOT_LABEL_RE = /^\[Shot\s+\d+\]\s*/i
 
 function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj))
 }
 
-export function composeH3Prompt(job) {
-  const motion = String(job.motion || '').trim()
+export function normalizeLookTrack(look) {
+  const raw = String(look || '').toLowerCase()
+  if (raw === 'live') return 'live'
+  if (raw === 'anime') return 'anime'
+  return ''
+}
+
+export function stripShotLabel(text) {
+  return String(text || '').replace(SHOT_LABEL_RE, '').trim()
+}
+
+function stripStyleTail(text) {
+  return String(text || '')
+    .replace(/[.]+$/g, '')
+    .trim()
+}
+
+/** Official H3 Shot 1 style token. motionPrefix is house flavor and never applied to live. */
+export function h3ShotStyle(job = {}) {
+  const look = normalizeLookTrack(job.lookTrack || job.look)
+  const explicit = stripStyleTail(job.style)
+  if (explicit) return explicit
+  if (look === 'live') return 'Live-action, cinematic'
+  const prefix = stripStyleTail(job.motionPrefix)
+  if (prefix) return prefix
+  return '2D-animated'
+}
+
+export function wantsSinging(job = {}) {
+  if (job.allowSinging === true || job.singing === true) return true
+  return SING_RE.test(`${job.motion || ''} ${job.dialogue || ''} ${job.instruction || ''}`)
+}
+
+export function subjectLock(job = {}) {
+  const chars = Array.isArray(job.characters) ? job.characters : []
+  const names = chars.map((c) => String(c?.name || '').trim()).filter(Boolean)
+  const plural = names.length > 1 || Number(job.subjectCount) > 1
+  let who
+  if (names.length === 1) who = `${names[0]} shown in <Picture 1>`
+  else if (names.length === 2) who = `${names[0]} and ${names[1]} shown in <Picture 1>`
+  else if (names.length > 2 || plural) who = 'The people shown in <Picture 1>'
+  else who = 'The subject shown in <Picture 1>'
+  const verb = names.length > 1 || plural ? 'remain' : 'remains'
+  if (job.continueFromPrior) {
+    return (
+      `${who} ${verb} in this pose, preserving appearance, clothing, body, colors, lighting, and spatial layout. ` +
+      'This take is a seamless continuation of the previous shot. Hold that exact closing arrangement. ' +
+      'For the first couple of seconds only a breath and a slight weight shift, lips closed, no speech.'
+    )
+  }
+  return `${who} ${verb} in this framing, preserving appearance, clothing, and spatial layout.`
+}
+
+export function hasAirlockLanguage(text) {
+  return /\b(first couple of seconds|about two seconds|opening hold|airlock|slight weight shift)\b/i.test(
+    String(text || ''),
+  )
+}
+
+export const AIRLOCK_LANDING =
+  'End in a stable arrangement with about two seconds spare after any speech. Keep the same location unless the motion names a new one.'
+
+/** Official overall_soundscape is 1–4 sentences. Tag lists become one sentence. Empty → N/A. */
+export function expandSoundscape(raw) {
+  const s = String(raw || '').trim()
+  if (!s || /^n\/a$/i.test(s)) return 'N/A'
+  if (/[.!?]$/.test(s) || s.split(/\s+/).length >= 12) return s
+  const parts = s
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+  if (!parts.length) return 'N/A'
+  if (parts.length === 1) return /[.!?]$/.test(parts[0]) ? parts[0] : `${parts[0]}.`
+  if (parts.length === 2) return `${parts[0]}, and ${parts[1]}.`
+  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}.`
+}
+
+export function composeH3Prompt(job = {}) {
+  const motion = stripShotLabel(String(job.motion || '').trim())
   const dialogue = String(job.dialogue || '').trim()
   const music = String(job.music || '').trim()
-  const soundscape = String(job.soundscape || '').trim()
   if (!motion && !dialogue) return ''
 
-  const lock = job.continueFromPrior
-    ? 'The person in <Picture 1> keeps the same identity, costume, body, colors, and space. Continue the action from this pose. Do not change location unless the motion says so.'
-    : 'The person in <Picture 1> keeps the same identity, costume, and setting.'
-
-  let body = `[Shot 1] 2D-animated cinematic anime. ${lock}`
-  if (motion) body += ` ${motion}`
+  const style = h3ShotStyle(job)
+  const lock = subjectLock(job)
+  const alreadyAirlock = hasAirlockLanguage(motion)
+  let body = `[Shot 1] ${style}, ${lock}`
+  if (motion) body += alreadyAirlock ? ` ${motion}` : ` Then ${motion}`
+  if (job.continueFromPrior && !alreadyAirlock) {
+    body += ` ${AIRLOCK_LANDING}`
+  }
   if (dialogue) {
-    body += ` ${dialogue}`
+    body += job.continueFromPrior ? ` After the opening hold, ${dialogue}` : ` ${dialogue}`
   } else {
-    body += ' Her lips remain completely closed. No spoken words. No singing.'
+    body += ' On-screen lips remain completely closed. No spoken words.'
+    if (!wantsSinging(job)) body += ' No singing.'
   }
 
   const parts = [
     'For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.',
     `integrated_multimodal_description: ${body}`,
-    `overall_soundscape: ${soundscape || 'Distant wind and light debris. No voices.'}`,
+    `overall_soundscape: ${expandSoundscape(job.soundscape)}`,
   ]
   if (music && music.toUpperCase() !== 'N/A') {
     parts.push(`non_diegetic_music: ${music}`)
@@ -130,7 +211,44 @@ export function applyMinimaxJob(prompt, job, report = []) {
       }
     }
   }
-  return { prompt: p, report }
+  return { prompt: p, report, h3Prompt }
+}
+
+export const KITCHEN_ATTENTION = 'comfy kitchen attention'
+
+/**
+ * MiniMax H3 must run Comfy Kitchen Attention (not Sage). Inserts the node
+ * when a graph still wires the UNET straight into the guider/sampler.
+ */
+export function ensureKitchenAttention(graph) {
+  const g = deepClone(graph || {})
+  for (const node of Object.values(g)) {
+    if (node?.class_type === 'ModelAttentionBackend' && node.inputs) {
+      node.inputs.attention = KITCHEN_ATTENTION
+    }
+  }
+  if (Object.values(g).some((n) => n?.class_type === 'ModelAttentionBackend')) return g
+  const unetId = Object.keys(g).find((id) => {
+    const ct = String(g[id]?.class_type || '')
+    const name = String(g[id]?.inputs?.unet_name || g[id]?.inputs?.ckpt_name || '')
+    return ct === 'UNETLoader' && /minimax/i.test(name)
+  })
+  if (!unetId) return g
+  let nid = '138'
+  while (g[nid]) nid = String(Number(nid) + 1)
+  g[nid] = {
+    class_type: 'ModelAttentionBackend',
+    inputs: { model: [unetId, 0], attention: KITCHEN_ATTENTION },
+  }
+  for (const [id, node] of Object.entries(g)) {
+    if (id === nid || !node?.inputs) continue
+    for (const [key, val] of Object.entries(node.inputs)) {
+      if (Array.isArray(val) && String(val[0]) === unetId && val[1] === 0) {
+        node.inputs[key] = [nid, 0]
+      }
+    }
+  }
+  return g
 }
 
 export function loadVideoTemplate(explicit) {
@@ -142,7 +260,7 @@ export function loadVideoTemplate(explicit) {
   }
   const data = JSON.parse(fs.readFileSync(resolved, 'utf8'))
   const prompt = data.prompt && typeof data.prompt === 'object' ? data.prompt : data
-  return { template: deepClone(prompt), templatePath: resolved }
+  return { template: ensureKitchenAttention(prompt), templatePath: resolved }
 }
 
 export function stageInputImage(sourceAbs, comfyRoot) {
@@ -239,7 +357,10 @@ export async function queueVideoAndWait(opts) {
   const { template, templatePath } = loadVideoTemplate(opts.templatePath)
   const diskBefore = fs.readFileSync(templatePath)
 
-  const { prompt, report: patchReport } = applyMinimaxJob(template, {
+  const lookTrack = normalizeLookTrack(opts.lookTrack)
+  const yamlPrefix = String(opts.motionPrefix ?? studio.video.prompts?.motion_prefix ?? '').trim()
+  const motionPrefix = lookTrack === 'live' ? '' : yamlPrefix
+  const job = {
     inputImageName: staged.inputImageName,
     motion: opts.motion,
     dialogue: opts.dialogue,
@@ -251,7 +372,13 @@ export async function queueVideoAndWait(opts) {
     filenamePrefix: prefix,
     seed: opts.seed,
     continueFromPrior: Boolean(opts.continueFromPrior),
-  })
+    lookTrack,
+    motionPrefix,
+    characters: opts.characters,
+    allowSinging: Boolean(opts.allowSinging),
+    instruction: opts.instruction,
+  }
+  const { prompt, report: patchReport, h3Prompt } = applyMinimaxJob(template, job)
 
   const diskAfter = fs.readFileSync(templatePath)
   if (!diskBefore.equals(diskAfter)) {
@@ -324,6 +451,14 @@ export async function queueVideoAndWait(opts) {
   }
   logInfo('comfy.done', { promptId, kind: 'video' })
 
+  if (!opts.keepModels) {
+    onProgress({ stage: 'comfy_free' })
+    try {
+      await comfyFreeMemory(comfyBase)
+    } catch {
+      /* next gen can still retry; VRAM may stay held */
+    }
+  }
 
   const rel = path.relative(outputRoot, mp4Path).replace(/\\/g, '/')
   const durationSeconds = durationSec
@@ -338,7 +473,7 @@ export async function queueVideoAndWait(opts) {
     seed: opts.seed,
     templatePath,
     kind: 'video',
-    extra: { durationSec, megapixels, fps, engine: 'minimax_h3' },
+    extra: { durationSec, megapixels, fps, engine: 'minimax_h3', lookTrack, h3Prompt },
   })
 
   const sidecar = {
@@ -359,8 +494,11 @@ export async function queueVideoAndWait(opts) {
     fps,
     sampler: { pipeline: 'minimax_h3', durationSec, megapixels, seed: opts.seed },
     prompt: opts.motion,
+    h3Prompt,
+    lookTrack: lookTrack || undefined,
     dialogue: opts.dialogue,
     music: opts.music,
+    soundscape: opts.soundscape || '',
     negative,
     tags: ['minimax-h3', 'director', 'video'],
     director: true,
@@ -384,6 +522,8 @@ export async function queueVideoAndWait(opts) {
     templatePath,
     patchReport,
     workflowPath: wf.workflowPath,
+    h3Prompt,
+    lookTrack,
   }
 }
 

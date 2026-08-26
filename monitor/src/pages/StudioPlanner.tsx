@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ArchiveProjectDialog } from '../components/ArchiveProjectDialog'
 import { FailNote } from '../components/FailNote'
 import {
@@ -9,10 +9,7 @@ import {
   type StudioPlanRecord,
 } from '../lib/api'
 
-const PROMPT_PLACEHOLDER = `Example:
-30 second rated-R found-footage action short, real_movie look.
-Handheld camcorder, two adult characters, radio dialogue, MiniMax music.
-End on a chase and a last radio line.`
+const PROMPT_PLACEHOLDER = `Example: 20 second rooftop fight, rain, no talking.`
 
 function ClipCard({
   clip,
@@ -182,8 +179,17 @@ function Field({ label, value }: { label: string; value?: string }) {
   )
 }
 
+function writerLabel(health: Awaited<ReturnType<typeof api.studioHealth>> | null) {
+  const p = health?.planner?.provider
+  if (p === 'none') return 'Import a plan'
+  if (p === 'xai') return health?.ok ? 'Grok writer on' : 'Grok key missing'
+  if (p === 'openai') return health?.ok ? 'Remote writer on' : 'Remote writer off'
+  return health?.ok ? 'Local writer on' : 'Local writer off'
+}
+
 export function StudioPlanner() {
   const { projectId } = useParams()
+  const navigate = useNavigate()
   const [prompt, setPrompt] = useState('')
   const [dryRun, setDryRun] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -193,6 +199,7 @@ export function StudioPlanner() {
   const [approveMsg, setApproveMsg] = useState<string | null>(null)
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [archiveBusy, setArchiveBusy] = useState(false)
+  const [importText, setImportText] = useState('')
 
   useEffect(() => {
     api
@@ -226,8 +233,31 @@ export function StudioPlanner() {
     setErr(null)
     setApproveMsg(null)
     try {
-      const r = await api.studioPlan({ prompt, dryRun, projectId })
+      let imported: StudioMoviePlan | undefined
+      const raw = importText.trim()
+      if (raw) {
+        imported = JSON.parse(raw) as StudioMoviePlan
+      }
+      const r = await api.studioPlan({ prompt, dryRun, projectId, plan: imported })
       setRecord(r.record)
+    } catch (e) {
+      setErr(e)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const makeMovie = async () => {
+    setBusy(true)
+    setErr(null)
+    setApproveMsg(null)
+    try {
+      let imported: StudioMoviePlan | undefined
+      const raw = importText.trim()
+      if (raw) imported = JSON.parse(raw) as StudioMoviePlan
+      const r = await api.studioFilm({ prompt, projectId, dryRun, plan: imported })
+      setRecord(r.record)
+      if (r.projectId && !dryRun) navigate(`/studio/${encodeURIComponent(r.projectId)}/make`)
     } catch (e) {
       setErr(e)
     } finally {
@@ -282,71 +312,36 @@ export function StudioPlanner() {
     <div className="page">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <p className="page-lead">Write the story, then Make the film.</p>
+          <p className="page-lead">Type what happens. Press Make movie. That is the whole job.</p>
         </div>
-        <div className="text-[13px] text-ghost">{health?.ok ? 'Writer is on' : 'Writer is off'}</div>
+        <div className="text-[13px] text-ghost">{writerLabel(health)}</div>
       </div>
-
-      {plan ? (
-        <div className="flex flex-wrap gap-2 items-center">
-          {record?.projectId ? (
-            <Link to={`/studio/${encodeURIComponent(record.projectId)}/make`} className="btn btn-primary">
-              Make the film
-            </Link>
-          ) : null}
-          <button
-            type="button"
-            disabled={busy || record?.approved || record?.archived}
-            onClick={approve}
-            className="btn btn-secondary"
-          >
-            {record?.archived ? 'Archived' : record?.approved ? 'Story locked' : 'Lock this story'}
-          </button>
-          <button
-            type="button"
-            disabled={busy || archiveBusy || !record?.projectId || record?.archived}
-            onClick={() => setArchiveOpen(true)}
-            className="text-[13px] text-ghost hover:text-magenta px-2"
-          >
-            {record?.archived ? 'Project archived' : 'Archive'}
-          </button>
-        </div>
-      ) : null}
-
-      {plan ? <PlanVisual plan={plan} /> : null}
 
       <div className="card space-y-3">
         <label className="block text-[13px] text-ghost">What happens in the film?</label>
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void makeMovie()
+          }}
           rows={6}
           placeholder={PROMPT_PLACEHOLDER}
           className="field resize-y min-h-[140px]"
         />
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            disabled={busy || !prompt.trim()}
-            onClick={generate}
-            className="btn btn-primary"
-          >
-            {busy ? 'Working…' : 'Generate plan'}
-          </button>
-          <label className="flex items-center gap-2 text-xs text-ghost cursor-pointer">
-            <input
-              type="checkbox"
-              checked={dryRun}
-              onChange={(e) => setDryRun(e.target.checked)}
-            />
-            Use a demo story
-          </label>
-          {!health?.ok ? (
-            <span className="text-[11px] text-amber">
-              Writer is offline — use a demo story, or start the local writer on :1234
-            </span>
-          ) : null}
-        </div>
+        {health && !health.ok && health.planner?.provider === 'local' ? (
+          <span className="text-[13px] text-amber">
+            Local writer is offline — paste a plan under More, or start LM Studio.
+          </span>
+        ) : null}
+        <button
+          type="button"
+          disabled={busy || (!prompt.trim() && !importText.trim())}
+          onClick={() => void makeMovie()}
+          className="btn btn-primary btn-xl w-full"
+        >
+          {busy ? 'Starting…' : 'Make movie'}
+        </button>
       </div>
 
       <FailNote error={err} />
@@ -357,11 +352,59 @@ export function StudioPlanner() {
         </div>
       ) : null}
 
-      {!plan ? (
-        <div className="card text-center text-ghost text-[15px]">
-          Generate a plan to see the timeline and per-clip still, motion, and dialogue.
+      {plan ? <PlanVisual plan={plan} /> : null}
+
+      <details className="card">
+        <summary className="text-[13px] text-ghost cursor-pointer">More (plan only, import JSON, archive)</summary>
+        <div className="mt-4 space-y-3">
+          <label className="block text-[13px] text-ghost">Paste a plan JSON</label>
+          <textarea
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            rows={4}
+            placeholder='{"title":"Night Drop","lookTrack":"anime","clips":[...]}'
+            className="field resize-y min-h-[88px] font-mono text-[12px]"
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={busy || (!prompt.trim() && !importText.trim())}
+              onClick={generate}
+              className="btn btn-secondary"
+            >
+              {busy ? 'Working…' : 'Plan only'}
+            </button>
+            <label className="flex items-center gap-2 text-xs text-ghost cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dryRun}
+                onChange={(e) => setDryRun(e.target.checked)}
+              />
+              Demo story
+            </label>
+            {plan && record?.projectId ? (
+              <>
+                <button
+                  type="button"
+                  disabled={busy || record?.approved || record?.archived}
+                  onClick={approve}
+                  className="btn btn-secondary"
+                >
+                  {record?.archived ? 'Archived' : record?.approved ? 'Story locked' : 'Lock this story'}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || archiveBusy || !record?.projectId || record?.archived}
+                  onClick={() => setArchiveOpen(true)}
+                  className="text-[13px] text-ghost hover:text-magenta px-2"
+                >
+                  Archive
+                </button>
+              </>
+            ) : null}
+          </div>
         </div>
-      ) : null}
+      </details>
 
       <ArchiveProjectDialog
         open={Boolean(archiveOpen && record?.projectId)}

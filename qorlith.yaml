@@ -11,17 +11,21 @@ monitor:
   web_port: 5173
 
 planner:
+  # local = LM Studio. openai = any OpenAI-compatible URL. xai/grok = api.x.ai.
+  # none = no LLM — POST a plan JSON (Grok bot / another agent writes the story).
+  provider: local
   url: http://127.0.0.1:1234/v1
-  model: ""             # exact LM Studio key (set in qorlith.local.yaml)
-  prefer: []            # name substrings if model is empty; first match wins
+  model: ""             # exact model key (local LM Studio, grok-4, gpt-4o, …)
+  api_key: ""           # or env QORLITH_PLANNER_KEY / XAI_API_KEY / OPENAI_API_KEY
+  prefer: []            # local only: name substrings if model is empty
   temperature: 0.35
   max_tokens: 4096
   context_length: 8192
   timeout_ms: 180000
   gpu: max              # LM Studio load flag: max | 0 | off
-  auto_manage: true     # start LMS + load planner.model
+  auto_manage: true     # local only: start LMS + load planner.model
   unload_before: true
-  unload_after: true    # free VRAM for Comfy after a plan
+  unload_after: true    # local only: free VRAM for Comfy after a plan
   identifier: qorlith-planner
   system: ""            # extra system instructions
   style: ""             # house style for still/motion briefs
@@ -32,6 +36,7 @@ stills:
   clip_skip: -2
   quality: standard          # draft | standard | hero — Brain default
   loras: []
+  locks: []          # optional house character locks (when/deny/name/look) — set in qorlith.local.yaml
   # - file: style.safetensors
   #   strength: 0.75
   #   trigger: my_style
@@ -49,8 +54,8 @@ stills:
     enabled: false
     model: ""                # IPAdapter SDXL face file (set in qorlith.local.yaml)
     clip_vision: ""
-    weight: 0.5
-    weight_type: linear
+    weight: 0.28
+    weight_type: ease out
   sampler:
     name: euler_ancestral
     scheduler: normal
@@ -68,9 +73,10 @@ video:
   megapixels: 0.6
   duration_sec: 12        # default take length when a clip omits durationSec
   duration_min: 6
-  duration_max: 12        # per-take cap at 0.6 MP — scenes may be shorter
+  duration_max: 15        # official H3 per-take cap
+  continue_min: 10        # cut=false continue takes — join needs ~2s airlock + ~2s settle
   prompts:
-    motion_prefix: ""
+    motion_prefix: ""     # anime-only H3 Shot 1 style; ignored when lookTrack is live
     negative: ""
     music_default: N/A
 

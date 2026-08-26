@@ -41,14 +41,64 @@ describe('studioPlanner', () => {
 
   it('buildPlanUserMessage turns GitS lock off for vague prompts', () => {
     const msg = buildPlanUserMessage('make a cool action short')
-    assert.match(msg, /GitS Motoko lock: OFF/)
+    assert.match(msg, /House character lock: OFF/)
     assert.match(msg, /\/no_think/)
     const gits = buildPlanUserMessage('Ghost in the Shell rooftop with the Major')
-    assert.match(gits, /GitS Motoko lock: ON/)
+    assert.match(gits, /House character lock: ON/)
     const denied = buildPlanUserMessage(
       '60 second anime rooftop duel, two adult cyborg women, silent. Not Ghost in the Shell. Not Motoko.',
     )
-    assert.match(denied, /GitS Motoko lock: OFF/)
+    assert.match(denied, /House character lock: OFF/)
+    const extras = buildPlanUserMessage(
+      'Ghost in the Shell anime, the Major Motoko Kusanagi. Two androids attacking her. Not Motoko. Not copies of Motoko.',
+    )
+    assert.match(extras, /House character lock: ON/)
+  })
+
+  it('validateMoviePlan applies Motoko lock when extras say Not Motoko', () => {
+    const p = validateMoviePlan(
+      {
+        projectId: 't',
+        title: 'T',
+        logline: 'L',
+        lookTrack: 'anime',
+        characters: [
+          {
+            id: 'S1',
+            name: 'Sable',
+            look: 'adult woman early 30s, short cropped black hair shaved sides, amber eyes',
+          },
+        ],
+        clips: [
+          {
+            id: 'S01',
+            durationSec: 12,
+            stillBrief:
+              'anime, 1girl, adult woman early 30s, short cropped black hair shaved sides, amber eyes, fully cybernetic body, matte charcoal segmented tactical bodysuit, no helmet, medium close-up, face clearly visible, compact SMG raised, rain-wet neon alley',
+          },
+          {
+            id: 'S02',
+            durationSec: 12,
+            cut: true,
+            stillBrief:
+              'anime, 1girl lead adult woman early 30s short cropped black hair shaved sides amber eyes fully cybernetic body matte charcoal segmented tactical bodysuit no helmet, wider medium shot face readable, second topless combat android mid-30s pale synthetic skin',
+          },
+        ],
+      },
+      {
+        userPrompt:
+          '24 second Ghost in the Shell anime. The Major Motoko Kusanagi. Two adult androids attacking her. Not Motoko. Not copies of Motoko.',
+      },
+    )
+    assert.equal(p.characters[0].name, 'Motoko')
+    assert.match(p.characters[0].look, /gitsstyl/)
+    assert.match(p.clips[0].stillBrief, /Motoko Kusanagi/)
+    assert.match(p.clips[0].stillBrief, /gitsstyl/)
+    assert.match(p.clips[0].stillBrief, /\bsolo\b/)
+    assert.doesNotMatch(p.clips[0].stillBrief, /amber eyes/)
+    assert.match(p.clips[1].stillBrief, /2girls/)
+    assert.doesNotMatch(p.clips[1].stillBrief, /\b1girl\b/)
+    assert.match(p.clips[1].stillBrief, /second topless/)
   })
 
   it('validateMoviePlan sanitizes silent music and speech-acts', () => {
@@ -89,6 +139,46 @@ describe('studioPlanner', () => {
     assert.equal(h.look, 'live')
   })
 
+  it('inferPlanHints keeps a named score when the user also said silent', () => {
+    const h = inferPlanHints(
+      '24 second Ghost in the Shell anime. Silent, no dialogue. Music: sparse taiko and distorted cello at moderate tempo.',
+    )
+    assert.equal(h.noTalk, true)
+    assert.equal(h.namedScore, true)
+    assert.equal(h.noMusic, false)
+    const rooftop = inferPlanHints(
+      '60 second anime rooftop duel, two adult cyborg women, no dialogue, silent. Not Motoko.',
+    )
+    assert.equal(rooftop.noTalk, true)
+    assert.equal(rooftop.namedScore, false)
+    assert.equal(rooftop.noMusic, true)
+  })
+
+  it('validateMoviePlan keeps named score on a silent-speech request', () => {
+    const p = validateMoviePlan(
+      {
+        projectId: 't',
+        title: 'T',
+        logline: 'L',
+        musicPalette: 'sparse taiko and distorted cello at moderate tempo',
+        clips: [
+          {
+            id: 'S01',
+            durationSec: 12,
+            stillBrief: 'adult woman, standing, alley, night, face visible',
+            motionBrief: 'The camera holds static as she raises the SMG.',
+            dialogue: '',
+            musicNote: 'sparse taiko and distorted cello at moderate tempo',
+          },
+        ],
+      },
+      { userPrompt: 'Silent, no dialogue. Music: sparse taiko and distorted cello.' },
+    )
+    assert.equal(p.clips[0].musicNote, 'sparse taiko and distorted cello at moderate tempo')
+    assert.notEqual(p.musicPalette, 'N/A')
+    assert.equal(p.clips[0].dialogue, '')
+  })
+
   it('validateMoviePlan caps long clips', () => {
     const p = validateMoviePlan({
       projectId: 't',
@@ -96,7 +186,7 @@ describe('studioPlanner', () => {
       logline: 'L',
       clips: [{ id: 'S01', durationSec: 40, title: 'long' }],
     })
-    assert.equal(p.clips[0].durationSec, 12)
+    assert.equal(p.clips[0].durationSec, 15)
     assert.ok(p.warnings?.length)
     assert.equal(p.clips[0].cut, false)
   })
@@ -118,17 +208,38 @@ describe('studioPlanner', () => {
     assert.equal(p.clips[1].t_start, 12)
   })
 
+  it('validateMoviePlan raises short continue takes to 10s', () => {
+    const p = validateMoviePlan({
+      projectId: 't',
+      title: 'T',
+      logline: 'L',
+      clips: [
+        { id: 'S01', durationSec: 12, title: 'hold' },
+        { id: 'S02', durationSec: 8, title: 'keep walking' },
+      ],
+    })
+    assert.equal(p.clips[1].cut, false)
+    assert.equal(p.clips[1].durationSec, 10)
+    assert.equal(p.clips[1].t_end - p.clips[1].t_start, 10)
+    assert.ok(p.warnings.some((w) => /continue take/i.test(w)))
+  })
+
   it('ensureLeadFaceFraming prefixes a wide first still', () => {
     const p = {
       clips: [{ id: 'S01', stillBrief: 'adult woman, short hair, standing on a rooftop, night' }],
     }
     const warnings = []
     ensureLeadFaceFraming(p, warnings)
-    assert.match(p.clips[0].stillBrief, /medium close-up/i)
-    assert.match(p.clips[0].stillBrief, /face clearly visible/i)
+    assert.match(p.clips[0].stillBrief, /medium-wide/i)
+    assert.match(p.clips[0].stillBrief, /face readable/i)
     assert.ok(warnings.length)
+    const talk = {
+      clips: [{ id: 'S01', stillBrief: 'adult woman, short hair, standing in a kitchen, night' }],
+    }
+    ensureLeadFaceFraming(talk, [])
+    assert.match(talk.clips[0].stillBrief, /medium close-up/i)
     const already = {
-      clips: [{ id: 'S01', stillBrief: 'medium close-up, adult woman, looking at viewer, rooftop' }],
+      clips: [{ id: 'S01', stillBrief: 'medium close-up, adult woman, looking at viewer, kitchen' }],
     }
     ensureLeadFaceFraming(already, [])
     assert.equal(already.clips[0].stillBrief.startsWith('medium close-up'), true)
@@ -136,8 +247,8 @@ describe('studioPlanner', () => {
   })
 
   it('CORE_PLANNER_RULES asks for a face-visible first still', () => {
-    assert.match(CORE_PLANNER_RULES, /medium shot or closer/)
-    assert.match(CORE_PLANNER_RULES, /face clearly visible/)
+    assert.match(CORE_PLANNER_RULES, /medium-wide/)
+    assert.match(CORE_PLANNER_RULES, /face (clearly visible|readable)/)
   })
 
   it('dryRunMoviePlan has multi clips', () => {
@@ -155,7 +266,9 @@ describe('studioPlanner', () => {
     assert.match(p, /MOTION BRIEF/)
     assert.match(p, /ceil\(durationTargetSec \/ 10\)/)
     assert.match(p, /cut=false/)
-    assert.match(p, /Hard max 12/)
+    assert.match(p, /Hard max 15/)
+    assert.match(p, /Continue airlock/)
+    assert.match(p, /continue takes are 10–15/)
     assert.match(p, /score_9_up/)
     assert.match(p, /non_diegetic_music/)
     assert.match(p, /with small amplitude/)
@@ -167,6 +280,9 @@ describe('studioPlanner', () => {
     assert.match(p, /Do not invent a leftover example cast|do not invent a leftover example cast/i)
     assert.match(p, /NEVER output curly braces/)
     assert.match(p, /every musicNote is N\/A/)
+    assert.match(p, /Do NOT write \[Shot 1\]/)
+    assert.match(p, /1–4 English sentences/)
+    assert.match(p, /Silent \/ no dialogue means no speech/)
     assert.doesNotMatch(p, /the adult \{who\}/)
   })
 

@@ -173,6 +173,46 @@ function summarizeRecord(rec) {
   }
 }
 
+const COVER_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp'])
+
+/** First still on the board — S01 preferred. */
+export function findProjectCover(id) {
+  const slug = slugifyProjectId(id)
+  const board = path.join(projectDir(slug), 'board')
+  if (!fs.existsSync(board)) return null
+  const hits = []
+  const walk = (dir) => {
+    let names
+    try {
+      names = fs.readdirSync(dir)
+    } catch {
+      return
+    }
+    for (const name of names) {
+      const p = path.join(dir, name)
+      let st
+      try {
+        st = fs.statSync(p)
+      } catch {
+        continue
+      }
+      if (st.isDirectory()) walk(p)
+      else if (st.isFile() && COVER_EXT.has(path.extname(name).toLowerCase()) && st.size > 2000) {
+        hits.push({ p, mtime: st.mtimeMs })
+      }
+    }
+  }
+  walk(board)
+  if (!hits.length) return null
+  hits.sort((a, b) => {
+    const a01 = /[/\\]S01[/\\]/i.test(a.p) ? 0 : 1
+    const b01 = /[/\\]S01[/\\]/i.test(b.p) ? 0 : 1
+    if (a01 !== b01) return a01 - b01
+    return b.mtime - a.mtime
+  })
+  return hits[0].p
+}
+
 export function suggestedStage(project) {
   if (!project) return 'plan'
   if (project.id) {
@@ -194,7 +234,19 @@ export function suggestedStage(project) {
   return 'plan'
 }
 
-export function mergeStudioProjects({ plans = [], boards = [], produce = [], brains = [] } = {}) {
+export function mergeStudioProjects({
+  plans = [],
+  boards = [],
+  produce = [],
+  brains = [],
+  includeArchived = false,
+} = {}) {
+  const archivedIds = new Set(
+    (plans || [])
+      .filter((p) => p?.archived)
+      .map((p) => String(p.projectId || p.id || '').trim())
+      .filter(Boolean),
+  )
   const byId = new Map()
 
   const touch = (id) => {
@@ -213,6 +265,7 @@ export function mergeStudioProjects({ plans = [], boards = [], produce = [], bra
         approved: false,
         produceRegistered: false,
         archived: false,
+        archivedAt: null,
         hasPlan: false,
         hasBoard: false,
         hasProduce: false,
@@ -224,7 +277,7 @@ export function mergeStudioProjects({ plans = [], boards = [], produce = [], bra
   }
 
   for (const p of plans) {
-    if (p?.archived) continue
+    if (p?.archived && !includeArchived) continue
     const rec = touch(p.projectId || p.id)
     if (!rec) continue
     rec.hasPlan = true
@@ -236,9 +289,12 @@ export function mergeStudioProjects({ plans = [], boards = [], produce = [], bra
     rec.hasProduce = rec.hasProduce || rec.produceRegistered
     rec.lookTrack = p.lookTrack || rec.lookTrack
     rec.updatedAt = p.updatedAt || rec.updatedAt
+    rec.archived = Boolean(p.archived)
+    rec.archivedAt = p.archivedAt || rec.archivedAt
   }
 
   for (const b of boards) {
+    if (!includeArchived && archivedIds.has(String(b.id || ''))) continue
     const rec = touch(b.id)
     if (!rec) continue
     rec.hasBoard = true
@@ -248,6 +304,7 @@ export function mergeStudioProjects({ plans = [], boards = [], produce = [], bra
 
   for (const pipe of produce) {
     if (pipe?.archived) continue
+    if (!includeArchived && archivedIds.has(String(pipe.id || ''))) continue
     const rec = touch(pipe.id)
     if (!rec) continue
     rec.hasProduce = true
@@ -260,6 +317,8 @@ export function mergeStudioProjects({ plans = [], boards = [], produce = [], bra
   }
 
   for (const brain of brains) {
+    const bid = String(brain.projectId || brain.id || '')
+    if (!includeArchived && archivedIds.has(bid)) continue
     const rec = touch(brain.projectId || brain.id)
     if (!rec) continue
     if (brain.running) rec.active = true
@@ -291,7 +350,29 @@ export function listStudioProjects(produceSummaries = [], brains = []) {
     boards: listEpisodePlans(),
     produce: produceSummaries,
     brains,
+  }).map((p) => ({
+    ...p,
+    coverUrl: findProjectCover(p.id)
+      ? `/api/studio/projects/${encodeURIComponent(p.id)}/cover`
+      : null,
+  }))
+}
+
+export function listArchivedStudioProjects() {
+  const plans = listProjectRecords().filter((p) => p.archived)
+  return mergeStudioProjects({
+    plans,
+    boards: listEpisodePlans(),
+    produce: [],
+    brains: [],
+    includeArchived: true,
   })
+    .filter((p) => p.archived)
+    .map((p) => ({
+      ...p,
+      coverPath: findProjectCover(p.id),
+    }))
+    .sort((a, b) => String(b.archivedAt || b.updatedAt || '').localeCompare(String(a.archivedAt || a.updatedAt || '')))
 }
 
 export function uniqueProjectId(title) {

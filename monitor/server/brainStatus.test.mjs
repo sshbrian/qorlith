@@ -15,10 +15,10 @@ import {
 } from './brainStatus.mjs'
 
 describe('brain status view', () => {
-  it('idle graph has six waiting steps', () => {
+  it('idle graph has seven waiting steps', () => {
     const idle = idleBrain('harbor')
     assert.equal(idle.started, false)
-    assert.equal(idle.steps.length, 6)
+    assert.equal(idle.steps.length, 7)
     assert.ok(idle.steps.every((s) => s.state === 'idle'))
   })
 

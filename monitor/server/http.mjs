@@ -4,7 +4,13 @@
 import cors from 'cors'
 import express from 'express'
 import { errorMiddleware } from './errors.mjs'
-import { info as logInfo } from './log.mjs'
+import { debug as logDebug, info as logInfo } from './log.mjs'
+
+function isNoisyHttp(method, path) {
+  if (method !== 'GET') return false
+  if (path === '/api/comfy/progress') return true
+  return /^\/api\/brain\/[^/]+$/.test(path)
+}
 import { mountDirector } from './routes/director.mjs'
 import { mountFloor } from './routes/floor.mjs'
 import { mountGallery } from './routes/gallery.mjs'
@@ -21,12 +27,14 @@ export function createApp() {
   app.use((req, res, next) => {
     const start = Date.now()
     res.on('finish', () => {
-      logInfo('http', {
+      const fields = {
         method: req.method,
         path: req.path,
         status: res.statusCode,
         ms: Date.now() - start,
-      })
+      }
+      if (isNoisyHttp(req.method, req.path)) logDebug('http', fields)
+      else logInfo('http', fields)
     })
     next()
   })

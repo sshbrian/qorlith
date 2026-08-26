@@ -212,6 +212,31 @@ export function markPipelineArchivedInRegistry(pipelineId, meta = {}) {
   return ids
 }
 
+export function unmarkPipelineArchivedInRegistry(pipelineId) {
+  const id = String(pipelineId || '')
+  if (!id) return loadArchivedPipelineIds()
+  const ids = loadArchivedPipelineIds()
+  ids.delete(id)
+  const prev = readJson(archivedPipelinesPath()) || {}
+  const entries = typeof prev.entries === 'object' && prev.entries ? { ...prev.entries } : {}
+  delete entries[id]
+  fs.mkdirSync(path.dirname(archivedPipelinesPath()), { recursive: true })
+  fs.writeFileSync(
+    archivedPipelinesPath(),
+    JSON.stringify(
+      {
+        updatedAt: new Date().toISOString(),
+        ids: [...ids].sort(),
+        entries,
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  )
+  return ids
+}
+
 export function isPipelineHiddenFromProduce(pipelineId, status = null) {
   const id = String(pipelineId || '')
   if (!id) return false

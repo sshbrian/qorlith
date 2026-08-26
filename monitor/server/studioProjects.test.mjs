@@ -41,10 +41,25 @@ describe('studioProjects merge', () => {
   it('skips archived plans', () => {
     const list = mergeStudioProjects({
       plans: [{ projectId: 'gone', title: 'Gone', archived: true, clipCount: 1 }],
-      boards: [],
-      produce: [],
+      boards: [{ id: 'gone', title: 'Gone', sceneCount: 1 }],
+      produce: [{ id: 'gone', name: 'Gone', okCount: 0 }],
     })
     assert.equal(list.length, 0)
+  })
+
+  it('can list archived plans when asked', () => {
+    const list = mergeStudioProjects({
+      plans: [
+        { projectId: 'gone', title: 'Gone', archived: true, archivedAt: '2026-08-15T00:00:00.000Z', clipCount: 1 },
+      ],
+      boards: [{ id: 'gone', title: 'Gone', sceneCount: 1 }],
+      produce: [],
+      includeArchived: true,
+    })
+    assert.equal(list.length, 1)
+    assert.equal(list[0].archived, true)
+    assert.equal(list[0].archivedAt, '2026-08-15T00:00:00.000Z')
+    assert.equal(list[0].hasBoard, true)
   })
 
   it('suggests make when a plan already has clips', () => {

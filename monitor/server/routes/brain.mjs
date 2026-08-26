@@ -24,7 +24,7 @@ export function mountBrain(app) {
       const view = loadBrain(id)
       if (!rec && !view.started) {
         fail(404, 'brain_not_found', 'No brain run for this project', {
-          hint: 'Press Make the film.',
+          hint: 'Press Make movie.',
         })
       }
       if (rec?.plan?.title && !view.started) {
@@ -87,12 +87,20 @@ export function mountBrain(app) {
           /* board seed is optional — Brain can still paint */
         }
       }
-      const stopAfter = req.body?.stopAfter === 'plan' ? 'plan' : 'stills'
-      const spawned = spawnBrain(id, { stopAfter })
+      const oneClick = Boolean(req.body?.oneClick || req.body?.autoPick)
+      const stopAfter = oneClick
+        ? 'film'
+        : req.body?.stopAfter === 'plan'
+          ? 'plan'
+          : req.body?.stopAfter === 'film'
+            ? 'film'
+            : 'stills'
+      const spawned = spawnBrain(id, { stopAfter, autoPick: oneClick })
       res.status(202).json({
         ok: true,
         pid: spawned.pid,
         stopAfter,
+        autoPick: oneClick,
         brain: loadBrain(id),
       })
     }),

@@ -37,19 +37,16 @@ export function ArchiveProjectDialog({
           Archive entire project?
         </h2>
         <p className="text-sm text-ghost leading-relaxed">
-          Hide media for <strong className="text-ink">{label || projectId}</strong>{' '}
-          (<span className="font-mono text-cyan">{projectId}</span>) from the default Gallery.
+          Put <strong className="text-ink">{label || projectId}</strong> away. It leaves the rail
+          and All media. Nothing is deleted.
         </p>
-        {children || (
-          <ul className="text-xs text-ghost space-y-1 list-disc pl-4">
-            <li>All stills and videos under the project folders are archived</li>
-            <li>
-              Files are <strong className="text-ink">not deleted</strong> — restore via Gallery
-              “show archived”
-            </li>
-            <li>Project stays on disk and is marked archived</li>
-          </ul>
-        )}
+        <ul className="text-xs text-ghost space-y-1 list-disc pl-4">
+          <li>The project and its stills stay on disk</li>
+          <li>
+            Restore it later from <strong className="text-ink">Archive</strong> in the left rail
+          </li>
+        </ul>
+        {children}
         <div className="flex flex-wrap gap-2 justify-end pt-1">
           <button
             type="button"

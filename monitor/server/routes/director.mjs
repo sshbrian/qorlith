@@ -15,7 +15,7 @@ import {
   validatePlan,
   validateVideoPlan,
 } from '../director.mjs'
-import { assertComfyIdle } from '../comfyClient.mjs'
+import { assertComfyIdle, comfyFreeMemory } from '../comfyClient.mjs'
 import { getComfyProgress, startComfyProgress } from '../comfyProgress.mjs'
 import {
   comfyHealth,
@@ -44,6 +44,15 @@ export function mountDirector(app) {
     '/api/comfy/progress',
     wrap(async (_req, res) => {
       res.json({ ok: true, ...getComfyProgress(), polledAt: new Date().toISOString() })
+    }),
+  )
+
+  app.post(
+    '/api/comfy/free',
+    wrap(async (_req, res) => {
+      const d = directorConfigFromApp()
+      await comfyFreeMemory(d.comfyBase || 'http://127.0.0.1:8188')
+      res.json({ ok: true, freed: true })
     }),
   )
 
@@ -428,6 +437,8 @@ export function mountDirector(app) {
         directorCfg: d,
         comfyOutputRoot: roots[0],
         continueFromPrior: Boolean(req.body?.continueFromPrior || req.body?.plan?.continueFromPrior),
+        lookTrack: req.body?.lookTrack || req.body?.plan?.lookTrack,
+        keepModels: Boolean(req.body?.keepModels),
       }
 
       if (args.generate && !args.planOnly && !args.dryRun) {
@@ -482,6 +493,10 @@ export function mountDirector(app) {
         dialogue: plan.dialogue,
         music: plan.music,
         soundscape: plan.soundscape,
+        lookTrack: plan.lookTrack,
+        characters: plan.characters,
+        allowSinging: plan.allowSinging,
+        instruction: req.body?.instruction || '',
         durationSec: plan.durationSec,
         megapixels: plan.megapixels,
         negative: plan.negative,
@@ -492,6 +507,7 @@ export function mountDirector(app) {
         comfyOutputRoot: roots[0],
         templatePath: d.videoWorkflow,
         filenamePrefix: req.body?.filenamePrefix,
+        keepModels: Boolean(req.body?.keepModels),
       })
       res.json({ ok: true, kind: 'video', plan, warnings, generation })
     }),

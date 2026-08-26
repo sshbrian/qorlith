@@ -16,6 +16,17 @@ describe('planner yaml', () => {
     assert.deepEqual(p.prefer, ['llama'])
   })
 
+  it('overlays planner provider and api_key', () => {
+    const p = mergePlanner(
+      { url: 'http://127.0.0.1:1234/v1', provider: 'local', api_key: '' },
+      {},
+      { provider: 'xai', api_key: 'sk-test', url: 'https://api.x.ai/v1' },
+    )
+    assert.equal(p.provider, 'xai')
+    assert.equal(p.api_key, 'sk-test')
+    assert.equal(p.url, 'https://api.x.ai/v1')
+  })
+
   it('directorConfigFromApp exposes planner knobs', () => {
     const studio = loadStudio()
     const d = directorConfigFromApp()
@@ -38,9 +49,10 @@ describe('planner yaml', () => {
     assert.equal(typeof s.stills.upscale, 'string')
   })
 
-  it('clipDurationBounds reads yaml max 12', () => {
+  it('clipDurationBounds reads yaml max 15 and continue floor', () => {
     const b = clipDurationBounds()
-    assert.equal(b.max, 12)
+    assert.equal(b.max, 15)
+    assert.equal(b.continueMin, 10)
     assert.ok(b.fallback >= 6)
     assert.ok(b.min >= 4)
   })

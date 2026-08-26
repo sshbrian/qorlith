@@ -99,7 +99,7 @@ export function EpisodePlan() {
   if (!data || !scene) {
     return (
       <div className="card">
-        <p className="text-[17px] text-ghost">No clips yet. Write the story in Plan, then Make the film.</p>
+        <p className="text-[17px] text-ghost">No clips yet. Type the story and press Make movie.</p>
       </div>
     )
   }
@@ -145,21 +145,19 @@ export function EpisodePlan() {
         </div>
 
         {viewing ? (
-          <img
-            src={viewing.url}
-            alt=""
-            className="w-full max-h-[62vh] object-contain rounded-[12px] bg-black"
-          />
+          <div className="theater-player" style={{ aspectRatio: '16 / 10' }}>
+            <img src={viewing.url} alt="" className="theater-video object-contain" />
+          </div>
         ) : (
-          <div className="h-56 flex items-center justify-center text-[15px] text-ghost">
-            No pictures for this clip yet. Press Make the film.
+          <div className="theater-player theater-empty">
+            <p className="text-[15px] text-ghost">No pictures for this clip yet. Press Make movie.</p>
           </div>
         )}
 
         {viewing ? (
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-primary btn-xl"
             disabled={busy || scene.pickRel === viewing.rel}
             onClick={() => void pickStill(viewing.rel)}
           >

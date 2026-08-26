@@ -3,7 +3,8 @@
 | File | What it is |
 |------|------------|
 | This page | Public notes |
-| `../qorlith.yaml` | **The** configuration file — models, LoRAs, prompts, ports |
+| `../H3_KITCHEN.md` | MiniMax H3 Comfy Kitchen Attention |
+| `../qorlith.yaml` | **The** configuration file — models, LoRAs, prompts, ports, planner provider |
 | `../README.md` | Product overview |
 | `../brain/README.md` | LangGraph control room |
 

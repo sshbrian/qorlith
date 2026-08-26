@@ -46,6 +46,24 @@ export async function assertComfyIdle(comfyBase) {
   }
 }
 
+/** Unload loaded checkpoints / MiniMax and release VRAM. Soft enough to call after every film. */
+export async function comfyFreeMemory(comfyBase) {
+  const base = String(comfyBase || getComfyUrl()).replace(/\/$/, '')
+  const r = await fetch(`${base}/free`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ unload_models: true, free_memory: true }),
+  })
+  if (!r.ok) {
+    const t = await r.text().catch(() => '')
+    fail(502, 'comfy_free', `Comfy POST /free: ${r.status} ${t.slice(0, 400)}`, {
+      hint: 'Is ComfyUI running on the URL in qorlith.yaml?',
+    })
+  }
+  logInfo('comfy.free', { unload_models: true })
+  return { ok: true }
+}
+
 export async function comfyHealth(comfyBase) {
   const base = comfyBase || getComfyUrl()
   try {

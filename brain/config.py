@@ -51,7 +51,8 @@ class BrainConfig:
     video_megapixels: float = 0.6
     video_duration_sec: int = 12
     video_duration_min: int = 6
-    video_duration_max: int = 12
+    video_duration_max: int = 15
+    video_continue_min: int = 10
     comfy_output: Path | None = None
 
     @property
@@ -85,11 +86,14 @@ def load_config(root: Path | None = None) -> BrainConfig:
 
     duration_sec = _int("duration_sec", 12)
     duration_min = _int("duration_min", 6)
-    duration_max = _int("duration_max", 12)
+    duration_max = _int("duration_max", 15)
+    continue_min = _int("continue_min", 10)
     if duration_min > duration_max:
         duration_min = duration_max
     if duration_sec > duration_max:
         duration_sec = duration_max
+    if continue_min > duration_max:
+        continue_min = duration_max
     out = str(comfy.get("output") or "").strip()
     ckpt = root / "brain" / "checkpointer.sqlite"
     return BrainConfig(
@@ -102,5 +106,6 @@ def load_config(root: Path | None = None) -> BrainConfig:
         video_duration_sec=duration_sec,
         video_duration_min=duration_min,
         video_duration_max=duration_max,
+        video_continue_min=continue_min,
         comfy_output=Path(out) if out else None,
     )
