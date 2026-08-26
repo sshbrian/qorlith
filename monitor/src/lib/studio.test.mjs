@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { clipJoinNote, clipPoster, mediaStudioCta, mediaStudioPath } from './studio.ts'
+import { clipBeat, clipJoinNote, clipPoster, mediaStudioCta, mediaStudioPath } from './studio.ts'
 
 describe('clipJoinNote', () => {
   it('S01 is an open take; later clips continue or cut', () => {
@@ -9,6 +9,20 @@ describe('clipJoinNote', () => {
     assert.equal(clipJoinNote(1, false), 'continues')
     assert.equal(clipJoinNote(1, true), 'cut')
     assert.equal(clipJoinNote(2, undefined), 'continues')
+  })
+})
+
+describe('clipBeat', () => {
+  it('uses the clip action, not the still prompt', () => {
+    assert.equal(
+      clipBeat({
+        stillBrief: '1girl, solo, rooftop, rain, neon',
+        motionBrief: 'The camera holds static as rain falls.',
+      }),
+      'The camera holds static as rain falls.',
+    )
+    assert.equal(clipBeat({ stillBrief: '1girl, rooftop' }), '')
+    assert.equal(clipBeat({ motionBrief: '  pan left  ' }), 'pan left')
   })
 })
 

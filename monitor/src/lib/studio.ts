@@ -77,6 +77,11 @@ export function clipJoinNote(index: number, cut?: boolean | null) {
   return cut ? 'cut' : 'continues'
 }
 
+/** Watch: the clip action, not the still prompt. */
+export function clipBeat(clip: { motionBrief?: string | null; stillBrief?: string | null }) {
+  return String(clip.motionBrief || '').trim()
+}
+
 /** Prefer the made clip. T2V never falls back to a leftover still or last-frame. */
 export function clipPoster(
   clip: { still?: string | null; video?: string | null },

@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { FailNote } from '../components/FailNote'
 import { useStudioLive, useStudioProjects, useStudioSession } from '../components/StudioSession'
 import { api, type BrainClip } from '../lib/api'
-import { clipJoinNote, clipPoster } from '../lib/studio'
+import { clipBeat, clipJoinNote, clipPoster } from '../lib/studio'
 import { preferBrainComfy, runIsLive } from '../lib/studioSession'
 
 function formatRuntime(clips: BrainClip[]) {
@@ -29,7 +29,7 @@ function SceneCard({
   index: number
 }) {
   const poster = clipPoster(clip, t2v ? 't2v' : 'stills')
-  const beat = (t2v ? clip.motionBrief : clip.stillBrief) || clip.motionBrief || ''
+  const beat = clipBeat(clip)
   const join = clipJoinNote(index, clip.cut)
   return (
     <li className={['scene-card', live ? 'is-live' : ''].join(' ')}>
