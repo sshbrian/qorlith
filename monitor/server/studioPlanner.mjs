@@ -79,13 +79,13 @@ The app prepends the house quality prefix and LoRA triggers. You write only the 
 - Do not open on a distant figure where the face is a few pixels. Do not make every still a face close-up.
 
 MOTION BRIEF = MiniMax H3 I2VA motion only
-The start still IS frame 0. The app wraps your text as I2VA + identity lock. You write only what CHANGES.
-- Path: action onset → continuous development → result/reaction. The app holds the still for about one second, then your motion, then ~2 s settle on continue takes.
-- Do not write the hold or the settle yourself. Do not walk the subject into frame from off-screen — they are already in the still.
+S01 and cut=true: the start still IS frame 0. Continue (cut=false, not S01): the previous last frame IS frame 0. The app wraps I2VA + style + identity lock. You write only what CHANGES.
+- Path: action onset → continuous development → result/reaction. The app holds the first frame for about one second, then your motion, then ~2 s settle on continue takes.
+- Do not write the hold or the settle yourself. Do not walk the subject into frame from off-screen — they are already in the first frame.
 - Camera as prose: motion type + optional amplitude + optional speed.
   Verbs: push in, pull out, pan left/right, truck left/right, tilt up/down, pedestal, arc, tracking, static, POV, shake slightly/strongly, roll.
   Amplitude: with small amplitude / with large amplitude. Speed: at slow speed / at fast speed. Omit medium.
-- Keep identity, costume, colors, props, and space consistent with the still.
+- Keep identity, costume, colors, props, and space consistent with the first frame.
 - Do NOT re-describe wardrobe or the set. Do NOT use Wan "At 0 seconds / At 1 second" beat lists. Do NOT name video models or LoRAs.
 - Do NOT write [Shot 1] — the app wraps I2VA + style + identity lock. Prefer one continuous shot. If you must cut inside a take: "the camera cuts to".
 

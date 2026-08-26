@@ -269,6 +269,10 @@ describe('studioPlanner', () => {
     assert.match(CORE_PLANNER_RULES, /face (clearly visible|readable)/)
     assert.match(CORE_PLANNER_RULES, /Do not write the hold/)
     assert.match(CORE_PLANNER_RULES, /off-screen/)
+    assert.match(CORE_PLANNER_RULES, /S01 and cut=true: the start still IS frame 0/)
+    assert.match(CORE_PLANNER_RULES, /previous last frame IS frame 0/)
+    assert.match(CORE_PLANNER_RULES, /already in the first frame/)
+    assert.doesNotMatch(CORE_PLANNER_RULES, /already in the still/)
   })
 
   it('dryRunMoviePlan has multi clips', () => {
