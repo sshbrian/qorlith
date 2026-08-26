@@ -49,6 +49,14 @@ describe('studioPlanner', () => {
     assert.match(msg, /\/no_think/)
     const gits = buildPlanUserMessage('Ghost in the Shell rooftop with the Major')
     assert.match(gits, /House character lock: ON/)
+    assert.match(gits, /repeat the house visual lock on every still/)
+    const gitsT2v = buildPlanUserMessage('Ghost in the Shell rooftop with the Major', { videoMode: 't2v' })
+    assert.match(gitsT2v, /House character lock: ON/)
+    assert.match(gitsT2v, /S01 and cut=true motionBrief/)
+    assert.doesNotMatch(gitsT2v, /repeat the house visual lock on every still/)
+    assert.doesNotMatch(gitsT2v, /Action S01 stillBrief is medium-wide/)
+    assert.match(gitsT2v, /Continue \(cut=false\) motionBrief is I2VA/)
+    assert.match(gitsT2v, /videoMode is t2v/)
     const denied = buildPlanUserMessage(
       '60 second anime rooftop duel, two adult cyborg women, silent. Not Ghost in the Shell. Not Motoko.',
     )

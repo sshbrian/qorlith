@@ -160,7 +160,7 @@ LOOK
 - Do not mix tracks inside one plan.
 
 CHARACTERS
-- 1–3 adults. Each has look (visual lock repeated in motionBrief) and voice (frozen for every spoken clip).
+- 1–3 adults. Each has look (visual lock in S01 / cut=true motionBrief) and voice (frozen for every spoken clip).
 - Same face, costume, and location language across clips unless a beat changes them.
 - Adults only. Never teen / child / loli / shota / minor framing. Fictional cast.
 
@@ -372,6 +372,7 @@ export function inferPlanHints(userPrompt) {
 
 export function buildPlanUserMessage(userPrompt, extra = {}) {
   const h = inferPlanHints(userPrompt)
+  const t2v = normalizeVideoMode(extra.videoMode) === 't2v'
   const musicLine = h.noMusic
     ? 'ALL musicPalette and musicNote fields are N/A'
     : 'named instruments + tempo + dynamics on musicPalette and every musicNote'
@@ -381,30 +382,37 @@ export function buildPlanUserMessage(userPrompt, extra = {}) {
       ? 'write real spoken lines with (S1) says: <d>[lang] words</d>'
       : 'dialogue empty unless the user asked for a line, shout, or radio talk'
   const gitsLine = h.gits
-    ? 'ON — repeat the house visual lock on every still. Comma-separated tags. If a second adult is in frame, mark two people. Deny phrases on extras do not turn this off.'
+    ? t2v
+      ? 'ON — put the house visual lock in S01 and cut=true motionBrief as prose, not 1girl tags. Continue takes do not re-describe the look. If a second adult is in frame, name them. Deny phrases on extras do not turn this off.'
+      : 'ON — repeat the house visual lock on every still. Comma-separated tags. If a second adult is in frame, mark two people. Deny phrases on extras do not turn this off.'
     : 'OFF — invent a NEW adult lock; do not paste a house character lock'
   const xLine = h.wantsX
-    ? '- rating X. stillBrief names the explicit act (mouth, tongue, vulva, fingers, strap-on). motionBrief is that act continuing. No "intimacy", no fade-to-black, no "lowers her head toward her lap" euphemism.\n'
+    ? t2v
+      ? '- rating X. motionBrief names the explicit act (mouth, tongue, vulva, fingers, strap-on). stillBrief may be short. No "intimacy", no fade-to-black, no "lowers her head toward her lap" euphemism.\n'
+      : '- rating X. stillBrief names the explicit act (mouth, tongue, vulva, fingers, strap-on). motionBrief is that act continuing. No "intimacy", no fade-to-black, no "lowers her head toward her lap" euphemism.\n'
     : ''
+  const shotLine = t2v
+    ? '- S01 / cut=true motionBrief is a medium-wide T2VA scene (who, place, action, camera). Continue (cut=false) motionBrief is I2VA camera + body action only — do not reopen the shot.'
+    : '- Action S01 stillBrief is medium-wide from the thighs up with the face, weapon, and location readable. Talk S01 is medium or close with the lead face clearly visible.'
+  const modeLine = t2v
+    ? '- videoMode is t2v. stillBrief is a short location. Do not write Picture 1. No start still will be painted.\n'
+    : '- videoMode is stills (default). Frozen stillBrief plus motion-only motionBrief.\n'
+  const stillLen =
+    !t2v && h.durationSec >= 60 ? ' Keep each stillBrief under 350 characters so the JSON fits.' : ''
   return `Create a complete movie production plan for this request:
 
 ${userPrompt}
 
 REQUEST CHECKLIST (follow exactly)
-- durationTargetSec: ${h.durationSec}; about ${h.clipCount} takes of 6–15s (prefer 10–12). Continue (cut=false) takes are 10–15s. Never pad by repeating beats with _2 titles.${h.durationSec >= 60 ? ' Keep each stillBrief under 350 characters so the JSON fits.' : ''}
+- durationTargetSec: ${h.durationSec}; about ${h.clipCount} takes of 6–15s (prefer 10–12). Continue (cut=false) takes are 10–15s. Never pad by repeating beats with _2 titles.${stillLen}
 - lookTrack: ${h.look}
 - music: ${musicLine}
 - dialogue: ${talkLine}
 - House character lock: ${gitsLine}
 - cut=false continues the same space from the last frame; cut=true only on location or time jumps
-- Action S01 stillBrief is medium-wide from the thighs up with the face, weapon, and location readable. Talk S01 is medium or close with the lead face clearly visible.
+${shotLine}
 - adults only. One new beat per clip.
-${
-    normalizeVideoMode(extra.videoMode) === 't2v'
-      ? '- videoMode is t2v. stillBrief may be short. motionBrief is the FULL MiniMax scene (style, composition, action, camera). Do not write Picture 1. No start still will be painted.\n'
-      : '- videoMode is stills (default). Frozen stillBrief plus motion-only motionBrief.\n'
-  }
-${xLine}- Reply with ONE JSON object. No <think>. No prose outside JSON.
+${modeLine}${xLine}- Reply with ONE JSON object. No <think>. No prose outside JSON.
 
 /no_think`
 }
