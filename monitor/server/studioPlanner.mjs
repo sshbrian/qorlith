@@ -1,6 +1,7 @@
 /**
- * Studio Planner — local LLM movie plans.
- * Uses LM Studio. Does not queue Comfy — Make (Brain) is the factory.
+ * Studio Planner — movie plans from the configured writer.
+ * Local LM Studio, Grok, OpenAI-compatible, or none (draft / paste).
+ * Does not queue Comfy — Make (Brain) is the factory.
  */
 import fs from 'fs'
 import path from 'path'
@@ -145,7 +146,7 @@ CLIP MATH (hard)
 CONTINUITY
 - Default cut=false. Video N+1 starts from the last frame of video N (same body, costume, space) as I2VA.
 - S01 and cut=true are T2VA (no Picture 1). cut=false continues from the previous last frame.
-- Set cut=true only for a purposeful hard cut: new location, time jump, or a still the previous last frame cannot continue.
+- Set cut=true only for a purposeful hard cut: new location, time jump, or a last frame that cannot continue.
 - Do not mark every clip as a cut. A chase or fight in one space is one continue chain.
 - Continue airlock (cut=false, not S01): the app holds the previous closing pose for ~2 s (breath / weight shift only, no speech), then your motionBrief, then ~2 s settle. Write the action AFTER that hold. Do not start or end a spoken line on the weld. Never split one line across two clips.
 - Each continue take must change a physical, irreversible world state (not only a look or a camera move).

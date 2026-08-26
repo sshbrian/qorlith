@@ -194,6 +194,7 @@ describe('UI contract — brain is shipped', () => {
     const t = read(path.join(ROOT, '..', 'brain', 'graph.py'))
     assert.match(t, /StateGraph/)
     assert.match(t, /face_qa/)
+    assert.match(t, /Straight to video/)
     assert.doesNotMatch(t, /NotImplementedError/)
     assert.doesNotMatch(t, /sketch only/)
     assert.match(t, /route_start/)

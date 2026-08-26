@@ -27,10 +27,10 @@ def _print(state: dict) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="brain", description="Qorlith Brain — stills-first control room")
+    parser = argparse.ArgumentParser(prog="brain", description="Qorlith Brain — movie control room")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    start = sub.add_parser("start", help="health → plan → stills → wait for board")
+    start = sub.add_parser("start", help="health → plan → stills or video → film")
     start.add_argument("--project", dest="project_id", default="")
     start.add_argument("--title", default="")
     start.add_argument("--prompt", default="")
@@ -41,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--dry-run", action="store_true")
     start.add_argument("--no-persist", action="store_true")
 
-    go = sub.add_parser("resume", help="continue a thread after board review")
+    go = sub.add_parser("resume", help="continue a stopped thread")
     go.add_argument("--thread", required=True)
     go.add_argument("--review-ok", action="store_true")
     go.add_argument("--stop-after", choices=["plan", "stills", "video"], default=None)

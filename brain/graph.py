@@ -1,4 +1,7 @@
-"""Stills-first LangGraph: health → plan → stills → board → video → done.
+"""LangGraph movie factory.
+
+Stills-first: health → plan → stills → board → video → done.
+Straight to video skips stills and board: health → plan → video → done.
 
 Clip media on disk and plan.json are the resume protocol. LangGraph only
 checkpoints at node boundaries; stills/video loops skip finished files.
