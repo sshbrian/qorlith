@@ -58,7 +58,8 @@ select {
 }
 
 .studio-rail {
-  background: #1c1c1e;
+  background: #111113;
+  border-right: 1px solid rgba(255, 255, 255, 0.045);
 }
 
 .studio-menu,
@@ -88,6 +89,23 @@ select {
   flex-direction: column;
   gap: 28px;
   contain: layout;
+}
+
+@keyframes house-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lobby,
+.screening,
+.set {
+  animation: house-in 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .lobby {
@@ -156,6 +174,7 @@ select {
   min-height: 132px;
   border: 0;
   border-radius: 22px;
+  transition: box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   background: linear-gradient(180deg, rgba(28, 28, 30, 0.92), rgba(12, 12, 14, 0.96));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
@@ -484,7 +503,7 @@ select {
 }
 
 .card {
-  background: #1c1c1e;
+  background: #141416;
   border-radius: 16px;
   padding: 20px;
 }
@@ -624,7 +643,10 @@ select {
   letter-spacing: -0.016em;
   border: 0;
   cursor: pointer;
-  transition: background-color 0.15s ease, opacity 0.15s ease;
+  transition:
+    background-color 0.2s ease,
+    opacity 0.2s ease,
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .btn:disabled {
@@ -639,6 +661,7 @@ select {
 
 .btn-primary:hover:not(:disabled) {
   background: #409cff;
+  transform: translateY(-1px);
 }
 
 .btn-xl {
@@ -1294,9 +1317,24 @@ video.theater-poster {
 }
 
 .set .filmstrip > li {
-  flex-basis: 200px;
+  flex: 0 0 220px;
   border-radius: 6px;
   background: #0a0a0b;
+}
+
+.set .filmstrip img,
+.set .filmstrip video,
+.set .filmstrip-empty {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.set .filmstrip-id {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(235, 235, 245, 0.45);
 }
 
 .filmstrip {
@@ -1442,8 +1480,15 @@ video.theater-poster {
   .poster-still video,
   .archive-card-still img,
   .archive-card-still video,
-  .title-card-field {
+  .title-card-field,
+  .btn {
     transition: none;
+  }
+
+  .lobby,
+  .screening,
+  .set {
+    animation: none;
   }
 }
 
