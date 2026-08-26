@@ -59,7 +59,7 @@ export const NODE_OPS: Record<string, NodeOp[]> = {
 const T2V_OP_COPY: Record<string, Partial<NodeOp>> = {
   plan_llm: { label: 'Writer writes the shot list' },
   plan_save: { label: 'Save the plan', call: 'plan.json' },
-  video_queue: { label: 'Queue MiniMax T2VA' },
+  video_queue: { label: 'Queue MiniMax' },
   video_wait: { label: 'Comfy makes the clip' },
 }
 
