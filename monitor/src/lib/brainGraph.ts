@@ -60,6 +60,7 @@ export const GRAPH_EDGES = [
   { from: 'start', to: 'health', kind: 'flow' },
   { from: 'health', to: 'plan', kind: 'flow' },
   { from: 'plan', to: 'stills', kind: 'flow' },
+  { from: 'plan', to: 'video', kind: 'flow' },
   { from: 'stills', to: 'face_qa', kind: 'flow' },
   { from: 'face_qa', to: 'video', kind: 'flow' },
   { from: 'video', to: 'free', kind: 'flow' },

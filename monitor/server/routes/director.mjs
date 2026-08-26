@@ -411,9 +411,10 @@ export function mountDirector(app) {
     wrap(async (req, res) => {
       const instruction = req.body?.instruction
       const sourceImage = req.body?.sourceImage
-      if (!sourceImage) {
+      const t2v = Boolean(req.body?.t2v || req.body?.plan?.t2v || req.body?.videoMode === 't2v')
+      if (!sourceImage && !t2v) {
         fail(400, 'missing_source', 'sourceImage required', {
-          hint: 'Generate a still first, or paste a start-still path.',
+          hint: 'Generate a still first, paste a start-still path, or send t2v: true.',
         })
       }
       if (!instruction && !req.body?.plan && !req.body?.dryRun) {
@@ -426,7 +427,8 @@ export function mountDirector(app) {
       const roots = cfg.comfyOutputRoots || []
       const args = {
         instruction: instruction || '',
-        sourceImage: String(sourceImage),
+        sourceImage: sourceImage ? String(sourceImage) : '',
+        t2v,
         plan: req.body?.plan,
         dryRun: Boolean(req.body?.dryRun),
         generate: req.body?.generate !== false,
@@ -470,9 +472,10 @@ export function mountDirector(app) {
     '/api/director/video/queue',
     wrap(async (req, res) => {
       const sourceImage = req.body?.sourceImage
-      if (!sourceImage) {
+      const t2v = Boolean(req.body?.t2v || req.body?.plan?.t2v || req.body?.videoMode === 't2v')
+      if (!sourceImage && !t2v) {
         fail(400, 'missing_source', 'sourceImage required', {
-          hint: 'Generate a still first, or paste a start-still path.',
+          hint: 'Generate a still first, paste a start-still path, or send t2v: true.',
         })
       }
       if (!req.body?.plan) {
@@ -488,7 +491,8 @@ export function mountDirector(app) {
       })
       await assertComfyIdle(d.comfyBase)
       const generation = await queueVideoAndWait({
-        sourceImage: String(sourceImage),
+        sourceImage: sourceImage ? String(sourceImage) : undefined,
+        t2v,
         motion: plan.motion,
         dialogue: plan.dialogue,
         music: plan.music,

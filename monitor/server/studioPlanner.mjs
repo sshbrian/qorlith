@@ -13,7 +13,7 @@ import {
   plannerNeedsLms,
   resolvePlanner,
 } from './plannerProvider.mjs'
-import { clipDurationBounds, loadStudio } from './studioConfig.mjs'
+import { clipDurationBounds, loadStudio, normalizeVideoMode } from './studioConfig.mjs'
 import { ensureEpisodePlan } from './episodePlan.mjs'
 import { slugifyProjectId } from './ids.mjs'
 import { loadProjectRecord, planRecordPath, projectDir, saveProjectRecord } from './project.mjs'
@@ -265,7 +265,7 @@ export function inferPlanHints(userPrompt) {
   }
 }
 
-export function buildPlanUserMessage(userPrompt) {
+export function buildPlanUserMessage(userPrompt, extra = {}) {
   const h = inferPlanHints(userPrompt)
   const musicLine = h.noMusic
     ? 'ALL musicPalette and musicNote fields are N/A'
@@ -294,6 +294,11 @@ REQUEST CHECKLIST (follow exactly)
 - cut=false continues the same space from the last frame; cut=true only on location or time jumps
 - Action S01 stillBrief is medium-wide from the thighs up with the face, weapon, and location readable. Talk S01 is medium or close with the lead face clearly visible.
 - adults only. One new beat per clip.
+${
+    normalizeVideoMode(extra.videoMode) === 't2v'
+      ? '- videoMode is t2v. stillBrief may be short. motionBrief is the FULL MiniMax scene (style, composition, action, camera). Do not write Picture 1. No start still will be painted.\n'
+      : '- videoMode is stills (default). Frozen stillBrief plus motion-only motionBrief.\n'
+  }
 ${xLine}- Reply with ONE JSON object. No <think>. No prose outside JSON.
 
 /no_think`
@@ -397,7 +402,7 @@ export async function plannerChat({
   return once(retryUser, tryDisableThinking ? { enable_thinking: false } : undefined)
 }
 
-export function validateMoviePlan(raw, { userPrompt = '' } = {}) {
+export function validateMoviePlan(raw, { userPrompt = '', videoMode } = {}) {
   const warnings = []
   if (!raw || typeof raw !== 'object') {
     fail(400, 'bad_plan', 'plan must be a JSON object', {
@@ -505,6 +510,7 @@ export function validateMoviePlan(raw, { userPrompt = '' } = {}) {
     rating,
     durationTargetSec,
     lookTrack,
+    videoMode: normalizeVideoMode(videoMode ?? raw.videoMode),
     song,
     musicPalette,
     characters,
@@ -600,8 +606,9 @@ function soundFromPrompt(t) {
 }
 
 /** Deterministic stills-first plan when no writer is available. House lock still applies. */
-export function draftMoviePlanFromPrompt(userPrompt, { reason = 'draft' } = {}) {
+export function draftMoviePlanFromPrompt(userPrompt, { reason = 'draft', videoMode } = {}) {
   const prompt = String(userPrompt || '').trim()
+  const mode = normalizeVideoMode(videoMode)
   const h = inferPlanHints(prompt)
   const takes = splitClipDurations(h.durationSec)
   const title = titleFromPrompt(prompt)
@@ -630,8 +637,11 @@ export function draftMoviePlanFromPrompt(userPrompt, { reason = 'draft' } = {}) 
       cut: false,
       gun_risk: gun,
       sexy: false,
-      stillBrief: stillCore,
-      motionBrief: motionFromPrompt(prompt, i),
+      stillBrief: mode === 't2v' ? loc : stillCore,
+      motionBrief:
+        mode === 't2v'
+          ? `${anime ? '2D-animated' : 'Live-action, cinematic'}, a medium-wide shot frames ${loc}. ${motionFromPrompt(prompt, i)}`
+          : motionFromPrompt(prompt, i),
       dialogue: h.noTalk ? '' : '',
       soundscape: soundFromPrompt(prompt),
       musicNote: palette,
@@ -647,6 +657,7 @@ export function draftMoviePlanFromPrompt(userPrompt, { reason = 'draft' } = {}) 
       rating: h.wantsX ? 'X' : 'R',
       durationTargetSec: takes.reduce((a, n) => a + n, 0),
       lookTrack: h.look,
+      videoMode: mode,
       song: h.noMusic ? 'N/A' : 'taiko and cello',
       musicPalette: palette,
       characters: [
@@ -660,7 +671,7 @@ export function draftMoviePlanFromPrompt(userPrompt, { reason = 'draft' } = {}) 
       clips,
       markdown: `# ${title}\n\nDrafted from the prompt (${reason}).\n\n${prompt.slice(0, 400)}`,
     },
-    { userPrompt: prompt },
+    { userPrompt: prompt, videoMode: mode },
   )
   plan.warnings = [
     ...(plan.warnings || []),
@@ -669,8 +680,8 @@ export function draftMoviePlanFromPrompt(userPrompt, { reason = 'draft' } = {}) 
   return plan
 }
 
-export function dryRunMoviePlan(userPrompt) {
-  return draftMoviePlanFromPrompt(userPrompt, { reason: 'dry-run' })
+export function dryRunMoviePlan(userPrompt, extra = {}) {
+  return draftMoviePlanFromPrompt(userPrompt, { reason: 'dry-run', ...extra })
 }
 
 export function plannerSpec() {
@@ -692,9 +703,10 @@ export function plannerSpec() {
   }
 }
 
-export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig, plan: imported } = {}) {
+export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig, plan: imported, videoMode } = {}) {
   const prompt = String(userPrompt || '').trim()
   const hasImport = imported && typeof imported === 'object'
+  const mode = normalizeVideoMode(videoMode || imported?.videoMode)
   if (!prompt && !hasImport) {
     fail(400, 'missing_prompt', 'prompt required', {
       hint: 'Describe the short, or POST a plan JSON.',
@@ -702,13 +714,16 @@ export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig,
   }
 
   if (hasImport) {
-    const plan = validateMoviePlan(imported, { userPrompt: prompt || String(imported.logline || imported.title || '') })
+    const plan = validateMoviePlan(imported, {
+      userPrompt: prompt || String(imported.logline || imported.title || ''),
+      videoMode: mode,
+    })
     logInfo('director.plan', { kind: 'movie', projectId: plan.projectId, dryRun: false, model: 'imported' })
     return { plan, dryRun: false, model: 'imported', provider: 'none', rawModelText: null }
   }
 
   if (dryRun) {
-    const plan = dryRunMoviePlan(prompt)
+    const plan = dryRunMoviePlan(prompt, { videoMode: mode })
     logInfo('director.plan', { kind: 'movie', projectId: plan.projectId, dryRun: true })
     return { plan, dryRun: true, model: null, provider: 'none', rawModelText: null }
   }
@@ -723,7 +738,7 @@ export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig,
   const provider = resolved.provider
 
   if (provider === 'none') {
-    const plan = draftMoviePlanFromPrompt(prompt, { reason: 'provider none' })
+    const plan = draftMoviePlanFromPrompt(prompt, { reason: 'provider none', videoMode: mode })
     logInfo('director.plan', { kind: 'movie', projectId: plan.projectId, dryRun: false, model: 'draft', provider })
     return { plan, dryRun: false, model: 'draft', provider: 'none', rawModelText: null }
   }
@@ -753,7 +768,7 @@ export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig,
     }
     const health = await lmstudioHealth(dcfg)
     if (!health.ok) {
-      const plan = draftMoviePlanFromPrompt(prompt, { reason: 'local writer offline' })
+      const plan = draftMoviePlanFromPrompt(prompt, { reason: 'local writer offline', videoMode: mode })
       logInfo('director.plan', {
         kind: 'movie',
         projectId: plan.projectId,
@@ -776,7 +791,7 @@ export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig,
     system: dcfg.plannerSystem,
     style: dcfg.plannerStyle,
   })
-  const user = buildPlanUserMessage(prompt)
+  const user = buildPlanUserMessage(prompt, { videoMode: mode })
   let rawText = ''
   try {
     rawText = await plannerChat({
@@ -801,7 +816,7 @@ export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig,
       })
     }
 
-    const plan = validateMoviePlan(parsed, { userPrompt: prompt })
+    const plan = validateMoviePlan(parsed, { userPrompt: prompt, videoMode: mode })
     logInfo('director.plan', { kind: 'movie', projectId: plan.projectId, dryRun: false, model, provider })
     return { plan, dryRun: false, model, provider, rawModelText: rawText.slice(0, 50_000) }
   } catch (e) {

@@ -51,6 +51,7 @@ class BrainState(TypedDict, total=False):
     stop_after: str
     quality: str
     dry_run: bool
+    video_mode: str
     job_ids: list[str]
     step: str
     current_clip: str
@@ -78,6 +79,7 @@ def empty_state(**kwargs: Any) -> BrainState:
         "stop_after": "",
         "quality": "standard",
         "dry_run": False,
+        "video_mode": "stills",
         "job_ids": [],
         "step": "health",
         "current_clip": "",
@@ -96,6 +98,17 @@ def empty_state(**kwargs: Any) -> BrainState:
 def _look(clips_plan: dict[str, Any] | None) -> str:
     raw = str((clips_plan or {}).get("lookTrack") or "live").lower()
     return "anime" if raw == "anime" else "live"
+
+
+def normalize_video_mode(raw: Any) -> str:
+    v = str(raw or "").strip().lower()
+    if v in {"t2v", "t2va", "text", "text-to-video", "straight"}:
+        return "t2v"
+    return "stills"
+
+
+def _is_t2v(state: BrainState | None) -> bool:
+    return normalize_video_mode((state or {}).get("video_mode")) == "t2v"
 
 
 STEPS = (
@@ -124,6 +137,7 @@ GRAPH_EDGES = (
     ("start", "health", "flow"),
     ("health", "plan", "flow"),
     ("plan", "stills", "flow"),
+    ("plan", "video", "flow"),
     ("stills", "face_qa", "flow"),
     ("face_qa", "video", "flow"),
     ("video", "free", "flow"),
@@ -332,6 +346,7 @@ def public_report(
         "projectId": state.get("project_id") or "",
         "title": state.get("title") or state.get("project_id") or "",
         "lookTrack": state.get("look_track") or "live",
+        "videoMode": normalize_video_mode(state.get("video_mode")),
         "status": status,
         "step": now,
         "stopAfter": state.get("stop_after") or None,
@@ -441,6 +456,8 @@ def infer_step(state: BrainState) -> str:
         return step
     if clips and videos and len(videos) >= len(clips):
         return "finish"
+    if _is_t2v(state) and clips:
+        return "video"
     if clips and stills and (state.get("review_ok") or status == "video"):
         return "video" if painted_stills_complete(clips, stills) else "stills"
     if clips and stills and painted_stills_complete(clips, stills):
@@ -933,14 +950,19 @@ def node_plan(studio: Studio, state: BrainState) -> BrainState:
     plan = (record or {}).get("plan") if record else None
     if plan and plan.get("clips"):
         write_report(studio.cfg, {**state, "step": "plan"}, phase="plan_reuse")
+        mode = normalize_video_mode(plan.get("videoMode") or state.get("video_mode"))
+        nxt = "video" if mode == "t2v" else "stills"
         return {
             **state,
             "project_id": plan.get("projectId") or project_id,
             "title": plan.get("title") or state.get("title") or "",
             "look_track": _look(plan),
             "clips": list(plan.get("clips") or []),
-            "status": "stills",
-            "step": "stills",
+            "video_mode": mode,
+            "review_ok": True if mode == "t2v" else bool(state.get("review_ok")),
+            "auto_pick": True if mode == "t2v" else bool(state.get("auto_pick")),
+            "status": nxt,
+            "step": nxt,
             "phase": "plan_reuse",
         }
 
@@ -966,6 +988,8 @@ def node_plan(studio: Studio, state: BrainState) -> BrainState:
         raise BrainError(502, "empty_plan", "Planner returned no clips", "Generate again, or use --dry-run.")
     pid = plan.get("projectId") or project_id
     write_report(studio.cfg, {**state, "project_id": pid, "step": "plan"}, phase="plan_save")
+    mode = normalize_video_mode(plan.get("videoMode") or state.get("video_mode"))
+    nxt = "video" if mode == "t2v" else "stills"
     return {
         **state,
         "project_id": pid,
@@ -973,8 +997,11 @@ def node_plan(studio: Studio, state: BrainState) -> BrainState:
         "title": plan.get("title") or state.get("title") or pid,
         "look_track": _look(plan),
         "clips": clips,
-        "status": "stills",
-        "step": "stills",
+        "video_mode": mode,
+        "review_ok": True if mode == "t2v" else bool(state.get("review_ok")),
+        "auto_pick": True if mode == "t2v" else bool(state.get("auto_pick")),
+        "status": nxt,
+        "step": nxt,
         "last_error": "",
         "phase": "plan_save",
     }
@@ -1146,6 +1173,15 @@ def _ipadapter_enabled(studio: Studio) -> bool:
 
 def node_stills(studio: Studio, state: BrainState) -> BrainState:
     state = hydrate_production_state(studio, state)
+    if _is_t2v(state):
+        return {
+            **state,
+            "status": "video",
+            "step": "video",
+            "review_ok": True,
+            "auto_pick": True,
+            "phase": "t2v_skip_stills",
+        }
     write_report(studio.cfg, {**state, "status": "stills", "step": "stills"}, phase="comfy_idle")
     if hasattr(studio, "wait_comfy_idle"):
         studio.wait_comfy_idle(should_stop=stopping)
@@ -1366,7 +1402,8 @@ def hydrate_production_state(studio: Studio, state: BrainState) -> BrainState:
         look = _look(plan)
     else:
         look = state.get("look_track") or "live"
-    out: BrainState = {**state, "clips": clips, "look_track": look or "live"}
+    mode = normalize_video_mode(plan.get("videoMode") or state.get("video_mode"))
+    out: BrainState = {**state, "clips": clips, "look_track": look or "live", "video_mode": mode}
     if plan.get("title") and not out.get("title"):
         out["title"] = str(plan["title"])
     return collect_disk_media(studio.cfg, out)
@@ -1391,7 +1428,7 @@ def resolve_video_source(
 
 
 def node_video(studio: Studio, state: BrainState) -> BrainState:
-    if not state.get("review_ok"):
+    if not state.get("review_ok") and not _is_t2v(state):
         raise BrainError(403, "need_review", "Board review is not done", "Set picks, then resume --review-ok.")
     state = hydrate_production_state(studio, state)
     write_report(studio.cfg, {**state, "status": "video", "step": "video"}, phase="comfy_idle")
@@ -1435,21 +1472,25 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
         _raise_if_stopped(progress)
         live["current_clip"] = cid
         write_report(studio.cfg, live, current_clip=cid, phase="comfy_idle")
-        pick = (state.get("picks") or {}).get(cid)
-        still = pick if pick and Path(str(pick)).is_file() else stills.get(cid)
-        if not still and (clip.get("cut") or not prev_video):
-            raise BrainError(400, "missing_still", f"No still for {cid}", "Run stills first.", state=progress)
-        frame_dest = studio.cfg.project_dir / project_id / "board" / cid / f"{cid}_from_prev.png"
-        source, source_kind = resolve_video_source(
-            clip,
-            still=str(still or ""),
-            prev_video=prev_video,
-            dest=frame_dest,
-        )
-        if source_kind == "continue" and source and not stills.get(cid):
-            stills[cid] = source
-            copy_still_to_board(studio.cfg, project_id, cid, source)
-            live["still_paths"] = stills
+        t2v_open = _is_t2v(state) and (bool(clip.get("cut")) or not prev_video)
+        if t2v_open:
+            source, source_kind = "", "t2v"
+        else:
+            pick = (state.get("picks") or {}).get(cid)
+            still = pick if pick and Path(str(pick)).is_file() else stills.get(cid)
+            if not still and (clip.get("cut") or not prev_video):
+                raise BrainError(400, "missing_still", f"No still for {cid}", "Run stills first.", state=progress)
+            frame_dest = studio.cfg.project_dir / project_id / "board" / cid / f"{cid}_from_prev.png"
+            source, source_kind = resolve_video_source(
+                clip,
+                still=str(still or ""),
+                prev_video=prev_video,
+                dest=frame_dest,
+            )
+            if source_kind == "continue" and source and not stills.get(cid):
+                stills[cid] = source
+                copy_still_to_board(studio.cfg, project_id, cid, source)
+                live["still_paths"] = stills
         if hasattr(studio, "wait_comfy_idle"):
             studio.wait_comfy_idle(should_stop=stopping)
         duration = clip_take_seconds(
@@ -1471,15 +1512,15 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
             "durationSec": duration,
             "megapixels": float(getattr(studio.cfg, "video_megapixels", None) or 0.6),
             "continueFromPrior": source_kind == "continue",
+            "t2v": source_kind == "t2v",
+            "videoMode": "t2v" if source_kind == "t2v" else "stills",
         }
         prefix = f"qorlith/{look}/{project_id}/video/{cid}"
         write_report(studio.cfg, live, current_clip=cid, phase="video_queue")
-        queued = studio.queue_video(
-            source,
-            plan,
-            instruction=motion,
-            filenamePrefix=prefix,
-        )
+        extra = {"instruction": motion, "filenamePrefix": prefix}
+        if source_kind == "t2v":
+            extra["t2v"] = True
+        queued = studio.queue_video(source, plan, **extra)
         job_id = queued.get("jobId")
         if not job_id:
             raise BrainError(502, "no_job", "Monitor did not return a video job", "Retry video.", state=progress)
@@ -1564,6 +1605,8 @@ def after_health(state: BrainState) -> str:
 def after_plan(state: BrainState) -> str:
     if not _ok(state) or state.get("stop_after") == "plan":
         return "end"
+    if _is_t2v(state):
+        return "end" if state.get("stop_after") == "stills" else "video"
     return "stills"
 
 
@@ -1631,7 +1674,7 @@ def build_graph(studio: Studio, cfg: BrainConfig | None = None, checkpointer=Non
         },
     )
     graph.add_conditional_edges("health", after_health, {"plan": "plan", "end": END})
-    graph.add_conditional_edges("plan", after_plan, {"stills": "stills", "end": END})
+    graph.add_conditional_edges("plan", after_plan, {"stills": "stills", "video": "video", "end": END})
     graph.add_conditional_edges("stills", after_stills, {"face_qa": "face_qa", "end": END})
     graph.add_conditional_edges("face_qa", after_qa, {"video": "video", "end": END})
     graph.add_conditional_edges("video", after_video, {"free": "free"})

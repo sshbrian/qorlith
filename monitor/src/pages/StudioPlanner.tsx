@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArchiveProjectDialog } from '../components/ArchiveProjectDialog'
 import { FailNote } from '../components/FailNote'
+import { VideoModeToggle, type VideoMode } from '../components/VideoModeToggle'
 import {
   api,
   type StudioMoviePlan,
@@ -190,6 +191,7 @@ export function StudioPlanner() {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const [prompt, setPrompt] = useState('')
+  const [videoMode, setVideoMode] = useState<VideoMode>('stills')
   const [dryRun, setDryRun] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<unknown>(null)
@@ -216,6 +218,7 @@ export function StudioPlanner() {
         if (!alive) return
         setRecord(r.record)
         if (!prompt && r.record?.userPrompt) setPrompt(r.record.userPrompt)
+        if (r.record?.plan?.videoMode === 't2v') setVideoMode('t2v')
       })
       .catch(() => {
         if (alive) setRecord(null)
@@ -237,7 +240,7 @@ export function StudioPlanner() {
       if (raw) {
         imported = JSON.parse(raw) as StudioMoviePlan
       }
-      const r = await api.studioPlan({ prompt, dryRun, projectId, plan: imported })
+      const r = await api.studioPlan({ prompt, dryRun, projectId, plan: imported, videoMode })
       setRecord(r.record)
     } catch (e) {
       setErr(e)
@@ -254,7 +257,7 @@ export function StudioPlanner() {
       let imported: StudioMoviePlan | undefined
       const raw = importText.trim()
       if (raw) imported = JSON.parse(raw) as StudioMoviePlan
-      const r = await api.studioFilm({ prompt, projectId, dryRun, plan: imported })
+      const r = await api.studioFilm({ prompt, projectId, dryRun, plan: imported, videoMode })
       setRecord(r.record)
       if (r.projectId && !dryRun) navigate(`/studio/${encodeURIComponent(r.projectId)}/make`)
     } catch (e) {
@@ -335,6 +338,10 @@ export function StudioPlanner() {
             </button>
           ))}
         </div>
+        <VideoModeToggle value={videoMode} onChange={setVideoMode} />
+        <p className="text-[12px] text-ghost">
+          {videoMode === 't2v' ? 'Goes straight to MiniMax. No painted still.' : 'Paints a still, then animates it.'}
+        </p>
         {health && !health.ok && health.planner?.provider === 'local' ? (
           <span className="text-[13px] text-amber">
             Local writer is offline — paste a plan under More, or start LM Studio.

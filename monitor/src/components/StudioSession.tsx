@@ -183,6 +183,7 @@ export function StudioSessionProvider({
         const r = await api.brainStart(projectId, {
           stopAfter,
           oneClick: stopAfter === 'film',
+          videoMode: brain?.videoMode === 't2v' ? 't2v' : 'stills',
         })
         applyBrain(r.brain)
         await refreshProjects()
@@ -192,7 +193,7 @@ export function StudioSessionProvider({
         setBusy(false)
       }
     },
-    [projectId, applyBrain, refreshProjects],
+    [projectId, applyBrain, refreshProjects, brain?.videoMode],
   )
 
   const resume = useCallback(async () => {

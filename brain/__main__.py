@@ -36,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--prompt", default="")
     start.add_argument("--stop-after", choices=["plan", "stills", "film"], default="stills")
     start.add_argument("--auto-pick", action="store_true")
+    start.add_argument("--video-mode", choices=["stills", "t2v"], default="stills")
     start.add_argument("--quality", choices=["draft", "standard", "hero"], default="standard")
     start.add_argument("--dry-run", action="store_true")
     start.add_argument("--no-persist", action="store_true")
@@ -62,7 +63,8 @@ def main(argv: list[str] | None = None) -> int:
                 title=args.title,
                 prompt=args.prompt,
                 stop_after=stop_after,
-                auto_pick=bool(args.auto_pick) or args.stop_after == "film",
+                auto_pick=bool(args.auto_pick) or args.stop_after == "film" or args.video_mode == "t2v",
+                video_mode=args.video_mode,
                 quality=args.quality,
                 dry_run=args.dry_run,
                 thread_id=args.project_id or "",

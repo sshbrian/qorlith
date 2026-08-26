@@ -283,6 +283,9 @@ describe('studioPlanner', () => {
     assert.ok(silent.clips.every((c) => !c.dialogue))
     assert.match(silent.clips[0].stillBrief, /alley/i)
     assert.equal(silent.clips[1].cut, false)
+    const t2v = draftMoviePlanFromPrompt('12 second rooftop fight, rain, no talking.', { videoMode: 't2v' })
+    assert.equal(t2v.videoMode, 't2v')
+    assert.match(t2v.clips[0].motionBrief, /medium-wide shot frames/i)
   })
 
   it('buildMoviePlanSystemPrompt teaches SDXL stills and H3 motion split', () => {

@@ -1038,9 +1038,10 @@ export async function runVideoPipeline(args) {
   }
 
   const sourceImage = String(args.sourceImage || '').trim()
-  if (!sourceImage) {
+  const t2v = Boolean(args.t2v) && !sourceImage
+  if (!sourceImage && !t2v) {
     fail(400, 'missing_source', 'sourceImage required (path to start still)', {
-      hint: 'Generate a still first, or paste a start-still path.',
+      hint: 'Generate a still first, paste a start-still path, or set t2v: true.',
     })
   }
 
@@ -1089,7 +1090,8 @@ export async function runVideoPipeline(args) {
     await assertComfyIdle(cfg.comfyBase)
     track({ stage: 'comfy_video_start' })
     genResult = await queueVideoAndWait({
-      sourceImage,
+      sourceImage: sourceImage || undefined,
+      t2v,
       motion: planResult.plan.motion,
       dialogue: planResult.plan.dialogue,
       music: planResult.plan.music,

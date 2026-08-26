@@ -69,7 +69,8 @@ stills:
 
 video:
   engine: minimax_h3
-  workflow: ""
+  workflow: ""            # MiniMax H3 I2VA API graph (default stills-first)
+  t2v_workflow: ""        # optional T2VA graph; empty = same file, first_frame unwired
   megapixels: 0.6
   duration_sec: 12        # default take length when a clip omits durationSec
   duration_min: 6

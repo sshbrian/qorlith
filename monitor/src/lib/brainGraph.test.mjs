@@ -204,7 +204,7 @@ describe('brain graph — decorateGraph', () => {
 
   it('has a complete, loop-free topology', () => {
     assert.equal(GRAPH_NODE_META.length, 9)
-    assert.equal(GRAPH_EDGES.filter((e) => e.kind === 'flow').length, 8)
+    assert.equal(GRAPH_EDGES.filter((e) => e.kind === 'flow').length, 9)
     const ids = new Set(GRAPH_NODE_META.map((n) => n.id))
     for (const e of GRAPH_EDGES) {
       assert.ok(ids.has(e.from), e.from)

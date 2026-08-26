@@ -5,7 +5,7 @@
 import fs from 'fs'
 import path from 'path'
 import { saveWorkflowSnapshot } from './comfyWorkflow.mjs'
-import { getVideoWorkflowPath, loadStudio } from './studioConfig.mjs'
+import { getVideoWorkflowPath, loadStudio, normalizeVideoMode } from './studioConfig.mjs'
 import { fail } from './errors.mjs'
 import { info as logInfo } from './log.mjs'
 import { comfyApi, comfyFreeMemory, comfyHealth } from './comfyClient.mjs'
@@ -115,17 +115,47 @@ function appendMotion(body, motion, alreadyAirlock) {
   return `${body} Then ${m}`
 }
 
+export function isT2vJob(job = {}) {
+  if (job.t2v === true) return true
+  return normalizeVideoMode(job.videoMode || job.mode) === 't2v'
+}
+
+export function stripFrameImages(graph) {
+  const g = deepClone(graph || {})
+  const drop = new Set()
+  for (const [id, node] of Object.entries(g)) {
+    if (!/minimaxh3/i.test(String(node?.class_type || ''))) continue
+    const inputs = node.inputs || {}
+    for (const key of ['first_frame', 'last_frame']) {
+      const ref = inputs[key]
+      if (Array.isArray(ref) && ref[0] != null) drop.add(String(ref[0]))
+      delete inputs[key]
+    }
+  }
+  for (const id of drop) {
+    const used = Object.entries(g).some(([oid, node]) => {
+      if (oid === id || !node?.inputs) return false
+      return JSON.stringify(node.inputs).includes(`"${id}"`)
+    })
+    if (!used) delete g[id]
+  }
+  return g
+}
+
 export function composeH3Prompt(job = {}) {
   const motion = stripShotLabel(String(job.motion || '').trim())
   const dialogue = String(job.dialogue || '').trim()
   const music = String(job.music || '').trim()
   if (!motion && !dialogue) return ''
 
+  const t2v = isT2vJob(job) && !job.continueFromPrior
   const style = h3ShotStyle(job)
-  const lock = subjectLock(job)
+  const lock = t2v ? '' : subjectLock(job)
   const alreadyAirlock = hasAirlockLanguage(motion)
-  let body = `[Shot 1] ${style}, ${lock}`
-  if (!job.continueFromPrior && !alreadyAirlock) body += ` ${STILL_ONSET}`
+  let body = `[Shot 1] ${style}${lock ? `, ${lock}` : ''}`
+  if (!job.continueFromPrior && !alreadyAirlock) {
+    body += t2v ? ' Hold the opening for about one second with no new motion.' : ` ${STILL_ONSET}`
+  }
   body = appendMotion(body, motion, alreadyAirlock)
   if (job.continueFromPrior && !alreadyAirlock) {
     body += ` ${AIRLOCK_LANDING}`
@@ -137,11 +167,16 @@ export function composeH3Prompt(job = {}) {
     if (!wantsSinging(job)) body += ' No singing.'
   }
 
-  const parts = [
-    'For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.',
+  const parts = []
+  if (!t2v) {
+    parts.push(
+      'For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.',
+    )
+  }
+  parts.push(
     `integrated_multimodal_description: ${body}`,
     `overall_soundscape: ${expandSoundscape(job.soundscape)}`,
-  ]
+  )
   if (music && music.toUpperCase() !== 'N/A') {
     parts.push(`non_diegetic_music: ${music}`)
   } else {
@@ -271,8 +306,15 @@ export function ensureKitchenAttention(graph) {
   return g
 }
 
-export function loadVideoTemplate(explicit) {
-  const resolved = explicit && fs.existsSync(explicit) ? path.resolve(explicit) : getVideoWorkflowPath()
+export function loadVideoTemplate(explicit, { t2v = false } = {}) {
+  const studio = loadStudio()
+  const t2vPath = String(studio.video?.t2v_workflow || '').trim()
+  const resolved =
+    explicit && fs.existsSync(explicit)
+      ? path.resolve(explicit)
+      : t2v && t2vPath && fs.existsSync(t2vPath)
+        ? path.resolve(t2vPath)
+        : getVideoWorkflowPath()
   if (!resolved || !fs.existsSync(resolved)) {
     fail(400, 'missing_video_workflow', 'Set video.workflow in qorlith.yaml to your MiniMax H3 API graph', {
       hint: 'Point video.workflow at an exported Comfy API JSON, then retry.',
@@ -280,7 +322,8 @@ export function loadVideoTemplate(explicit) {
   }
   const data = JSON.parse(fs.readFileSync(resolved, 'utf8'))
   const prompt = data.prompt && typeof data.prompt === 'object' ? data.prompt : data
-  return { template: ensureKitchenAttention(prompt), templatePath: resolved }
+  const kitchen = ensureKitchenAttention(prompt)
+  return { template: t2v ? stripFrameImages(kitchen) : kitchen, templatePath: resolved }
 }
 
 export function stageInputImage(sourceAbs, comfyRoot) {
@@ -368,20 +411,26 @@ export async function queueVideoAndWait(opts) {
     })
   }
 
-  onProgress({ stage: 'stage_input', detail: opts.sourceImage })
-  const staged = stageInputImage(opts.sourceImage, comfyRoot)
+  const t2v = Boolean(opts.t2v) && !opts.sourceImage
+  let staged = null
+  if (opts.sourceImage) {
+    onProgress({ stage: 'stage_input', detail: opts.sourceImage })
+    staged = stageInputImage(opts.sourceImage, comfyRoot)
+  }
 
   const prefix = opts.filenamePrefix || `qorlith/video/dir_${Date.now().toString(36)}`
   const startedAt = Date.now()
   onProgress({ stage: 'load_template' })
-  const { template, templatePath } = loadVideoTemplate(opts.templatePath)
+  const { template, templatePath } = loadVideoTemplate(opts.templatePath, { t2v })
   const diskBefore = fs.readFileSync(templatePath)
 
   const lookTrack = normalizeLookTrack(opts.lookTrack)
   const yamlPrefix = String(opts.motionPrefix ?? studio.video.prompts?.motion_prefix ?? '').trim()
   const motionPrefix = lookTrack === 'live' ? '' : yamlPrefix
   const job = {
-    inputImageName: staged.inputImageName,
+    inputImageName: staged?.inputImageName,
+    t2v,
+    videoMode: t2v ? 't2v' : 'stills',
     motion: opts.motion,
     dialogue: opts.dialogue,
     music: opts.music,
@@ -493,7 +542,7 @@ export async function queueVideoAndWait(opts) {
     seed: opts.seed,
     templatePath,
     kind: 'video',
-    extra: { durationSec, megapixels, fps, engine: 'minimax_h3', lookTrack, h3Prompt },
+    extra: { durationSec, megapixels, fps, engine: 'minimax_h3', lookTrack, h3Prompt, t2v },
   })
 
   const sidecar = {
@@ -508,11 +557,11 @@ export async function queueVideoAndWait(opts) {
     workflow: path.basename(templatePath),
     templatePath,
     workflowPath: wf.workflowPath,
-    sourceImage: staged.sourceAbs,
-    related: [{ path: staged.sourceAbs, role: 'source' }],
+    sourceImage: staged?.sourceAbs || null,
+    related: staged?.sourceAbs ? [{ path: staged.sourceAbs, role: 'source' }] : [],
     durationSeconds,
     fps,
-    sampler: { pipeline: 'minimax_h3', durationSec, megapixels, seed: opts.seed },
+    sampler: { pipeline: t2v ? 'minimax_h3_t2v' : 'minimax_h3', durationSec, megapixels, seed: opts.seed },
     prompt: opts.motion,
     h3Prompt,
     lookTrack: lookTrack || undefined,
@@ -520,13 +569,13 @@ export async function queueVideoAndWait(opts) {
     music: opts.music,
     soundscape: opts.soundscape || '',
     negative,
-    tags: ['minimax-h3', 'director', 'video'],
+    tags: ['minimax-h3', 'director', 'video', ...(t2v ? ['t2v'] : ['i2va'])],
     director: true,
   }
   const jsonPath = mp4Path.replace(/\.[^.]+$/, '') + '.json'
   fs.writeFileSync(jsonPath, JSON.stringify(sidecar, null, 2), 'utf8')
   sidecar.metaPath = jsonPath
-  patchStillRelated(staged.sourceAbs, mp4Path)
+  if (staged?.sourceAbs) patchStillRelated(staged.sourceAbs, mp4Path)
   onProgress({ stage: 'comfy_done', detail: mp4Path })
 
   return {

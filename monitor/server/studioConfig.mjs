@@ -53,6 +53,7 @@ function emptyStudio() {
     video: {
       engine: 'minimax_h3',
       workflow: '',
+      t2v_workflow: '',
       megapixels: 0.6,
       duration_sec: 12,
       duration_min: 6,
@@ -150,6 +151,14 @@ export function getLoraInventory() {
 
 export function getCheckpoint() {
   return String(loadStudio().stills.checkpoint || '').trim()
+}
+
+export function normalizeVideoMode(raw) {
+  const v = String(raw || '')
+    .toLowerCase()
+    .trim()
+  if (v === 't2v' || v === 't2va' || v === 'text' || v === 'text-to-video' || v === 'straight') return 't2v'
+  return 'stills'
 }
 
 export function clipDurationBounds() {

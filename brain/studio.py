@@ -157,7 +157,9 @@ class Studio:
         return self._post_when_idle(f"{self.cfg.monitor_url}/api/director/queue", body)
 
     def queue_video(self, source_image: str, plan: dict[str, Any], **extra: Any) -> dict[str, Any]:
-        body = {"sourceImage": source_image, "plan": plan, "async": True, "keepModels": True, **extra}
+        body = {"plan": plan, "async": True, "keepModels": True, **extra}
+        if source_image:
+            body["sourceImage"] = source_image
         return self._post_when_idle(f"{self.cfg.monitor_url}/api/director/video/run", body)
 
     def job(self, job_id: str) -> dict[str, Any]:

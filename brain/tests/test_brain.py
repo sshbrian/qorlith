@@ -419,6 +419,39 @@ def test_video_continue_without_a_second_still(tmp_path: Path, monkeypatch):
     assert [c[2]["continueFromPrior"] for c in s.calls if c and c[0] == "video"] == [False, True]
 
 
+def test_t2v_skips_stills_and_queues_video():
+    s = FakeStudio()
+    s.plans["harbor"] = {
+        "plan": {
+            "projectId": "harbor",
+            "videoMode": "t2v",
+            "clips": [
+                {"id": "S01", "title": "open", "motionBrief": "rain alley", "durationSec": 12},
+                {"id": "S02", "title": "press", "motionBrief": "keep going", "durationSec": 10},
+            ],
+        }
+    }
+    out = run(
+        s,
+        empty_state(
+            project_id="harbor",
+            video_mode="t2v",
+            auto_pick=True,
+            stop_after="",
+            quality="draft",
+        ),
+        checkpointer=memory_saver(),
+        persist=False,
+    )
+    still_calls = [c for c in s.calls if isinstance(c, tuple) and c[0] == "still"]
+    video_calls = [c for c in s.calls if isinstance(c, tuple) and c[0] == "video"]
+    assert still_calls == []
+    assert len(video_calls) == 2
+    assert video_calls[0][1] == ""
+    assert video_calls[0][2]["t2v"] is True
+    assert out["status"] == "done"
+
+
 def test_clip_needs_painted_still():
     assert clip_needs_painted_still({"id": "S01"}, 0) is True
     assert clip_needs_painted_still({"id": "S02"}, 1) is False

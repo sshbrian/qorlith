@@ -95,7 +95,11 @@ export function mountBrain(app) {
           : req.body?.stopAfter === 'film'
             ? 'film'
             : 'stills'
-      const spawned = spawnBrain(id, { stopAfter, autoPick: oneClick })
+      const spawned = spawnBrain(id, {
+        stopAfter,
+        autoPick: oneClick,
+        videoMode: req.body?.videoMode || rec?.plan?.videoMode,
+      })
       res.status(202).json({
         ok: true,
         pid: spawned.pid,

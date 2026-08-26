@@ -285,7 +285,14 @@ export function mountStudio(app) {
       const dryRun = Boolean(req.body?.dryRun)
       const pinnedId = String(req.body?.projectId || '').trim()
       const imported = req.body?.plan && typeof req.body.plan === 'object' ? req.body.plan : null
-      const result = await generateMoviePlan({ userPrompt: prompt, dryRun, appConfig: cfg, plan: imported })
+      const videoMode = req.body?.videoMode || imported?.videoMode
+      const result = await generateMoviePlan({
+        userPrompt: prompt,
+        dryRun,
+        appConfig: cfg,
+        plan: imported,
+        videoMode,
+      })
       const now = new Date().toISOString()
       let projectId = result.plan.projectId
       let existing = null
@@ -376,6 +383,7 @@ export function mountStudio(app) {
         dryRun,
         appConfig: cfg,
         plan: imported,
+        videoMode: req.body?.videoMode || imported?.videoMode,
       })
       const now = new Date().toISOString()
       const projectId = existing.projectId

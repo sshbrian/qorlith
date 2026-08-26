@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BrandMark } from '../components/BrandMark'
 import { FailNote } from '../components/FailNote'
 import { PosterCard } from '../components/PosterCard'
+import { VideoModeToggle, type VideoMode } from '../components/VideoModeToggle'
 import { useStudioSession } from '../components/StudioSession'
 import { api } from '../lib/api'
 import { canonicalStage, projectPath, PROMPT_PLACEHOLDER, PROMPT_STARTERS } from '../lib/studio'
@@ -12,6 +13,7 @@ export function StudioHome() {
   const navigate = useNavigate()
   const recents = projects.slice(0, 6)
   const [prompt, setPrompt] = useState('')
+  const [videoMode, setVideoMode] = useState<VideoMode>('stills')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<unknown>(null)
 
@@ -21,7 +23,7 @@ export function StudioHome() {
     setBusy(true)
     setErr(null)
     try {
-      const r = await api.studioFilm({ prompt: text })
+      const r = await api.studioFilm({ prompt: text, videoMode })
       await refreshProjects()
       navigate(`/studio/${encodeURIComponent(r.projectId)}/make`)
     } catch (e) {
@@ -72,6 +74,12 @@ export function StudioHome() {
             </button>
           ))}
         </div>
+        <VideoModeToggle value={videoMode} onChange={setVideoMode} />
+        <p className="text-[12px] text-ghost text-center">
+          {videoMode === 't2v'
+            ? 'Goes straight to MiniMax. No painted still.'
+            : 'Paints a still, then animates it.'}
+        </p>
         <FailNote error={err} />
         <button
           type="button"

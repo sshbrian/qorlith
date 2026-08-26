@@ -6,9 +6,9 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'node:url'
 import { fail } from './errors.mjs'
-import { projectDir, projectsRoot } from './project.mjs'
+import { loadProjectRecord, projectDir, projectsRoot } from './project.mjs'
 import { decorateProgressForBrain, getComfyProgress } from './comfyProgress.mjs'
-import { loadStudio } from './studioConfig.mjs'
+import { loadStudio, normalizeVideoMode } from './studioConfig.mjs'
 
 function stillQualityFromYaml() {
   const q = String(loadStudio().stills?.quality || 'standard').toLowerCase()
@@ -183,7 +183,7 @@ export function stopBrain(id) {
   return { ok: true, pid, killed: result.killed, brain: loadBrain(id) }
 }
 
-export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk = false, autoPick = false } = {}) {
+export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk = false, autoPick = false, videoMode } = {}) {
   if (!fs.existsSync(BRAIN_BIN)) {
     fail(500, 'brain_missing', 'bin/brain is not installed', {
       hint: 'Run from the Qorlith repo so ./bin/brain exists.',
@@ -195,6 +195,8 @@ export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk 
     })
   }
   const film = stopAfter === 'film' || stopAfter === '' || stopAfter === 'finish'
+  const rec = loadProjectRecord(id)
+  const mode = normalizeVideoMode(videoMode || rec?.plan?.videoMode)
   const args = resume
     ? ['resume', '--thread', id, ...(reviewOk ? ['--review-ok'] : [])]
     : [
@@ -205,7 +207,8 @@ export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk 
         film ? 'film' : stopAfter || 'stills',
         '--quality',
         stillQualityFromYaml(),
-        ...((autoPick || film) ? ['--auto-pick'] : []),
+        ...((autoPick || film || mode === 't2v') ? ['--auto-pick'] : []),
+        ...(mode === 't2v' ? ['--video-mode', 't2v'] : []),
       ]
   const child = spawn(BRAIN_BIN, args, {
     cwd: REPO,
@@ -226,6 +229,7 @@ export function idleBrain(projectId, extra = {}) {
     projectId,
     title: extra.title || projectId,
     lookTrack: extra.lookTrack || 'live',
+    videoMode: extra.videoMode || 'stills',
     status: 'idle',
     step: 'health',
     stopAfter: null,
@@ -266,6 +270,7 @@ export function viewBrain(raw, fallbackId = '') {
     projectId: raw.projectId || fallbackId,
     title: raw.title || raw.projectId || fallbackId,
     lookTrack: raw.lookTrack || 'live',
+    videoMode: raw.videoMode || 'stills',
     status,
     step,
     stopAfter: raw.stopAfter || null,

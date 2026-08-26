@@ -17,7 +17,7 @@ you / Grok / remote LLM
 
 Brain talks to the Monitor API only. It never posts a raw Comfy graph.
 
-**One click:** Plan → **Make movie**. That writes the story, paints stills, auto-picks the first frame of each clip, runs MiniMax H3, and welds the master.
+**One click:** Plan → **Make movie**. Default is stills-first (paint a still, then MiniMax H3 I2VA). **Straight to video** skips the still and runs MiniMax H3 T2VA from the prompt.
 
 ## Configure
 

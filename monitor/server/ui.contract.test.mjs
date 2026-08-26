@@ -113,6 +113,13 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /archived.*only/)
   })
 
+  it('Home and Plan expose Straight to video', () => {
+    assert.match(read(path.join(src, 'components', 'VideoModeToggle.tsx')), /Straight to video/)
+    assert.match(page('StudioHome.tsx'), /VideoModeToggle/)
+    assert.match(page('StudioPlanner.tsx'), /VideoModeToggle/)
+    assert.match(read(path.join(src, 'lib', 'api.ts')), /videoMode/)
+  })
+
   it('Home and Plan share the same prompt chips', () => {
     const studio = read(path.join(src, 'lib', 'studio.ts'))
     assert.match(studio, /PROMPT_STARTERS/)

@@ -224,6 +224,7 @@ export type StudioMoviePlan = {
   rating: string
   durationTargetSec: number
   lookTrack: string
+  videoMode?: 'stills' | 't2v' | string
   song?: string
   musicPalette?: string
   characters?: { id: string; name: string; look?: string; voice?: string }[]
@@ -374,6 +375,7 @@ export type BrainReport = {
   projectId: string
   title?: string
   lookTrack?: string
+  videoMode?: string
   status: string
   step: string
   stopAfter?: string | null
@@ -589,7 +591,15 @@ export const api = {
       `/api/brain/${encodeURIComponent(id)}`,
     ),
   brains: () => get<{ brains: BrainReport[]; polledAt: string }>('/api/brain'),
-  brainStart: (id: string, body?: { stopAfter?: 'plan' | 'stills' | 'film'; oneClick?: boolean; autoPick?: boolean }) =>
+  brainStart: (
+    id: string,
+    body?: {
+      stopAfter?: 'plan' | 'stills' | 'film'
+      oneClick?: boolean
+      autoPick?: boolean
+      videoMode?: 'stills' | 't2v'
+    },
+  ) =>
     post<{ ok: boolean; pid: number; stopAfter?: string; autoPick?: boolean; brain: BrainReport }>(
       `/api/brain/${encodeURIComponent(id)}/start`,
       body || {},
@@ -640,7 +650,13 @@ export const api = {
         videoWorkflow: { workflowPath: string | null; apiPath: string | null }
       }[]
     }>(`/api/studio/plans/${encodeURIComponent(id)}/workflows`),
-  studioPlan: (body: { prompt?: string; dryRun?: boolean; projectId?: string; plan?: StudioMoviePlan }) =>
+  studioPlan: (body: {
+    prompt?: string
+    dryRun?: boolean
+    projectId?: string
+    plan?: StudioMoviePlan
+    videoMode?: 'stills' | 't2v'
+  }) =>
     post<{
       ok: boolean
       record: StudioPlanRecord
@@ -655,6 +671,7 @@ export const api = {
     projectId?: string
     dryRun?: boolean
     plan?: StudioMoviePlan
+    videoMode?: 'stills' | 't2v'
   }) =>
     post<{
       ok: boolean

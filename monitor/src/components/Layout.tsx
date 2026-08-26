@@ -23,6 +23,7 @@ import {
 } from '../lib/studio'
 import { usePinnedScroll } from '../lib/studioScroll'
 import { BrandMark } from './BrandMark'
+import { VideoModeToggle, type VideoMode } from './VideoModeToggle'
 
 const STAGES: { id: StudioStage; label: string }[] = [
   { id: 'plan', label: 'Plan' },
@@ -102,6 +103,7 @@ function LayoutBody({
   const [railMobileOpen, setRailMobileOpen] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newPrompt, setNewPrompt] = useState('')
+  const [newVideoMode, setNewVideoMode] = useState<VideoMode>('stills')
   const [creating, setCreating] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [archiveBusy, setArchiveBusy] = useState(false)
@@ -197,6 +199,7 @@ function LayoutBody({
       const r = await api.studioFilm({
         title: newTitle.trim() || undefined,
         prompt: text,
+        videoMode: newVideoMode,
       })
       setNewTitle('')
       setNewPrompt('')
@@ -532,6 +535,12 @@ function LayoutBody({
                   className="field resize-y min-h-[128px]"
                 />
               </label>
+              <VideoModeToggle value={newVideoMode} onChange={setNewVideoMode} />
+              <p className="text-[12px] text-ghost">
+                {newVideoMode === 't2v'
+                  ? 'Goes straight to MiniMax. No painted still.'
+                  : 'Paints a still, then animates it.'}
+              </p>
               <label className="block space-y-1.5">
                 <span className="text-[13px] text-ghost">Title (optional)</span>
                 <input

@@ -10,6 +10,7 @@ import {
   findMp4,
   h3ShotStyle,
   loadVideoTemplate,
+  stripFrameImages,
   stripShotLabel,
   subjectLock,
 } from './comfyVideo.mjs'
@@ -136,6 +137,16 @@ describe('MiniMax H3 video plan', () => {
     assert.match(anime, /non_diegetic_music: sparse taiko/)
     assert.match(anime, /and heavy rain\./)
     assert.match(anime, /No spoken words/)
+    const t2v = composeH3Prompt({
+      motion: 'rain on a neon alley, a woman walks through puddles',
+      dialogue: '',
+      music: 'N/A',
+      lookTrack: 'anime',
+      t2v: true,
+    })
+    assert.match(t2v, /integrated_multimodal_description/)
+    assert.doesNotMatch(t2v, /Picture 1/)
+    assert.match(t2v, /Hold the opening/)
   })
 
   it('composeH3Prompt ignores anime motionPrefix on live and keeps singing', () => {
@@ -150,6 +161,12 @@ describe('MiniMax H3 video plan', () => {
     assert.doesNotMatch(sung, /No singing/)
     assert.equal(stripShotLabel('[Shot 1] she turns'), 'she turns')
     assert.equal(expandSoundscape(''), 'N/A')
+    const stripped = stripFrameImages({
+      '136': { class_type: 'MiniMaxH3ImageToVideo', inputs: { prompt: 'x', first_frame: ['137', 0] } },
+      '137': { class_type: 'LoadImage', inputs: { image: 'a.png' } },
+    })
+    assert.equal(stripped['137'], undefined)
+    assert.equal(stripped['136'].inputs.first_frame, undefined)
     const long = expandSoundscape('Rain. Wind. A burst. Casings. A distant siren.')
     assert.match(long, /Rain/)
     assert.doesNotMatch(long, /siren/)
