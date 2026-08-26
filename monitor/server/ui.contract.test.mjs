@@ -120,9 +120,12 @@ describe('UI contract — stages, not tools', () => {
   })
 
   it('Plan hides the unused still field in Straight to video', () => {
-    assert.match(page('StudioPlanner.tsx'), /videoMode === 't2v' \? null/)
-    assert.match(page('StudioPlanner.tsx'), /label="Still"/)
-    assert.match(page('StudioPlanner.tsx'), /Scene/)
+    const t = page('StudioPlanner.tsx')
+    assert.match(t, /plan\.videoMode === 't2v'/)
+    assert.match(t, /t2v \? null/)
+    assert.match(t, /label="Still"/)
+    assert.match(t, /Scene/)
+    assert.doesNotMatch(t, /\{videoMode === 't2v' \? null/)
   })
 
   it('Home and Plan expose Straight to video', () => {

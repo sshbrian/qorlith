@@ -28,7 +28,7 @@ import {
 import { GraphMark } from './GraphMark'
 
 const OPEN_KEY = 'qorlith.make.graphOpen'
-const { nodeW: NODE_W, nodeH: NODE_H, padX: PAD_X, padY: PAD_Y } = GRAPH_LAYOUT
+const { nodeW: NODE_W, nodeH: NODE_H, padY: PAD_Y } = GRAPH_LAYOUT
 
 function nodeCenter(id: string, videoMode?: string) {
   return { x: nodeX(id, videoMode) + NODE_W / 2, y: PAD_Y + NODE_H / 2 }

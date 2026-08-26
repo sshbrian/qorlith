@@ -419,6 +419,8 @@ export type GalleryItem = {
   /** Pixel dimensions when known (sidecar or file probe) */
   pixelSize?: { width: number; height: number } | null
   archived?: boolean
+  clipId?: string | null
+  project?: string | null
 }
 
 export type GalleryListResponse = {

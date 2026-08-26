@@ -81,6 +81,7 @@ function Timeline({
 }
 
 function PlanVisual({ plan }: { plan: StudioMoviePlan }) {
+  const t2v = plan.videoMode === 't2v'
   const [selectedId, setSelectedId] = useState<string | null>(plan.clips[0]?.id || null)
   useEffect(() => {
     setSelectedId(plan.clips[0]?.id || null)
@@ -145,8 +146,8 @@ function PlanVisual({ plan }: { plan: StudioMoviePlan }) {
                 <h2 className="text-[20px] font-semibold tracking-tight">{selected.title}</h2>
                 <div className="text-[13px] text-ghost mt-0.5">{selected.id}</div>
               </div>
-              {videoMode === 't2v' ? null : <Field label="Still" value={selected.stillBrief} />}
-              <Field label={videoMode === 't2v' ? 'Scene' : 'Motion'} value={selected.motionBrief} />
+              {t2v ? null : <Field label="Still" value={selected.stillBrief} />}
+              <Field label={t2v ? 'Scene' : 'Motion'} value={selected.motionBrief} />
               <Field label="Dialogue" value={selected.dialogue} />
               <Field label="Sound" value={selected.soundscape} />
               <Field label="Music" value={selected.musicNote} />

@@ -148,11 +148,6 @@ export function Watch() {
   const t2v = brain?.videoMode === 't2v'
   const posterStill = clips.find((c) => c.still)?.still
   const posterVideo = clips.find((c) => c.video)?.video
-  const poster = posterStill
-    ? api.mediaUrl(posterStill)
-    : posterVideo
-      ? api.mediaUrl(posterVideo)
-      : null
   const sceneClips = clips.filter((c) => c.id)
 
   if (!projectId) {
@@ -176,9 +171,9 @@ export function Watch() {
         <div className="theater">
           <div className="theater-player theater-making">
             {posterStill ? (
-              <img src={poster} alt="" className="theater-poster" />
+              <img src={api.mediaUrl(posterStill)} alt="" className="theater-poster" />
             ) : posterVideo ? (
-              <video src={poster} muted playsInline loop className="theater-poster" />
+              <video src={api.mediaUrl(posterVideo)} muted playsInline loop className="theater-poster" />
             ) : null}
             <div className="theater-making-scrim" />
             <div className="theater-making-copy">
