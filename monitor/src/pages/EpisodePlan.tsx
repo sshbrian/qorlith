@@ -91,12 +91,20 @@ export function EpisodePlan() {
     return <Navigate to={`/studio/${encodeURIComponent(projectId)}/make`} replace />
   }
 
-  if (loading && !data) return <p className="text-[15px] text-ghost">Loading stills…</p>
+  if (loading && !data) {
+    return (
+      <div className="table table-hold">
+        <div className="table-glass" aria-hidden>
+          <div className="table-glow" />
+        </div>
+      </div>
+    )
+  }
   if (err && !data) {
     return (
-      <div className="space-y-3">
+      <div className="table">
         <FailNote error={err} />
-        <p className="text-[15px] text-ghost">
+        <p className="set-call">
           Make a plan first. The board fills in after pictures are painted.
         </p>
       </div>
@@ -104,76 +112,95 @@ export function EpisodePlan() {
   }
   if (!data || !scene) {
     return (
-      <div className="card">
-        <p className="text-[17px] text-ghost">No clips yet. Type the story and press Make movie.</p>
+      <div className="table">
+        <div className="table-glass table-glass-empty">
+          <div className="table-glow" />
+          <p className="set-call">The glass is empty. Write the story, then come back for the cut.</p>
+          {projectId ? (
+            <Link to={`/studio/${encodeURIComponent(projectId)}/plan`} className="btn btn-primary btn-xl mt-6">
+              Open Plan
+            </Link>
+          ) : null}
+        </div>
       </div>
     )
   }
 
   const picked = data.scenes.filter((s) => s.pickRel).length
   void data.markdown
+  const pinned = scene.pickRel === viewing?.rel
 
   return (
-    <div className="page">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <p className="page-lead">
-          Choose the picture you want for each clip. {picked} of {data.scenes.length} chosen.
+    <div className="table">
+      <div className="set-slate">
+        <p className="set-call">
+          Choose the frame for the cut. {picked} of {data.scenes.length} pinned.
         </p>
         {projectId ? (
-          <Link to={`/studio/${encodeURIComponent(projectId)}/make`} className="text-[15px] text-cyan">
-            Back to Make
+          <Link to={`/studio/${encodeURIComponent(projectId)}/make`} className="theater-save">
+            Back to the set
           </Link>
         ) : null}
       </div>
       <FailNote error={err} />
 
-      <nav className="flex flex-wrap gap-1.5">
-        {data.scenes.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => setSceneId(s.id)}
-            className={`rounded-full px-3 py-1.5 text-[13px] ${
-              s.id === scene.id ? 'bg-cyan text-white' : 'bg-white/[0.08] text-ghost hover:text-ink'
-            }`}
-          >
-            {s.title || s.id}
-          </button>
-        ))}
-      </nav>
+      <ol className="workprint table-clips" aria-label="Clips">
+        {data.scenes.map((s) => {
+          const thumb = s.pick?.url || s.stills[0]?.url
+          return (
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => setSceneId(s.id)}
+                className={['table-clip', s.id === scene.id ? 'is-on' : '', s.pickRel ? 'is-pinned' : ''].join(' ')}
+                title={s.title || s.id}
+              >
+                {thumb ? <img src={thumb} alt="" /> : <span className="workprint-empty" />}
+                <span className="workprint-mark">{s.id}</span>
+              </button>
+            </li>
+          )
+        })}
+      </ol>
 
-      <section className="card space-y-4">
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-[20px] font-semibold tracking-tight">{scene.title || scene.id}</h2>
+      <section className="table-glass">
+        <div className="table-glow" />
+        <div className="table-glass-head">
+          <h2 className="script-title">{scene.title || scene.id}</h2>
           <span className="text-[13px] text-ghost">
             {scene.stills.length ? `${scene.stills.length} takes` : 'No pictures yet'}
           </span>
         </div>
 
         {viewing ? (
-          <div className="theater-player" style={{ aspectRatio: '16 / 10' }}>
-            <img src={viewing.url} alt="" className="theater-video object-contain" />
-          </div>
+          <button
+            type="button"
+            className="table-hero"
+            onDoubleClick={() => void pickStill(viewing.rel)}
+            title="Double-click to pin this frame"
+          >
+            <img src={viewing.url} alt="" />
+          </button>
         ) : (
-          <div className="theater-player theater-empty">
-            <p className="text-[15px] text-ghost">No pictures for this clip yet. Press Make movie.</p>
+          <div className="table-hero is-empty">
+            <p className="set-call">No pictures for this clip yet. Press Make movie.</p>
           </div>
         )}
 
         {viewing ? (
           <button
             type="button"
-            className="btn btn-primary btn-xl"
-            disabled={busy || scene.pickRel === viewing.rel}
+            className="btn btn-primary btn-xl title-card-go"
+            disabled={busy || pinned}
             onClick={() => void pickStill(viewing.rel)}
           >
-            {scene.pickRel === viewing.rel ? 'This one' : 'Use this one'}
+            {pinned ? 'This one' : 'Use this one'}
           </button>
         ) : null}
 
         {scene.stills.length ? (
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-            {scene.stills.map((s) => {
+          <div className="table-contact">
+            {scene.stills.map((s, i) => {
               const on = viewing?.rel === s.rel
               const pick = scene.pickRel === s.rel
               return (
@@ -182,16 +209,10 @@ export function EpisodePlan() {
                   type="button"
                   onClick={() => setViewByScene((prev) => ({ ...prev, [scene.id]: s.rel }))}
                   onDoubleClick={() => void pickStill(s.rel)}
-                  className={`relative rounded-[10px] overflow-hidden ring-2 ${
-                    on ? 'ring-cyan' : pick ? 'ring-white/30' : 'ring-transparent'
-                  }`}
+                  className={['table-print', on ? 'is-viewing' : '', pick ? 'is-pinned' : ''].join(' ')}
+                  style={{ ['--tilt' as string]: `${((i % 3) - 1) * 1.1}deg` }}
                 >
-                  <img src={s.url} alt="" className="w-full aspect-video object-cover" />
-                  {pick ? (
-                    <span className="absolute top-1 right-1 rounded-full bg-cyan text-white text-[11px] px-1.5">
-                      Pick
-                    </span>
-                  ) : null}
+                  <img src={s.url} alt="" />
                 </button>
               )
             })}

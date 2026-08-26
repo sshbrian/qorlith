@@ -105,8 +105,179 @@ select {
 .lobby,
 .screening,
 .set,
-.script {
+.script,
+.table {
   animation: house-in 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.table-hold {
+  min-height: 58vh;
+  justify-content: center;
+}
+
+.table-glass {
+  position: relative;
+  padding: 26px 24px 28px;
+  border-radius: 10px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015) 38%, rgba(0, 0, 0, 0.28)),
+    #101014;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -50px 90px rgba(0, 0, 0, 0.4),
+    0 32px 90px rgba(0, 0, 0, 0.5);
+}
+
+.table-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.1) 0%, transparent 46%);
+}
+
+.table-glass-empty {
+  min-height: 52vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.table-hold .table-glass {
+  min-height: 42vh;
+}
+
+.table-glass-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.table-hero {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.table-hero img {
+  display: block;
+  width: 100%;
+  max-height: 58vh;
+  object-fit: contain;
+  background: #050506;
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.table-hero.is-empty {
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.table-glass .title-card-go {
+  position: relative;
+  z-index: 1;
+  margin-top: 16px;
+}
+
+.table-contact {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.table-print {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.table-print img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  transform: rotate(var(--tilt, 0deg));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.48);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease;
+}
+
+.table-print:hover img {
+  transform: rotate(0deg) translateY(-3px);
+}
+
+.table-print.is-viewing img {
+  transform: rotate(0deg) scale(1.04);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.62),
+    0 16px 36px rgba(0, 0, 0, 0.5);
+}
+
+.table-print.is-pinned img {
+  box-shadow:
+    0 0 0 1px rgba(10, 132, 255, 0.8),
+    0 14px 32px rgba(10, 132, 255, 0.16);
+}
+
+.table-clips {
+  gap: 8px;
+}
+
+.table-clip {
+  display: block;
+  width: 92px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.table-clip img,
+.table-clip .workprint-empty {
+  display: block;
+  width: 92px;
+  height: 52px;
+  object-fit: cover;
+  background: #0a0a0b;
+  opacity: 0.78;
+}
+
+.table-clip.is-on img,
+.table-clip.is-on .workprint-empty {
+  opacity: 1;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.table-clip.is-pinned .workprint-mark {
+  color: #409cff;
 }
 
 .script {
@@ -1521,8 +1692,16 @@ video.theater-poster {
   .lobby,
   .screening,
   .set,
-  .script {
+  .script,
+  .table {
     animation: none;
+  }
+
+  .table-print img,
+  .table-print:hover img,
+  .table-print.is-viewing img {
+    transition: none;
+    transform: none;
   }
 }
 

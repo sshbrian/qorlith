@@ -119,6 +119,11 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /data\.markdown/)
     assert.match(t, /videoMode === 't2v'/)
     assert.match(t, /<Navigate/)
+    assert.match(t, /table-glass/)
+    assert.match(t, /table-print/)
+    assert.match(t, /table-hero/)
+    assert.doesNotMatch(t, />Pick</)
+    assert.match(read(path.join(src, 'components', 'Layout.tsx')), /stage === 'board'/)
   })
 
   it('Gallery honors ?archived=only', () => {
