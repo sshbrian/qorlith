@@ -42,4 +42,27 @@ describe('storyboard markdown', () => {
     assert.match(md, /\*\*Still\*\*/)
     assert.match(md, /No radio/)
   })
+
+  it('T2V storyboard labels the MiniMax beat Scene, not Still', () => {
+    const md = buildStoryboardMarkdown({
+      projectId: 'roof',
+      plan: {
+        title: 'Rooftop',
+        videoMode: 't2v',
+        clips: [
+          {
+            id: 'S01',
+            title: 'open',
+            durationSec: 12,
+            stillBrief: 'rain-wet rooftop',
+            motionBrief: 'a medium-wide shot frames a rain-wet rooftop. The camera holds.',
+          },
+        ],
+      },
+    })
+    assert.match(md, /\*\*Scene\*\*/)
+    assert.doesNotMatch(md, /\*\*Still\*\*/)
+    assert.doesNotMatch(md, /\*\*Motion\*\*/)
+    assert.match(md, /medium-wide shot frames/)
+  })
 })

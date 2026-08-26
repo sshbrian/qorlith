@@ -9,6 +9,7 @@ import {
   buildPlanUserMessage,
   collectProjectMediaPaths,
   CORE_PLANNER_RULES,
+  T2V_PLANNER_RULES,
   dryRunMoviePlan,
   draftMoviePlanFromPrompt,
   ensureLeadFaceFraming,
@@ -37,6 +38,7 @@ describe('studioPlanner', () => {
 
   it('CORE_PLANNER_RULES does not name Motoko', () => {
     assert.doesNotMatch(CORE_PLANNER_RULES, /Motoko/i)
+    assert.doesNotMatch(T2V_PLANNER_RULES, /Motoko/i)
     const p = buildMoviePlanSystemPrompt({ system: 'HOUSE_ONLY', style: 'STYLE_ONLY' })
     assert.doesNotMatch(p, /Motoko/)
   })
@@ -359,6 +361,24 @@ describe('studioPlanner', () => {
     assert.match(p, /1–4 English sentences/)
     assert.match(p, /Silent \/ no dialogue means no speech/)
     assert.doesNotMatch(p, /the adult \{who\}/)
+  })
+
+  it('buildMoviePlanSystemPrompt teaches T2V full-scene motion', () => {
+    const p = buildMoviePlanSystemPrompt({
+      system: 'HOUSE_TRIGGER_xyz',
+      style: 'HOUSE_STYLE_xyz',
+      videoMode: 't2v',
+    })
+    assert.match(p, /Straight to video MiniMax H3 T2VA/)
+    assert.match(p, /FULL MiniMax T2VA scene/)
+    assert.match(p, /medium-wide shot frames/)
+    assert.match(p, /Do NOT write Picture 1/)
+    assert.doesNotMatch(p, /Stills-first: each clip is \(1\) one SDXL/)
+    assert.doesNotMatch(p, /The start still IS frame 0/)
+    assert.match(p, /cut=false/)
+    assert.match(p, /HOUSE_TRIGGER_xyz/)
+    assert.match(p, /stillBrief: short location only/)
+    assert.match(p, /motionBrief names the explicit act/)
   })
 
   it('planPaths uses lookTrack folders', () => {

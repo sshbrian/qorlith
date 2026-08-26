@@ -59,8 +59,13 @@ export function buildStoryboardMarkdown(record) {
         c.sexy ? 'X' : null,
       ].filter(Boolean)
       if (flags.length) bits.push(`*${flags.join(' · ')}*`, '')
-      if (c.stillBrief) bits.push('**Still**', '', c.stillBrief, '')
-      if (c.motionBrief) bits.push('**Motion**', '', c.motionBrief, '')
+      const t2v = plan.videoMode === 't2v'
+      if (t2v) {
+        if (c.motionBrief) bits.push('**Scene**', '', c.motionBrief, '')
+      } else {
+        if (c.stillBrief) bits.push('**Still**', '', c.stillBrief, '')
+        if (c.motionBrief) bits.push('**Motion**', '', c.motionBrief, '')
+      }
       if (c.dialogue) bits.push('**Dialogue**', '', c.dialogue, '')
       else bits.push('**Dialogue** — none', '')
       if (c.soundscape) bits.push(`**Sound** — ${c.soundscape}`, '')

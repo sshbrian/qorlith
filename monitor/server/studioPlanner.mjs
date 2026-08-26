@@ -130,6 +130,100 @@ musicNote: two named instruments at a TEMPO, DYNAMICS, music drops under dialogu
 Never copy a character, location, or spoken line that the user did not ask for.
 Never leave angle brackets or curly braces in the JSON.`
 
+/** Straight to video: no painted still. motionBrief is the whole MiniMax T2VA scene. */
+export const T2V_PLANNER_RULES = `PIPELINE
+Straight to video: each clip is MiniMax H3 text-to-video-audio. No start still is painted. You do not queue Comfy. You only write the plan JSON.
+
+CLIP MATH (hard)
+- Each MiniMax take is 6–15 s. Default 12. First clip and cut=true may be 6–15 (punch-in / hold may be 6–8).
+- cut=false continue takes are 10–15 s (prefer 12). Never 6–8 on a continue — the join needs ~2 s quiet + ~2 s settle.
+- n ≈ ceil(durationTargetSec / 10). Never one 30–120 s MiniMax job.
+- ids are stable S01, S02, … (used as resume keys).
+- t_start / t_end are consecutive on the master timeline. sum(durationSec) ≈ durationTargetSec.
+- Prefer one continuous shot per clip.
+
+CONTINUITY
+- Default cut=false. Video N+1 starts from the last frame of video N (same body, costume, space) as I2VA.
+- S01 and cut=true are T2VA (no Picture 1). cut=false continues from the previous last frame.
+- Set cut=true only for a purposeful hard cut: new location, time jump, or a still the previous last frame cannot continue.
+- Do not mark every clip as a cut. A chase or fight in one space is one continue chain.
+- Continue airlock (cut=false, not S01): the app holds the previous closing pose for ~2 s (breath / weight shift only, no speech), then your motionBrief, then ~2 s settle. Write the action AFTER that hold. Do not start or end a spoken line on the weld. Never split one line across two clips.
+- Each continue take must change a physical, irreversible world state (not only a look or a camera move).
+
+LOOK
+- lookTrack is only "anime" or "live".
+- anime = 2D / cel / GitS-like. live = photoreal / camcorder / found-footage.
+- If the user names a look, honor it.
+- Office, kitchen, hotel, handshake, documentary, found-footage, hidden cam, camcorder, photoreal, real_movie → live. STYLE anime cannot override those.
+- GitS / anime / rooftop duel anime → anime when the user said so.
+- If still unspecified, follow the STYLE block, else live.
+- Do not mix tracks inside one plan.
+
+CHARACTERS
+- 1–3 adults. Each has look (visual lock repeated in motionBrief) and voice (frozen for every spoken clip).
+- Same face, costume, and location language across clips unless a beat changes them.
+- Adults only. Never teen / child / loli / shota / minor framing. Fictional cast.
+
+STILL BRIEF = unused place note
+- A short location string is enough. It is NOT sent to MiniMax. No SDXL tags, no frozen pose lists, no 1girl/solo.
+
+MOTION BRIEF = the FULL MiniMax T2VA scene
+No start still. The app wraps style (2D-animated or Live-action, cinematic). You write composition, who, place, action, camera.
+- Open with a readable shot: "a medium-wide shot frames LOCATION." Then body action. Then camera as prose.
+- Include the lead's appearance (hair, body, outfit) in the first clip unless a house lock already did.
+- Path: action onset → continuous development → result/reaction. Do not write the continue hold or settle yourself.
+- Camera as prose: motion type + optional amplitude + optional speed.
+  Verbs: push in, pull out, pan left/right, truck left/right, tilt up/down, pedestal, arc, tracking, static, POV, shake slightly/strongly, roll.
+  Amplitude: with small amplitude / with large amplitude. Speed: at slow speed / at fast speed. Omit medium.
+- Do NOT write Picture 1, [Shot 1], SDXL tags, Wan "At 0 seconds" beat lists, or video model names.
+- Prefer one continuous shot. If you must cut inside a take: "the camera cuts to".
+
+DIALOGUE (H3 spoken field)
+- If the user did not ask for speech, a line, a shout, or radio talk, every dialogue field is empty.
+- Silent / no dialogue / no people talking → every dialogue is empty.
+- Stable speaker IDs (S1), (S2) matching characters[]. Silent people get no ID.
+- When there IS speech, write real names and voices from characters[] — never placeholders:
+  the adult woman with a dry mid voice (S1) says: <d>[English] Copy.</d>
+- Inside <d>: [English] or [Japanese] then the exact words. No quotes, no "en:".
+- Preserve user-supplied lines verbatim (including Japanese).
+- Voiceover: "says in an off-screen voiceover" and lips remain closed.
+- Keep the voice-lock string identical across clips.
+- NEVER output curly braces { } or leftover template tokens in any field.
+
+SOUNDSCAPE
+- 1–4 English sentences. Ambient + physical action + non-verbal human sound (rain, footsteps, gunfire, breath).
+- Never dialogue, never audience score. N/A only if the clip has no diegetic sound.
+
+MUSIC
+- musicPalette = global non_diegetic_music: at least two named instruments + tempo + dynamics. No vocals. Drops under dialogue.
+- musicNote = THAT CLIP's non_diegetic_music string (named instruments + tempo + dynamics) or N/A.
+- musicNote is fed to MiniMax as non_diegetic_music.
+- Never write only "soft" / "loud" / "epic" / "emotional" / "orchestral" / "dynamic".
+- If the user named drums, piano, guitar, etc., those instruments MUST appear in musicPalette and musicNote.
+- Diegetic radio/TV/phone music belongs in dialogue or motion, not musicNote.
+- Silent / no dialogue means no speech. Do not clear the score unless they also said no music / no score, or said silent without naming instruments or a score.
+- If the user asked for no music / no score, or silent with no named score: musicPalette is N/A AND every musicNote is N/A. This overrides house style.
+
+DEFAULTS when the user is vague
+- 30 s · R · look from STYLE or live · MiniMax score · 10–12 s clips.
+- Invent a tight logline and label assumed defaults in markdown. Do not ask questions.
+
+DURATION
+- durationSec is 6–15 (prefer 10–12). Never 4 or 5. Hard max 15.
+- A 24 s beat is 12+12, not 3×8. A 20 s continue chain is 10+10, not 12+8.
+- sum(durationSec) must match durationTargetSec (off by at most 1 second).
+
+TEMPLATES (fill from the USER request — do not invent a leftover example cast)
+stillBrief: short location only
+motionBrief: a medium-wide shot frames LOCATION. The camera VERB with small amplitude at slow speed as BODY ACTION.
+musicNote: two named instruments at a TEMPO, DYNAMICS, music drops under dialogue
+Never copy a character, location, or spoken line that the user did not ask for.
+Never leave angle brackets or curly braces in the JSON.`
+
+export function plannerCoreRules(videoMode) {
+  return normalizeVideoMode(videoMode) === 't2v' ? T2V_PLANNER_RULES : CORE_PLANNER_RULES
+}
+
 export const PLAN_JSON_SCHEMA = `{
   "projectId": "snake_case_id",
   "title": "Human title",
@@ -163,13 +257,17 @@ export const PLAN_JSON_SCHEMA = `{
 export function buildMoviePlanSystemPrompt(extra = {}) {
   const system = String(extra.system || '').trim()
   const style = String(extra.style || '').trim()
+  const t2v = normalizeVideoMode(extra.videoMode) === 't2v'
   const custom = [system && `--- STUDIO NOTES ---\n${system}`, style && `--- STYLE ---\n${style}`]
     .filter(Boolean)
     .join('\n\n')
+  const sex = t2v
+    ? '- If the user asked for graphic sex: rating X. motionBrief names the explicit act continuing (mouth, tongue, vulva, penetration). stillBrief may be short. No fade-to-black, no silhouette, no "intimacy" euphemism.\n'
+    : '- If the user asked for graphic sex: rating X. stillBrief is a frozen explicit frame that names the act (mouth, tongue, vulva, penetration). motionBrief continues that act. No fade-to-black, no silhouette, no "intimacy" euphemism.\n'
   return `You are the Studio Planner for Qorlith offline movie production.
-Write complete stills-first MiniMax H3 plans. Reply with ONE JSON object only (optional markdown fence). No prose outside JSON.
+Write complete ${t2v ? 'Straight to video MiniMax H3 T2VA' : 'stills-first MiniMax H3'} plans. Reply with ONE JSON object only (optional markdown fence). No prose outside JSON.
 
-${CORE_PLANNER_RULES}
+${plannerCoreRules(extra.videoMode)}
 
 CRITICAL OUTPUT
 - JSON only, matching this schema:
@@ -177,8 +275,7 @@ ${PLAN_JSON_SCHEMA}
 - Each clip durationSec MUST be 6–15 (max 15). Continue (cut=false) takes MUST be ≥10. cut defaults to false.
 - stillBrief ≤ 800 characters. motionBrief ≤ 800 characters.
 - Adults only.
-- If the user asked for graphic sex: rating X. stillBrief is a frozen explicit frame that names the act (mouth, tongue, vulva, penetration). motionBrief continues that act. No fade-to-black, no silhouette, no "intimacy" euphemism.
-${custom ? `\n${custom}\n` : ''}`
+${sex}${custom ? `\n${custom}\n` : ''}`
 }
 
 export function parseJsonFromModel(text) {
@@ -791,6 +888,7 @@ export async function generateMoviePlan({ userPrompt, dryRun = false, appConfig,
   const system = buildMoviePlanSystemPrompt({
     system: dcfg.plannerSystem,
     style: dcfg.plannerStyle,
+    videoMode: mode,
   })
   const user = buildPlanUserMessage(prompt, { videoMode: mode })
   let rawText = ''
