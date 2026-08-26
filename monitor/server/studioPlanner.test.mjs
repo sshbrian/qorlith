@@ -343,7 +343,8 @@ describe('studioPlanner', () => {
     assert.equal(p.videoMode, 't2v')
     assert.match(p.clips[0].motionBrief, /Motoko/)
     assert.match(p.clips[0].motionBrief, /gitsstyl/)
-    assert.match(p.clips[0].stillBrief, /gitsstyl/)
+    assert.equal(p.clips[0].stillBrief, 'rain-wet rooftop')
+    assert.doesNotMatch(p.clips[0].stillBrief, /1girl|gitsstyl/)
     assert.doesNotMatch(p.clips[0].motionBrief, /\b1girl\b/)
   })
 

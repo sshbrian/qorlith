@@ -135,7 +135,7 @@ export function applyHouseLockToPlan(plan, userPrompt, warnings = []) {
   const clips = plan.clips || []
   for (const [i, c] of clips.entries()) {
     const before = String(c.stillBrief || '')
-    if (before.trim()) {
+    if (!t2v && before.trim()) {
       const next = applyHouseLockToStillBrief(before, lock.look)
       if (next !== before) {
         c.stillBrief = next

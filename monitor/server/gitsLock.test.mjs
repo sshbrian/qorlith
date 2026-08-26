@@ -62,6 +62,8 @@ describe('gitsLock', () => {
     )
     assert.match(t2v.clips[0].motionBrief, /Motoko/)
     assert.match(t2v.clips[0].motionBrief, /gitsstyl/)
+    assert.equal(t2v.clips[0].stillBrief, 'rain-wet rooftop')
+    assert.doesNotMatch(t2v.clips[0].stillBrief, /1girl/)
     assert.match(t2v.characters[0].look, /gitsstyl/)
     assert.equal(t2v.characters[0].name, 'Motoko')
     assert.ok(warnings.some((w) => /motionBrief for house lock/i.test(w)))
