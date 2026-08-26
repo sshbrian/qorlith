@@ -163,7 +163,7 @@ describe('brain graph — decorateGraph', () => {
         status: 'stopped',
         step: 'video',
         running: false,
-        steps: [{ id: 'video', label: 'Motion', state: 'idle' }],
+        steps: [{ id: 'video', label: 'Clips', state: 'idle' }],
         timings: { video: { startedAt: 't', endedAt: 't2', seconds: 3.5 } },
       }),
     )
@@ -181,7 +181,7 @@ describe('brain graph — decorateGraph', () => {
           { id: 'plan', label: 'Story', state: 'done' },
           { id: 'stills', label: 'Pictures', state: 'done' },
           { id: 'face_qa', label: 'Your picks', state: 'done' },
-          { id: 'video', label: 'Motion', state: 'done' },
+          { id: 'video', label: 'Clips', state: 'done' },
           { id: 'free', label: 'Clear', state: 'done' },
           { id: 'finish', label: 'Film', state: 'done' },
         ],
@@ -212,6 +212,8 @@ describe('brain graph — decorateGraph', () => {
       assert.ok(ids.has(e.to), e.to)
     }
     assert.deepEqual([...PIPELINE], ['health', 'plan', 'stills', 'face_qa', 'video', 'free', 'finish'])
+    assert.equal(GRAPH_NODE_META.find((n) => n.id === 'video')?.label, 'Clips')
+    assert.equal(decorateGraph(report()).nodes.find((n) => n.id === 'video')?.label, 'Clips')
   })
 
   it('t2v graph skips pictures and packs left', () => {
@@ -224,7 +226,7 @@ describe('brain graph — decorateGraph', () => {
         steps: [
           { id: 'health', label: 'Ready', state: 'done' },
           { id: 'plan', label: 'Story', state: 'done' },
-          { id: 'video', label: 'Motion', state: 'active' },
+          { id: 'video', label: 'Clips', state: 'active' },
         ],
       }),
     )

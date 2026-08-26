@@ -732,6 +732,8 @@ def test_graph_compiles():
 
 def test_step_states_mark_current_and_done():
     steps = step_states("stills", "stills")
+    assert [s["id"] for s in steps][-3] == "video"
+    assert steps[-3]["label"] == "Clips"
     assert [s["state"] for s in steps] == ["done", "done", "active", "idle", "idle", "idle", "idle"]
     stopped = step_states("stills", "stills", "plan")
     assert [s["state"] for s in stopped] == ["done", "done", "idle", "idle", "idle", "idle", "idle"]

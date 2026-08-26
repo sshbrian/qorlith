@@ -23,6 +23,7 @@ describe('brain status view', () => {
     assert.equal(idle.started, false)
     assert.equal(idle.steps.length, 7)
     assert.ok(idle.steps.every((s) => s.state === 'idle'))
+    assert.equal(idle.steps.find((s) => s.id === 'video')?.label, 'Clips')
   })
 
   it('Straight to video never stops after stills', () => {
@@ -290,8 +291,8 @@ describe('brain status view', () => {
     assert.equal(over.progress.done, 1)
     assert.equal(over.progress.total, 2)
     assert.equal(over.progress.currentShot, 'S02')
-    assert.equal(over.progress.phase, 'motion')
-    assert.match(over.statusLine, /Animating|Running|video/i)
+    assert.equal(over.progress.phase, 'clips')
+    assert.match(over.statusLine, /Making clips|Running/)
     assert.ok(over.friends.some((f) => f.name === 'Board'))
   })
 

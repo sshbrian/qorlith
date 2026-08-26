@@ -31,6 +31,7 @@ def _cfg(tmp_path: Path) -> BrainConfig:
 
 def test_graph_spec_is_closed():
     ids = [row[0] for row in GRAPH_NODE_META]
+    assert next(row[1] for row in GRAPH_NODE_META if row[0] == "video") == "Clips"
     assert tuple(sid for sid in ids if sid not in {"start", "end"}) == GRAPH_NODES
     known = set(ids)
     kinds = set()

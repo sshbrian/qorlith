@@ -67,7 +67,7 @@ export function WorkflowModal({
   }, [projectId])
 
   const heading =
-    kind === 'still' ? 'Pictures · Comfy stills' : t2v ? 'MiniMax · clips' : 'Motion · Comfy video'
+    kind === 'still' ? 'Pictures · Comfy stills' : 'MiniMax · clips'
   const ready = clips.filter((c) => (kind === 'still' ? c.stillWorkflow.apiPath : c.videoWorkflow.apiPath))
 
   return (

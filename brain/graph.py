@@ -119,7 +119,7 @@ STEPS = (
     ("plan", "Story"),
     ("stills", "Pictures"),
     ("face_qa", "Your picks"),
-    ("video", "Motion"),
+    ("video", "Clips"),
     ("free", "Clear"),
     ("finish", "Film"),
 )
@@ -132,7 +132,7 @@ GRAPH_NODE_META = (
     ("plan", "Story", "Write the clip list"),
     ("stills", "Pictures", "Paint each still"),
     ("face_qa", "Your picks", "You choose the frames"),
-    ("video", "Motion", "Make each clip"),
+    ("video", "Clips", "Make each clip"),
     ("free", "Clear", "Unload Comfy models"),
     ("finish", "Film", "Join the clips"),
     ("end", "End", "Stop or done"),
@@ -175,12 +175,7 @@ STATUS_STEP = {
 
 def pipeline_steps(video_mode: Any = None) -> tuple[tuple[str, str], ...]:
     if normalize_video_mode(video_mode) == "t2v":
-        out = []
-        for sid, label in STEPS:
-            if sid in T2V_SKIP_STEPS:
-                continue
-            out.append(("video", "Clips") if sid == "video" else (sid, label))
-        return tuple(out)
+        return tuple((sid, label) for sid, label in STEPS if sid not in T2V_SKIP_STEPS)
     return STEPS
 
 
@@ -294,7 +289,7 @@ def graph_view(
         if sid in skip:
             continue
         if t2v and sid == "video":
-            label, blurb = "Clips", "Prompt to MiniMax"
+            blurb = "Prompt to MiniMax"
         if sid == "start":
             state = "done" if begun else "idle"
         elif sid == "end":

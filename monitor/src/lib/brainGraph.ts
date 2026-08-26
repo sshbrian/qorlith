@@ -6,7 +6,7 @@ export const GRAPH_NODE_META = [
   { id: 'plan', label: 'Story', blurb: 'Write the clip list' },
   { id: 'stills', label: 'Pictures', blurb: 'Paint each still' },
   { id: 'face_qa', label: 'Your picks', blurb: 'You choose the frames' },
-  { id: 'video', label: 'Motion', blurb: 'Make each clip' },
+  { id: 'video', label: 'Clips', blurb: 'Make each clip' },
   { id: 'free', label: 'Clear', blurb: 'Unload Comfy models' },
   { id: 'finish', label: 'Film', blurb: 'Join the clips' },
   { id: 'end', label: 'End', blurb: 'Stop or done' },
@@ -302,8 +302,7 @@ export function decorateGraph(
 
   const nodes: GraphNodeView[] = metas.map((meta) => {
     const blurb = t2v && meta.id === 'video' ? 'Prompt to MiniMax' : meta.blurb
-    const label = t2v && meta.id === 'video' ? 'Clips' : meta.label
-    const base = { id: meta.id, label, blurb }
+    const base = { id: meta.id, label: meta.label, blurb }
     if (raw?.nodes?.length) {
       const hit = raw.nodes.find((n) => n.id === meta.id)
       if (hit) return { ...base, state: hit.state || 'idle' }

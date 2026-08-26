@@ -237,6 +237,8 @@ describe('UI contract — brain is shipped', () => {
 
   it('Brain page can stop and show a master', () => {
     const t = page('Brain.tsx')
+    assert.match(t, /Stills, then the clips/)
+    assert.doesNotMatch(t, /Stills, motion/)
     const session = read(path.join(src, 'components', 'StudioSession.tsx'))
     assert.match(session, /brainStop/)
     assert.match(t, /Stop/)
@@ -285,7 +287,7 @@ describe('UI contract — brain is shipped', () => {
     assert.match(spec, /continue trim \+ 40ms crossfade/)
     assert.doesNotMatch(spec, /concat -c copy/)
     assert.match(spec, /Prompt to MiniMax/)
-    assert.match(spec, /t2v && meta.id === 'video' \? 'Clips'/)
+    assert.match(spec, /id: 'video', label: 'Clips'/)
     assert.match(spec, /Writer writes the story/)
     assert.doesNotMatch(spec, /Local LLM/)
     assert.doesNotMatch(spec, /LM Studio/)

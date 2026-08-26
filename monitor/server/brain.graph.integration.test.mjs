@@ -148,7 +148,7 @@ describe('brain graph + monitor HTTP', () => {
         { id: 'plan', label: 'Story', state: 'done' },
         { id: 'stills', label: 'Pictures', state: 'active' },
         { id: 'face_qa', label: 'Your picks', state: 'idle' },
-        { id: 'video', label: 'Motion', state: 'idle' },
+        { id: 'video', label: 'Clips', state: 'idle' },
         { id: 'finish', label: 'Film', state: 'idle' },
       ],
       clips: [{ id: 'S02', title: 'Alley', still: null, video: null }],
@@ -209,7 +209,7 @@ describe('brain graph + monitor HTTP', () => {
       lastError: 'Render job failed',
       steps: [
         { id: 'health', label: 'Ready', state: 'done' },
-        { id: 'video', label: 'Motion', state: 'fail' },
+        { id: 'video', label: 'Clips', state: 'fail' },
       ],
       clips: [],
       timings: {

@@ -147,7 +147,7 @@ export function Brain() {
               ? 'The film is ready.'
               : t2v
                 ? 'One button. Straight to video, then the film.'
-                : 'One button. Stills, motion, then the film.'}
+                : 'One button. Stills, then the clips.'}
         </p>
         <div className={`text-[15px] ${statusTone}`}>
           {running ? (
