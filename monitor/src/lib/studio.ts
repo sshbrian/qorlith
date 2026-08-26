@@ -1,6 +1,14 @@
 export const LAST_PROJECT_KEY = 'qorlith.studio.lastProject'
 export const RAIL_COLLAPSED_KEY = 'qorlith.studio.railCollapsed'
 
+export const PROMPT_PLACEHOLDER = 'Example: 20 second rooftop fight, rain, no talking.'
+
+export const PROMPT_STARTERS = [
+  { label: '12 seconds', text: '12 second rooftop fight in the rain, silent, no talking.' },
+  { label: '20 second chase', text: '20 second neon alley chase, rain, no talking.' },
+  { label: '32 second raid', text: '32 second night raid through a server floor, gunfire, no talking.' },
+] as const
+
 export const STAGES = ['plan', 'make', 'board', 'watch'] as const
 export type StudioStage = (typeof STAGES)[number]
 

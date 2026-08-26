@@ -5,15 +5,7 @@ import { FailNote } from '../components/FailNote'
 import { PosterCard } from '../components/PosterCard'
 import { useStudioSession } from '../components/StudioSession'
 import { api } from '../lib/api'
-import { canonicalStage, projectPath } from '../lib/studio'
-
-const HOME_PLACEHOLDER = 'Example: 20 second rooftop fight, rain, no talking.'
-
-const STARTERS = [
-  { label: '12 seconds', text: '12 second rooftop fight in the rain, silent, no talking.' },
-  { label: '20 second chase', text: '20 second neon alley chase, rain, no talking.' },
-  { label: '32 second raid', text: '32 second night raid through a server floor, gunfire, no talking.' },
-]
+import { canonicalStage, projectPath, PROMPT_PLACEHOLDER, PROMPT_STARTERS } from '../lib/studio'
 
 export function StudioHome() {
   const { projects, projectsReady, refreshProjects } = useStudioSession()
@@ -65,11 +57,11 @@ export function StudioHome() {
           }}
           rows={5}
           autoFocus
-          placeholder={HOME_PLACEHOLDER}
+          placeholder={PROMPT_PLACEHOLDER}
           className="field resize-y min-h-[128px]"
         />
         <div className="flex flex-wrap gap-2">
-          {STARTERS.map((s) => (
+          {PROMPT_STARTERS.map((s) => (
             <button
               key={s.label}
               type="button"

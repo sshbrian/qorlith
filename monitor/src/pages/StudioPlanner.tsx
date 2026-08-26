@@ -8,14 +8,7 @@ import {
   type StudioPlanClip,
   type StudioPlanRecord,
 } from '../lib/api'
-
-const PROMPT_PLACEHOLDER = `Example: 20 second rooftop fight, rain, no talking.`
-
-const STARTERS = [
-  { label: '12 seconds', text: '12 second rooftop fight in the rain, silent, no talking.' },
-  { label: '20 second chase', text: '20 second neon alley chase, rain, no talking.' },
-  { label: '32 second raid', text: '32 second night raid through a server floor, gunfire, no talking.' },
-]
+import { PROMPT_PLACEHOLDER, PROMPT_STARTERS } from '../lib/studio'
 
 function ClipCard({
   clip,
@@ -187,10 +180,10 @@ function Field({ label, value }: { label: string; value?: string }) {
 
 function writerLabel(health: Awaited<ReturnType<typeof api.studioHealth>> | null) {
   const p = health?.planner?.provider
-  if (p === 'none') return 'Import a plan'
-  if (p === 'xai') return health?.ok ? 'Grok writer on' : 'Grok key missing'
-  if (p === 'openai') return health?.ok ? 'Remote writer on' : 'Remote writer off'
-  return health?.ok ? 'Local writer on' : 'Local writer off'
+  if (p === 'none') return 'Paste a plan under More'
+  if (p === 'xai') return health?.ok ? 'Grok is ready' : 'Add a Grok key to write'
+  if (p === 'openai') return health?.ok ? 'Remote writer is ready' : 'Remote writer needs a key'
+  return health?.ok ? 'Local writer is ready' : 'Local writer is offline'
 }
 
 export function StudioPlanner() {
@@ -336,7 +329,7 @@ export function StudioPlanner() {
           className="field resize-y min-h-[140px]"
         />
         <div className="flex flex-wrap gap-2">
-          {STARTERS.map((s) => (
+          {PROMPT_STARTERS.map((s) => (
             <button key={s.label} type="button" className="chip" onClick={() => setPrompt(s.text)}>
               {s.label}
             </button>
