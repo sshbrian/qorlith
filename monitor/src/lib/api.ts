@@ -208,6 +208,7 @@ export type StudioPlanClip = {
   t_start: number
   t_end: number
   durationSec: number
+  cut?: boolean
   gun_risk?: boolean
   sexy?: boolean
   stillBrief?: string
@@ -367,6 +368,7 @@ export type BrainClip = {
   id: string
   title?: string
   durationSec?: number | null
+  cut?: boolean
   stillBrief?: string | null
   motionBrief?: string | null
   still?: string | null

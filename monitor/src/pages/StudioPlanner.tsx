@@ -9,17 +9,20 @@ import {
   type StudioPlanClip,
   type StudioPlanRecord,
 } from '../lib/api'
-import { PROMPT_PLACEHOLDER, PROMPT_STARTERS } from '../lib/studio'
+import { clipJoinNote, PROMPT_PLACEHOLDER, PROMPT_STARTERS } from '../lib/studio'
 
 function ClipCard({
   clip,
+  index,
   selected,
   onSelect,
 }: {
   clip: StudioPlanClip
+  index: number
   selected: boolean
   onSelect: () => void
 }) {
+  const join = clipJoinNote(index, clip.cut)
   return (
     <button
       type="button"
@@ -30,7 +33,9 @@ function ClipCard({
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-[15px] truncate">{clip.title}</span>
-        <span className="text-[12px] text-ghost shrink-0">{clip.durationSec}s</span>
+        <span className="text-[12px] text-ghost shrink-0">
+          {clip.durationSec}s{join ? ` · ${join}` : ''}
+        </span>
       </div>
     </button>
   )
@@ -53,19 +58,20 @@ function Timeline({
   return (
     <div className="mt-3">
       <div className="flex gap-0.5 h-10 items-stretch">
-        {clips.map((c) => {
+        {clips.map((c, i) => {
           const w = Math.max(8, ((c.durationSec || 8) / total) * 100)
           const sel = selectedId === c.id
+          const join = clipJoinNote(i, c.cut)
           return (
             <button
               key={c.id}
               type="button"
-              title={`${c.id} ${c.title} · ${c.durationSec}s`}
+              title={`${c.id} ${c.title} · ${c.durationSec}s${join ? ` · ${join}` : ''}`}
               onClick={() => onSelect(c.id)}
               style={{ flex: `${c.durationSec || 8} 1 0`, minWidth: `${w * 0.4}%` }}
               className={`rounded-[8px] text-[11px] transition ${
                 sel ? 'bg-cyan text-white' : 'bg-white/[0.08] text-ghost hover:text-ink'
-              }`}
+              } ${c.cut && i > 0 ? 'ml-1' : ''}`}
             >
               {c.id}
             </button>
@@ -87,10 +93,15 @@ function PlanVisual({ plan }: { plan: StudioMoviePlan }) {
     setSelectedId(plan.clips[0]?.id || null)
   }, [plan.projectId, plan.clips])
 
+  const selectedIndex = Math.max(
+    0,
+    plan.clips.findIndex((c) => c.id === selectedId),
+  )
   const selected = useMemo(
     () => plan.clips.find((c) => c.id === selectedId) || plan.clips[0] || null,
     [plan.clips, selectedId],
   )
+  const selectedJoin = selected ? clipJoinNote(selectedIndex, selected.cut) : ''
 
   return (
     <div className="space-y-4">
@@ -130,10 +141,11 @@ function PlanVisual({ plan }: { plan: StudioMoviePlan }) {
 
       <div className="grid lg:grid-cols-[240px_1fr] gap-3">
         <aside className="space-y-1 max-h-[420px] overflow-y-auto">
-          {plan.clips.map((c) => (
+          {plan.clips.map((c, i) => (
             <ClipCard
               key={c.id}
               clip={c}
+              index={i}
               selected={selected?.id === c.id}
               onSelect={() => setSelectedId(c.id)}
             />
@@ -144,7 +156,10 @@ function PlanVisual({ plan }: { plan: StudioMoviePlan }) {
             <div className="space-y-4 text-[15px]">
               <div>
                 <h2 className="text-[20px] font-semibold tracking-tight">{selected.title}</h2>
-                <div className="text-[13px] text-ghost mt-0.5">{selected.id}</div>
+                <div className="text-[13px] text-ghost mt-0.5">
+                  {selected.id}
+                  {selectedJoin ? ` · ${selectedJoin}` : ''}
+                </div>
               </div>
               {t2v ? null : <Field label="Still" value={selected.stillBrief} />}
               <Field label={t2v ? 'Scene' : 'Motion'} value={selected.motionBrief} />
@@ -274,7 +289,12 @@ export function StudioPlanner() {
     setErr(null)
     try {
       const r = await api.studioPlanApprove(record.projectId, { startProduction: true })
-      setApproveMsg(r.message || 'Plan locked. Open Make to paint the stills.')
+      setApproveMsg(
+        r.message ||
+          (videoMode === 't2v'
+            ? 'Plan locked. Open Make to make the film.'
+            : 'Plan locked. Open Make to paint the stills.'),
+      )
       // reload record
       const again = await api.studioPlanGet(record.projectId)
       setRecord(again.record)

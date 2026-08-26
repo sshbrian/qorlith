@@ -74,6 +74,7 @@ describe('brain status view', () => {
     assert.equal(view.clips[0].title, 'open')
     assert.equal(view.clips[0].motionBrief, 'a medium-wide shot frames a neon alley.')
     assert.equal(view.clips[0].stillBrief, 'neon alley')
+    assert.equal(view.clips[0].cut, false)
   })
 
   it('reads a live v1 report', () => {

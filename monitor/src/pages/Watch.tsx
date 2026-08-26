@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { FailNote } from '../components/FailNote'
 import { useStudioLive, useStudioProjects, useStudioSession } from '../components/StudioSession'
 import { api, type BrainClip } from '../lib/api'
+import { clipJoinNote } from '../lib/studio'
 import { runIsLive } from '../lib/studioSession'
 
 function formatRuntime(clips: BrainClip[]) {
@@ -19,15 +20,18 @@ function SceneCard({
   projectId,
   t2v,
   live,
+  index,
 }: {
   clip: BrainClip
   projectId: string
   t2v: boolean
   live?: boolean
+  index: number
 }) {
   const still = clip.still ? api.mediaUrl(clip.still) : null
   const video = clip.video ? api.mediaUrl(clip.video) : null
   const beat = (t2v ? clip.motionBrief : clip.stillBrief) || clip.motionBrief || ''
+  const join = clipJoinNote(index, clip.cut)
   return (
     <li className={['scene-card', live ? 'is-live' : ''].join(' ')}>
       <div className="scene-card-still">
@@ -45,6 +49,7 @@ function SceneCard({
             <div className="text-[15px] truncate">{clip.title || clip.id}</div>
             <div className="text-[12px] text-ghost shrink-0">
               {clip.durationSec != null ? `${clip.durationSec}s` : clip.id}
+              {join ? ` · ${join}` : ''}
             </div>
           </div>
           {beat ? <div className="text-[12px] text-ghost truncate mt-0.5">{beat}</div> : null}
@@ -210,12 +215,13 @@ export function Watch() {
         <div>
           <h2 className="text-[15px] text-ghost mb-3">Scenes</h2>
           <ul className="scene-grid">
-            {sceneClips.map((c) => (
+            {sceneClips.map((c, i) => (
               <SceneCard
                 key={c.id}
                 clip={c}
                 projectId={projectId}
                 t2v={t2v}
+                index={i}
                 live={running && brain?.currentClip === c.id}
               />
             ))}

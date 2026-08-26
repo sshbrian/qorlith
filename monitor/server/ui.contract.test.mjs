@@ -125,6 +125,7 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /t2v \? null/)
     assert.match(t, /label="Still"/)
     assert.match(t, /Scene/)
+    assert.match(t, /clipJoinNote/)
     assert.doesNotMatch(t, /\{videoMode === 't2v' \? null/)
   })
 
@@ -201,6 +202,7 @@ describe('UI contract — brain is shipped', () => {
     assert.match(t, /Tap for sound/)
     assert.match(t, /Make movie/)
     assert.match(t, /The film is not made yet/)
+    assert.match(t, /clipJoinNote/)
     assert.match(t, /sceneClips/)
     assert.match(t, /Making now/)
     assert.match(t, /clips\.filter\(\(c\) => c\.id\)/)

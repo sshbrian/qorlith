@@ -66,6 +66,12 @@ export function writeRailCollapsed(collapsed: boolean) {
   }
 }
 
+/** S01 is an open take. Later clips either continue or hard-cut. */
+export function clipJoinNote(index: number, cut?: boolean | null) {
+  if (index <= 0) return ''
+  return cut ? 'cut' : 'continues'
+}
+
 export function projectPath(id: string, stage?: StudioStage) {
   const base = `/studio/${encodeURIComponent(id)}`
   return stage ? `${base}/${stage}` : base
