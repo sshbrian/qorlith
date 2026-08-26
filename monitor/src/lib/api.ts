@@ -330,6 +330,7 @@ export type StudioProject = {
   hasProduce: boolean
   updatedAt: string | null
   lookTrack?: string | null
+  videoMode?: 'stills' | 't2v' | string
   stage: 'plan' | 'make' | 'board' | 'watch' | string
 }
 

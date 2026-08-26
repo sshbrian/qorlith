@@ -109,6 +109,9 @@ function LayoutBody({
   const [archiveBusy, setArchiveBusy] = useState(false)
   const [archiveErr, setArchiveErr] = useState<unknown>(null)
   const { projects, current, refreshProjects, openNew } = useStudioProjects()
+  const { brain } = useStudioSession()
+  const t2v = brain?.videoMode === 't2v' || current?.videoMode === 't2v'
+  const stages = t2v ? STAGES.filter((s) => s.id !== 'board') : STAGES
 
   useEffect(() => {
     if (projectId) writeLastProject(projectId)
@@ -117,6 +120,11 @@ function LayoutBody({
   useEffect(() => {
     setRailMobileOpen(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    if (!t2v || stage !== 'board' || !projectId) return
+    navigate(projectPath(projectId, 'make'), { replace: true })
+  }, [t2v, stage, projectId, navigate])
 
   useEffect(() => {
     if (!railMobileOpen) return
@@ -432,7 +440,7 @@ function LayoutBody({
             </div>
             {showStages ? (
               <div className="seg" role="tablist">
-                {STAGES.map((s) => (
+                {stages.map((s) => (
                   <button
                     key={s.id}
                     type="button"

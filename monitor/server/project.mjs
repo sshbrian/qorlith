@@ -166,6 +166,7 @@ function summarizeRecord(rec) {
     durationTargetSec: rec.plan?.durationTargetSec,
     rating: rec.plan?.rating,
     lookTrack: rec.plan?.lookTrack,
+    videoMode: rec.plan?.videoMode === 't2v' ? 't2v' : 'stills',
     approved: Boolean(rec.approved),
     produceRegistered: Boolean(rec.produceRegistered),
     archived: Boolean(rec.archived),
@@ -221,7 +222,8 @@ export function suggestedStage(project) {
       try {
         const brain = JSON.parse(fs.readFileSync(brainFile, 'utf8'))
         const st = String(brain.status || '')
-        if (st === 'face_qa') return 'board'
+        const t2v = project.videoMode === 't2v' || brain.videoMode === 't2v'
+        if (st === 'face_qa') return t2v ? 'make' : 'board'
         if (st === 'done') return 'watch'
         if (st && st !== 'idle') return 'make'
       } catch {
@@ -230,6 +232,7 @@ export function suggestedStage(project) {
     }
   }
   if (project.hasPlan && (project.clipCount || 0) > 0) return 'make'
+  if (project.videoMode === 't2v') return project.hasPlan ? 'make' : 'plan'
   if (project.hasBoard && (project.sceneCount || 0) > 0) return 'board'
   return 'plan'
 }
@@ -271,6 +274,7 @@ export function mergeStudioProjects({
         hasProduce: false,
         updatedAt: null,
         lookTrack: null,
+        videoMode: 'stills',
       })
     }
     return byId.get(key)
@@ -288,6 +292,7 @@ export function mergeStudioProjects({
     rec.produceRegistered = Boolean(p.produceRegistered)
     rec.hasProduce = rec.hasProduce || rec.produceRegistered
     rec.lookTrack = p.lookTrack || rec.lookTrack
+    rec.videoMode = p.videoMode === 't2v' ? 't2v' : rec.videoMode || 'stills'
     rec.updatedAt = p.updatedAt || rec.updatedAt
     rec.archived = Boolean(p.archived)
     rec.archivedAt = p.archivedAt || rec.archivedAt
@@ -325,6 +330,7 @@ export function mergeStudioProjects({
     const videos = (brain.clips || []).filter((c) => c.video).length
     if (videos > rec.okCount) rec.okCount = videos
     if (brain.title && rec.title === rec.id) rec.title = brain.title
+    if (brain.videoMode === 't2v') rec.videoMode = 't2v'
     if (brain.updatedAt && (!rec.updatedAt || String(brain.updatedAt) > String(rec.updatedAt))) {
       rec.updatedAt = brain.updatedAt
     }

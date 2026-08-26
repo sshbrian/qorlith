@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import { api, type EpisodePlanDetail, type EpisodeScene, type EpisodeStill } from '../lib/api'
 import { FailNote } from '../components/FailNote'
+import { useStudioSession } from '../components/StudioSession'
 
 export function EpisodePlan() {
   const { projectId } = useParams()
+  const { brain } = useStudioSession()
   const [data, setData] = useState<EpisodePlanDetail | null>(null)
   const [err, setErr] = useState<unknown>(null)
   const [loading, setLoading] = useState(true)
@@ -83,6 +85,10 @@ export function EpisodePlan() {
     } finally {
       setBusy(false)
     }
+  }
+
+  if (brain?.videoMode === 't2v' && projectId) {
+    return <Navigate to={`/studio/${encodeURIComponent(projectId)}/make`} replace />
   }
 
   if (loading && !data) return <p className="text-[15px] text-ghost">Loading stills…</p>

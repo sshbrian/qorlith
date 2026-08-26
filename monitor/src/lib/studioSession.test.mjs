@@ -80,6 +80,7 @@ describe('studio session fingerprints', () => {
     }
     assert.equal(projectsFingerprint([p]), projectsFingerprint([{ ...p }]))
     assert.notEqual(projectsFingerprint([p]), projectsFingerprint([{ ...p, active: false }]))
+    assert.notEqual(projectsFingerprint([p]), projectsFingerprint([{ ...p, videoMode: 't2v' }]))
   })
 
   it('idle report is a stable empty document', () => {

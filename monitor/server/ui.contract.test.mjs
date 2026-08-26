@@ -53,6 +53,8 @@ describe('UI contract — App routes & nav', () => {
     assert.match(t, /Make/)
     assert.match(t, /Board/)
     assert.match(t, /Watch/)
+    assert.match(t, /s\.id !== 'board'/)
+    assert.match(t, /stage !== 'board'/)
     assert.doesNotMatch(t, /<Director/)
     assert.match(t, /<Outlet/)
     assert.match(t, /StudioSessionProvider/)
@@ -105,6 +107,8 @@ describe('UI contract — stages, not tools', () => {
     assert.doesNotMatch(t, /function parseBlocks/)
     assert.doesNotMatch(t, /function MarkdownView/)
     assert.match(t, /data\.markdown/)
+    assert.match(t, /videoMode === 't2v'/)
+    assert.match(t, /<Navigate/)
   })
 
   it('Gallery honors ?archived=only', () => {

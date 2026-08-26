@@ -69,6 +69,32 @@ describe('studioProjects merge', () => {
     )
   })
 
+  it('never suggests the board for a t2v project', () => {
+    assert.equal(
+      suggestedStage({
+        hasPlan: true,
+        hasBoard: true,
+        clipCount: 2,
+        sceneCount: 2,
+        videoMode: 't2v',
+      }),
+      'make',
+    )
+    const list = mergeStudioProjects({
+      plans: [
+        {
+          projectId: 't2v_film',
+          title: 'T2V',
+          clipCount: 2,
+          videoMode: 't2v',
+        },
+      ],
+      boards: [{ id: 't2v_film', title: 'T2V', sceneCount: 2 }],
+    })
+    assert.equal(list[0].videoMode, 't2v')
+    assert.equal(list[0].stage, 'make')
+  })
+
   it('marks a running brain as live', () => {
     const list = mergeStudioProjects({
       plans: [{ projectId: 'harbor', title: 'Harbor', clipCount: 3, updatedAt: '2026-08-01T00:00:00.000Z' }],
