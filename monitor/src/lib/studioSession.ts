@@ -19,10 +19,10 @@ export function brainFingerprint(brain: BrainReport | null | undefined): string 
   const clips = (brain.clips || [])
     .map(
       (c) =>
-        `${c.id}:${c.still || ''}:${c.video || ''}:${c.pick || ''}:${c.durationSec ?? ''}:${c.title || ''}:${c.motionBrief || ''}`,
+        `${c.id}:${c.still || ''}:${c.video || ''}:${c.pick || ''}:${c.durationSec ?? ''}:${c.title || ''}:${c.motionBrief || ''}:${c.cut ? '1' : '0'}`,
     )
     .join(',')
-  const steps = (brain.steps || []).map((s) => `${s.id}:${s.state}`).join(',')
+  const steps = (brain.steps || []).map((s) => `${s.id}:${s.state}:${s.label || ''}`).join(',')
   return [
     brain.runId || '',
     brain.status,

@@ -5,10 +5,12 @@ import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { describe, it } from 'node:test'
 import {
+  attachPlanClips,
   floorOverlayFromBrain,
   idleBrain,
   killBrainPid,
   markBrainStopped,
+  planClipsForBrain,
   resolveBrainStopAfter,
   statusLabel,
   stopBrain,
@@ -28,6 +30,32 @@ describe('brain status view', () => {
     assert.equal(resolveBrainStopAfter('film', 't2v'), 'film')
     assert.equal(resolveBrainStopAfter('plan', 't2v'), 'plan')
     assert.equal(resolveBrainStopAfter('stills', 'stills'), 'stills')
+  })
+
+  it('idle brain picks up planned clips and continue vs cut', () => {
+    const rec = {
+      plan: {
+        title: 'Roof',
+        videoMode: 't2v',
+        clips: [
+          { id: 'S01', title: 'Open', durationSec: 12, motionBrief: 'rain alley' },
+          { id: 'S02', title: 'Press', durationSec: 12, cut: true, motionBrief: 'new room' },
+        ],
+      },
+    }
+    const planned = planClipsForBrain(rec)
+    assert.equal(planned.length, 2)
+    assert.equal(planned[1].cut, true)
+    const idle = attachPlanClips(idleBrain('roof', { videoMode: 't2v' }), rec)
+    assert.equal(idle.clips[0].title, 'Open')
+    assert.equal(idle.clips[0].motionBrief, 'rain alley')
+    assert.equal(idle.clips[1].cut, true)
+    const live = attachPlanClips(
+      { clips: [{ id: 'S01', title: 'Open', video: '/S01.mp4', cut: false }] },
+      rec,
+    )
+    assert.equal(live.clips[0].video, '/S01.mp4')
+    assert.equal(live.clips[0].motionBrief, 'rain alley')
   })
 
   it('idle t2v graph skips pictures', () => {

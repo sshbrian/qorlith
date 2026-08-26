@@ -247,6 +247,48 @@ export function spawnBrain(id, { resume = false, stopAfter = 'stills', reviewOk 
   return { pid: child.pid, args }
 }
 
+export function planClipsForBrain(rec) {
+  const clips = rec?.plan?.clips
+  if (!Array.isArray(clips)) return []
+  return clips
+    .filter((c) => c && c.id)
+    .map((c) => ({
+      id: c.id,
+      title: c.title || c.id,
+      durationSec: c.durationSec ?? null,
+      cut: Boolean(c.cut),
+      stillBrief: c.stillBrief || null,
+      motionBrief: c.motionBrief || null,
+      still: null,
+      video: null,
+      pick: null,
+    }))
+}
+
+export function attachPlanClips(view, rec) {
+  const planned = planClipsForBrain(rec)
+  if (!planned.length || !view) return view
+  if (!Array.isArray(view.clips) || !view.clips.length) {
+    return { ...view, clips: planned }
+  }
+  const byId = new Map(planned.map((c) => [c.id, c]))
+  return {
+    ...view,
+    clips: view.clips.map((c) => {
+      const p = byId.get(c.id)
+      if (!p) return c
+      return {
+        ...c,
+        title: c.title || p.title,
+        durationSec: c.durationSec ?? p.durationSec ?? null,
+        cut: Boolean(c.cut) || Boolean(p.cut),
+        stillBrief: c.stillBrief || p.stillBrief || null,
+        motionBrief: c.motionBrief || p.motionBrief || null,
+      }
+    }),
+  }
+}
+
 export function idleBrain(projectId, extra = {}) {
   const videoMode = normalizeVideoMode(extra.videoMode)
   return {
@@ -353,9 +395,14 @@ export function loadBrain(id) {
   else {
     view =
       lastGoodBrain.get(id) ||
-      idleBrain(id, { videoMode: planMode, title: rec?.plan?.title || rec?.title })
+      idleBrain(id, {
+        videoMode: planMode,
+        title: rec?.plan?.title || rec?.title,
+        clips: planClipsForBrain(rec),
+      })
     if (planMode === 't2v') view.videoMode = 't2v'
   }
+  view = attachPlanClips(view, rec)
   if (view.videoMode === 't2v' && Array.isArray(view.steps)) {
     view.steps = view.steps.filter((s) => !T2V_SKIP_STEPS.has(s.id))
   }

@@ -43,6 +43,11 @@ describe('studio session fingerprints', () => {
       brainFingerprint({ ...a, clips: [{ ...a.clips[0], motionBrief: 'rain alley' }] }),
     )
     assert.notEqual(brainFingerprint(a), brainFingerprint({ ...a, videoMode: 't2v' }))
+    assert.notEqual(brainFingerprint(a), brainFingerprint({ ...a, clips: [{ ...a.clips[0], cut: true }] }))
+    assert.notEqual(
+      brainFingerprint(a),
+      brainFingerprint({ ...a, steps: [{ id: 'stills', state: 'active', label: 'Clips' }] }),
+    )
     assert.equal(brainFingerprint(null), '')
   })
 
