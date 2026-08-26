@@ -92,6 +92,14 @@ describe('UI contract — stages, not tools', () => {
     }
   })
 
+  it('Floor shows overlay friends, including T2V without Board', () => {
+    const t = page('Floor.tsx')
+    assert.match(t, /s\?\.friends/)
+    assert.match(t, /f\.name/)
+    assert.match(t, /f\.blurb/)
+    assert.match(read(path.join(ROOT, 'server', 'brainStatus.mjs')), /videoMode === 't2v' \? \[\]/)
+  })
+
   it('Make and Watch do not own poll timers', () => {
     assert.doesNotMatch(page('Brain.tsx'), /setInterval/)
     assert.doesNotMatch(page('Watch.tsx'), /setInterval/)

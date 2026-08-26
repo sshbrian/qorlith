@@ -602,7 +602,7 @@ export function floorOverlayFromProduce(detail, baseFloor) {
   if (!detail || !detail.total) return baseFloor
   const phase = detail.active
     ? detail.currentState === 'video'
-      ? 'i2va'
+      ? 'clips'
       : detail.currentState === 'stills'
         ? 'stills'
         : 'rendering'
@@ -626,8 +626,8 @@ export function floorOverlayFromProduce(detail, baseFloor) {
       ? 'complete'
       : detail.active
         ? detail.currentState === 'video'
-          ? 'rendering video'
-          : 'rendering stills'
+          ? 'making clips'
+          : 'painting stills'
         : baseFloor.mood
 
   const friends = [

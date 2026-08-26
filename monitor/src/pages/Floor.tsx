@@ -95,6 +95,16 @@ export function Floor() {
           {prog?.currentShot ? <span>Now {prog.currentShot}</span> : null}
         </div>
         {prog?.detail ? <div className="mt-1 text-[13px] text-ghost">{prog.detail}</div> : null}
+        {s?.friends?.length ? (
+          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-ghost">
+            {s.friends.map((f) => (
+              <span key={f.name}>
+                {f.name}
+                {f.blurb ? ` · ${f.blurb}` : ''}
+              </span>
+            ))}
+          </div>
+        ) : null}
         <div className="mt-4">
           <Link
             to={
