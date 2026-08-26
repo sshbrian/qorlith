@@ -469,7 +469,7 @@ def test_t2v_continue_frame_lives_next_to_the_clip(monkeypatch):
     assert continue_frame_path(s.cfg, "harbor", "S02", t2v=True) == Path(sources[0])
     board = s.cfg.project_dir / "harbor" / "board"
     assert not board.exists() or not any(board.rglob("*"))
-    assert out["still_paths"]["S02"].endswith("video/S02_from_prev.png")
+    assert not (out.get("still_paths") or {}).get("S02")
 
 
 def test_t2v_skips_stills_and_queues_video():

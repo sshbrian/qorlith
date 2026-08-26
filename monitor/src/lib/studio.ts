@@ -72,6 +72,21 @@ export function clipJoinNote(index: number, cut?: boolean | null) {
   return cut ? 'cut' : 'continues'
 }
 
+/** Straight to video shows the clip, not a continue last-frame stuffed into still. */
+export function clipPoster(
+  clip: { still?: string | null; video?: string | null },
+  videoMode?: string | null,
+): { src: string; kind: 'image' | 'video' } | null {
+  const still = clip.still || null
+  const video = clip.video || null
+  if (videoMode === 't2v') {
+    if (video) return { src: video, kind: 'video' }
+    return still ? { src: still, kind: 'image' } : null
+  }
+  if (still) return { src: still, kind: 'image' }
+  return video ? { src: video, kind: 'video' } : null
+}
+
 export function projectPath(id: string, stage?: StudioStage) {
   const base = `/studio/${encodeURIComponent(id)}`
   return stage ? `${base}/${stage}` : base

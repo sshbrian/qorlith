@@ -613,6 +613,11 @@ def collect_disk_media(cfg: BrainConfig, state: BrainState) -> BrainState:
     look = str(state.get("look_track") or "live")
     project_id = str(state.get("project_id") or "")
     stills = dict(state.get("still_paths") or {})
+    t2v = normalize_video_mode(state.get("video_mode")) == "t2v"
+    if t2v:
+        stills = {
+            k: v for k, v in stills.items() if v and not str(v).replace("\\", "/").endswith("_from_prev.png")
+        }
     videos = {k: v for k, v in (state.get("video_paths") or {}).items() if media_ok(v, kind="video")}
     looks = [look]
     alt = "live" if look == "anime" else "anime"
@@ -629,7 +634,7 @@ def collect_disk_media(cfg: BrainConfig, state: BrainState) -> BrainState:
                 if found:
                     stills[key] = found
                     break
-        if stills.get(key):
+        if stills.get(key) and not t2v:
             copy_still_to_board(cfg, project_id, key, stills[key])
         local = project_clip_video(cfg, project_id, key)
         if media_ok(local, kind="video"):
@@ -1553,10 +1558,9 @@ def node_video(studio: Studio, state: BrainState) -> BrainState:
                 prev_video=prev_video,
                 dest=frame_dest,
             )
-            if source_kind == "continue" and source and not stills.get(cid):
+            if source_kind == "continue" and source and not stills.get(cid) and not t2v:
                 stills[cid] = source
-                if not t2v:
-                    copy_still_to_board(studio.cfg, project_id, cid, source)
+                copy_still_to_board(studio.cfg, project_id, cid, source)
                 live["still_paths"] = stills
         if hasattr(studio, "wait_comfy_idle"):
             studio.wait_comfy_idle(should_stop=stopping)

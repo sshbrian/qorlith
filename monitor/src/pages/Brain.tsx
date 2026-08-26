@@ -8,6 +8,7 @@ import { WorkflowModal } from '../components/WorkflowModal'
 import { useStudioLive, useStudioSession } from '../components/StudioSession'
 import { api, type BrainClip, type BrainStep } from '../lib/api'
 import { idleBrainReport, runIsLive } from '../lib/studioSession'
+import { clipPoster } from '../lib/studio'
 
 function StepNode({ step }: { step: BrainStep }) {
   const on = step.state === 'active'
@@ -45,24 +46,29 @@ function BrainProgress({ armed }: { armed: boolean }) {
 const Filmstrip = memo(function Filmstrip({
   clips,
   currentClip,
+  t2v,
 }: {
   clips: BrainClip[]
   currentClip: string | null | undefined
+  t2v: boolean
 }) {
   return (
     <ul className="filmstrip">
-      {clips.map((c) => (
-        <li key={c.id} className={currentClip === c.id ? 'is-live' : ''}>
-          {c.still ? (
-            <img src={api.mediaUrl(c.still)} alt="" decoding="async" />
-          ) : c.video ? (
-            <video src={api.mediaUrl(c.video)} muted playsInline preload="metadata" />
-          ) : (
-            <span className="filmstrip-empty">{currentClip === c.id ? 'Now' : ''}</span>
-          )}
-          <span className="filmstrip-id">{c.title || c.id}</span>
-        </li>
-      ))}
+      {clips.map((c) => {
+        const poster = clipPoster(c, t2v ? 't2v' : 'stills')
+        return (
+          <li key={c.id} className={currentClip === c.id ? 'is-live' : ''}>
+            {poster?.kind === 'image' ? (
+              <img src={api.mediaUrl(poster.src)} alt="" decoding="async" />
+            ) : poster?.kind === 'video' ? (
+              <video src={api.mediaUrl(poster.src)} muted playsInline preload="metadata" />
+            ) : (
+              <span className="filmstrip-empty">{currentClip === c.id ? 'Now' : ''}</span>
+            )}
+            <span className="filmstrip-id">{c.title || c.id}</span>
+          </li>
+        )
+      })}
     </ul>
   )
 })
@@ -240,7 +246,7 @@ export function Brain() {
         </div>
       ) : null}
 
-      {clips.length ? <Filmstrip clips={clips} currentClip={report.currentClip} /> : null}
+      {clips.length ? <Filmstrip clips={clips} currentClip={report.currentClip} t2v={t2v} /> : null}
 
       {hasMaster ? (
         <div className="theater-player">

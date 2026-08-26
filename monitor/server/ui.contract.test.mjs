@@ -148,7 +148,7 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /t2v \? null/)
     assert.match(t, /more && !t2v/)
     assert.match(t, /Pictures only/)
-    assert.match(t, /c\.video/)
+    assert.match(t, /clipPoster/)
     assert.match(t, /currentClip === c\.id \? 'Now'/)
   })
 
@@ -208,6 +208,7 @@ describe('UI contract — brain is shipped', () => {
     assert.match(t, /Make movie/)
     assert.match(t, /The film is not made yet/)
     assert.match(t, /clipJoinNote/)
+    assert.match(t, /clipPoster/)
     assert.match(t, /sceneClips/)
     assert.match(t, /Making now/)
     assert.match(t, /clips\.filter\(\(c\) => c\.id\)/)

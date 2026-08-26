@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { FailNote } from '../components/FailNote'
 import { useStudioLive, useStudioProjects, useStudioSession } from '../components/StudioSession'
 import { api, type BrainClip } from '../lib/api'
-import { clipJoinNote } from '../lib/studio'
+import { clipJoinNote, clipPoster } from '../lib/studio'
 import { runIsLive } from '../lib/studioSession'
 
 function formatRuntime(clips: BrainClip[]) {
@@ -28,17 +28,16 @@ function SceneCard({
   live?: boolean
   index: number
 }) {
-  const still = clip.still ? api.mediaUrl(clip.still) : null
-  const video = clip.video ? api.mediaUrl(clip.video) : null
+  const poster = clipPoster(clip, t2v ? 't2v' : 'stills')
   const beat = (t2v ? clip.motionBrief : clip.stillBrief) || clip.motionBrief || ''
   const join = clipJoinNote(index, clip.cut)
   return (
     <li className={['scene-card', live ? 'is-live' : ''].join(' ')}>
       <div className="scene-card-still">
-        {still ? (
-          <img src={still} alt="" />
-        ) : video ? (
-          <video src={video} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+        {poster?.kind === 'image' ? (
+          <img src={api.mediaUrl(poster.src)} alt="" />
+        ) : poster?.kind === 'video' ? (
+          <video src={api.mediaUrl(poster.src)} muted playsInline preload="metadata" className="w-full h-full object-cover" />
         ) : (
           <div className="scene-card-empty">{live ? 'Making now' : 'Not made yet'}</div>
         )}
@@ -151,8 +150,7 @@ export function Watch() {
   const { comfy } = useStudioLive()
   const clips = brain?.clips || []
   const t2v = brain?.videoMode === 't2v' || current?.videoMode === 't2v'
-  const posterStill = clips.find((c) => c.still)?.still
-  const posterVideo = clips.find((c) => c.video)?.video
+  const makingPoster = clips.map((c) => clipPoster(c, t2v ? 't2v' : 'stills')).find(Boolean) || null
   const sceneClips = clips.filter((c) => c.id)
 
   if (!projectId) {
@@ -175,10 +173,10 @@ export function Watch() {
       ) : running ? (
         <div className="theater">
           <div className="theater-player theater-making">
-            {posterStill ? (
-              <img src={api.mediaUrl(posterStill)} alt="" className="theater-poster" />
-            ) : posterVideo ? (
-              <video src={api.mediaUrl(posterVideo)} muted playsInline loop className="theater-poster" />
+            {makingPoster?.kind === 'image' ? (
+              <img src={api.mediaUrl(makingPoster.src)} alt="" className="theater-poster" />
+            ) : makingPoster?.kind === 'video' ? (
+              <video src={api.mediaUrl(makingPoster.src)} muted playsInline loop className="theater-poster" />
             ) : null}
             <div className="theater-making-scrim" />
             <div className="theater-making-copy">
