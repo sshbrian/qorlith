@@ -9,7 +9,7 @@ export function CoverThumb({
 }) {
   if (!url) return null
   if (kind === 'video') {
-    return <video src={url} muted playsInline preload="metadata" className={className} />
+    return <video src={url} muted playsInline loop preload="metadata" className={className} />
   }
   return <img src={url} alt="" className={className} />
 }
@@ -32,8 +32,29 @@ export function PosterCard({
   onClick: () => void
 }) {
   const letter = (title || '?').slice(0, 1).toUpperCase()
+  const wake = (el: HTMLButtonElement, on: boolean) => {
+    if (!overlay) return
+    const v = el.querySelector('video')
+    if (!v) return
+    if (on && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      void v.play()
+      return
+    }
+    v.pause()
+    try {
+      v.currentTime = 0
+    } catch {
+      /* ignore */
+    }
+  }
   return (
-    <button type="button" onClick={onClick} className={['poster-card', overlay ? 'is-overlay' : ''].join(' ')}>
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={(e) => wake(e.currentTarget, true)}
+      onMouseLeave={(e) => wake(e.currentTarget, false)}
+      className={['poster-card', overlay ? 'is-overlay' : ''].join(' ')}
+    >
       <div className="poster-still">
         {coverUrl ? (
           <CoverThumb url={coverUrl} kind={coverKind} />

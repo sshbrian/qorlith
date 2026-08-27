@@ -194,6 +194,8 @@ describe('UI contract — stages, not tools', () => {
     const card = read(path.join(src, 'components', 'PosterCard.tsx'))
     assert.match(card, /export function CoverThumb/)
     assert.match(card, /kind === 'video'/)
+    assert.match(card, /querySelector\('video'\)/)
+    assert.match(card, /prefers-reduced-motion/)
     assert.match(page('StudioHome.tsx'), /coverKind/)
     assert.match(page('Archive.tsx'), /CoverThumb/)
     assert.match(read(path.join(src, 'components', 'Layout.tsx')), /CoverThumb/)
