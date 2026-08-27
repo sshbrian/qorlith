@@ -17,7 +17,7 @@ import { fileURLToPath } from 'url'
 import { slugifyProjectId } from './ids.mjs'
 import { ensureEpisodePlan, listEpisodePlans } from './episodePlan.mjs'
 import { info as logInfo } from './log.mjs'
-import { normalizeVideoMode } from './studioConfig.mjs'
+import { getComfyOutput, normalizeVideoMode } from './studioConfig.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -229,10 +229,71 @@ export function coverMissingHint(id) {
     : 'Paint a still, or finish the film so master.mp4 is on disk.'
 }
 
-/** Stills: board still first (S01 preferred). T2V: the film — last-frame PNGs are not a poster. */
+function coverSrcAllowed(abs, root) {
+  const a = path.resolve(abs)
+  const r = path.resolve(root)
+  if (a === r || a.startsWith(r + path.sep)) return true
+  try {
+    const out = getComfyOutput()
+    if (out) {
+      const o = path.resolve(out)
+      if (a === o || a.startsWith(o + path.sep)) return true
+    }
+  } catch {
+    /* yaml may be missing in tests */
+  }
+  return false
+}
+
+/** Hang a still or clip as the lobby print. Copies it into the project folder. */
+export function setProjectCover(id, src) {
+  const slug = slugifyProjectId(id)
+  const root = projectDir(slug)
+  const from = path.resolve(String(src || ''))
+  let st
+  try {
+    st = fs.statSync(from)
+  } catch {
+    return null
+  }
+  if (!st.isFile() || st.size < 2000) return null
+  const ext = path.extname(from).toLowerCase()
+  if (!COVER_IMAGE_EXT.has(ext) && !COVER_VIDEO_EXT.has(ext)) return null
+  if (/_from_prev\./i.test(path.basename(from)) && isT2vRecord(slug)) return null
+  if (!coverSrcAllowed(from, root)) return null
+  fs.mkdirSync(root, { recursive: true })
+  const dest = path.join(root, `cover${ext}`)
+  for (const other of [...COVER_IMAGE_EXT, ...COVER_VIDEO_EXT]) {
+    const p = path.join(root, `cover${other}`)
+    if (p !== dest && fs.existsSync(p)) {
+      try {
+        fs.unlinkSync(p)
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  fs.copyFileSync(from, dest)
+  const rec = loadProjectRecord(slug)
+  if (rec) {
+    rec.cover = `cover${ext}`
+    rec.updatedAt = new Date().toISOString()
+    saveProjectRecord(rec)
+  }
+  return dest
+}
+
+/** Stills: hung print, then board still (S01 preferred). T2V: the film — last-frame PNGs are not a poster. */
 export function findProjectCover(id) {
   const slug = slugifyProjectId(id)
   const root = projectDir(slug)
+  const rec = loadProjectRecord(slug)
+  if (rec?.cover) {
+    const hung = path.resolve(root, String(rec.cover))
+    if ((hung === path.resolve(root) || hung.startsWith(path.resolve(root) + path.sep)) && fs.existsSync(hung)) {
+      return hung
+    }
+  }
   const t2v = isT2vRecord(slug)
   if (!t2v) {
     const stills = []
@@ -397,9 +458,17 @@ export function listStudioProjects(produceSummaries = [], brains = []) {
     brains,
   }).map((p) => {
     const cover = findProjectCover(p.id)
+    let stamp = 0
+    try {
+      if (cover) stamp = Math.floor(fs.statSync(cover).mtimeMs)
+    } catch {
+      /* ignore */
+    }
     return {
       ...p,
-      coverUrl: cover ? `/api/studio/projects/${encodeURIComponent(p.id)}/cover` : null,
+      coverUrl: cover
+        ? `/api/studio/projects/${encodeURIComponent(p.id)}/cover${stamp ? `?v=${stamp}` : ''}`
+        : null,
       coverKind: cover ? coverKindFromPath(cover) : null,
     }
   })

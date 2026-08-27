@@ -293,10 +293,37 @@ select {
   margin-left: -5px;
 }
 
-.table-hero.is-pinned img {
+.table-hero.is-pinned img,
+.table-hero.is-hung img {
   box-shadow:
     0 0 0 1px rgba(255, 214, 170, 0.42),
     0 22px 60px rgba(0, 0, 0, 0.55);
+}
+
+.table-hero.is-hung::after,
+.workprint-frame.is-hung::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  z-index: 2;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff7ea, #e2b16a 58%, #7a4e24);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.5);
+}
+
+.workprint-frame.is-hung {
+  position: relative;
+}
+
+.workprint-frame.is-hung::after {
+  top: 6px;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
 }
 
 .table-clips {
@@ -2128,6 +2155,50 @@ video.theater-poster {
   box-shadow: 0 0 0 0.5px rgba(235, 235, 245, 0.12);
 }
 
+.set .filmstrip > li.is-ready .filmstrip-id {
+  color: rgba(255, 224, 190, 0.72);
+}
+
+.set .filmstrip > li.is-ready::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  right: 12px;
+  bottom: 16px;
+  width: 9px;
+  height: 1.5px;
+  background: rgba(255, 230, 200, 0.55);
+  transform: rotate(-22deg);
+  box-shadow: 0 0 0 0.4px rgba(255, 230, 200, 0.2);
+}
+
+.set .filmstrip > li.is-landed {
+  animation: chalk-land 1.35s ease-out;
+}
+
+.set .filmstrip > li.is-landed::after {
+  background: rgba(255, 230, 200, 0.95);
+  box-shadow: 0 0 10px rgba(255, 214, 170, 0.45);
+}
+
+@keyframes chalk-land {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(255, 214, 170, 0),
+      0 0 0 0 rgba(255, 186, 120, 0);
+  }
+  28% {
+    box-shadow:
+      0 0 0 1px rgba(255, 230, 200, 0.7),
+      0 0 24px rgba(255, 186, 120, 0.28);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(255, 214, 170, 0),
+      0 0 0 0 rgba(255, 186, 120, 0);
+  }
+}
+
 .set .filmstrip img,
 .set .filmstrip video,
 .set .filmstrip-empty {
@@ -2354,6 +2425,7 @@ video.theater-poster {
   .set .filmstrip > li.is-live video,
   .set .filmstrip > li.is-live .filmstrip-empty,
   .set .filmstrip > li.is-live::after,
+  .set .filmstrip > li.is-landed,
   .theater-credits {
     animation: none;
   }

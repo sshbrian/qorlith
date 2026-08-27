@@ -7,7 +7,7 @@ import { housePin } from '../lib/houseSound'
 
 export function EpisodePlan() {
   const { projectId } = useParams()
-  const { brain } = useStudioSession()
+  const { brain, refreshProjects } = useStudioSession()
   const [data, setData] = useState<EpisodePlanDetail | null>(null)
   const [err, setErr] = useState<unknown>(null)
   const [loading, setLoading] = useState(true)
@@ -61,6 +61,29 @@ export function EpisodePlan() {
       null
     )
   }, [scene, viewByScene])
+
+  const [hungRel, setHungRel] = useState<string | null>(null)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target
+      if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return
+      if (e.key !== 'p' && e.key !== 'P') return
+      const src = viewing?.abs
+      if (!projectId || !src) return
+      e.preventDefault()
+      void api
+        .studioCoverHang(projectId, src)
+        .then(() => {
+          housePin()
+          setHungRel(viewing.rel)
+          return refreshProjects()
+        })
+        .catch(() => {})
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [projectId, viewing, refreshProjects])
 
   async function pickStill(rel: string) {
     if (!scene || !data?.id) return
@@ -177,7 +200,7 @@ export function EpisodePlan() {
         {viewing ? (
           <button
             type="button"
-            className={['table-hero', pinned ? 'is-pinned' : ''].join(' ')}
+            className={['table-hero', pinned ? 'is-pinned' : '', hungRel === viewing.rel ? 'is-hung' : ''].join(' ')}
             onDoubleClick={() => void pickStill(viewing.rel)}
             title="Double-click to pin this frame"
           >

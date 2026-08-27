@@ -48,10 +48,12 @@ const Filmstrip = memo(function Filmstrip({
   clips,
   currentClip,
   t2v,
+  landed = [],
 }: {
   clips: BrainClip[]
   currentClip: string | null | undefined
   t2v: boolean
+  landed?: string[]
 }) {
   const rootRef = useRef<HTMLUListElement>(null)
   useEffect(() => {
@@ -73,11 +75,17 @@ const Filmstrip = memo(function Filmstrip({
       {clips.map((c, i) => {
         const poster = clipPoster(c, t2v ? 't2v' : 'stills')
         const join = clipJoinNote(i, c.cut)
+        const live = currentClip === c.id
         return (
           <li
             key={c.id}
-            className={[currentClip === c.id ? 'is-live' : '', join === 'cut' ? 'is-cut' : ''].join(' ')}
-            aria-current={currentClip === c.id ? 'true' : undefined}
+            className={[
+              live ? 'is-live' : '',
+              join === 'cut' ? 'is-cut' : '',
+              poster && !live ? 'is-ready' : '',
+              landed.includes(c.id) ? 'is-landed' : '',
+            ].join(' ')}
+            aria-current={live ? 'true' : undefined}
           >
             {poster?.kind === 'image' ? (
               <img src={api.mediaUrl(poster.src)} alt="" decoding="async" />
@@ -105,8 +113,11 @@ export function Brain() {
   )
   const [sheet, setSheet] = useState<null | 'story' | 'stills' | 'video'>(null)
   const [more, setMore] = useState(false)
+  const [landed, setLanded] = useState<string[]>([])
   const sentWatch = useRef(false)
   const sawLive = useRef(false)
+  const readySeen = useRef(new Set<string>())
+  const readyPrimed = useRef(false)
   const raw = brain && (brain.started || (brain.clips && brain.clips.length)) ? brain : fallback
   const report = t2v && raw.videoMode !== 't2v' ? { ...raw, videoMode: 't2v' } : raw
   const running = runIsLive(report)
@@ -115,6 +126,9 @@ export function Brain() {
   useEffect(() => {
     sentWatch.current = false
     sawLive.current = false
+    readySeen.current = new Set()
+    readyPrimed.current = false
+    setLanded([])
   }, [projectId])
   useEffect(() => {
     if (running) sawLive.current = true
@@ -126,6 +140,26 @@ export function Brain() {
     sawLive.current = false
     navigate(`/studio/${encodeURIComponent(projectId)}/watch`, { viewTransition: true })
   }, [projectId, running, report.status, report.master, navigate])
+
+  useEffect(() => {
+    const mode = t2v ? 't2v' : 'stills'
+    const ready = new Set(
+      (report.clips || []).filter((c) => clipPoster(c, mode)).map((c) => c.id),
+    )
+    if (!readyPrimed.current) {
+      readyPrimed.current = true
+      readySeen.current = ready
+      return
+    }
+    const fresh = [...ready].filter((id) => !readySeen.current.has(id))
+    readySeen.current = ready
+    if (!fresh.length) return
+    setLanded((xs) => [...new Set([...xs, ...fresh])])
+    const t = window.setTimeout(() => {
+      setLanded((xs) => xs.filter((id) => !fresh.includes(id)))
+    }, 1600)
+    return () => window.clearTimeout(t)
+  }, [t2v, report.clips])
 
   if (!projectId) {
     return <p className="text-[15px] text-ghost">Open a project to make the film.</p>
@@ -258,7 +292,7 @@ export function Brain() {
 
       {clips.length ? (
         <div className="set-strip">
-          <Filmstrip clips={clips} currentClip={report.currentClip} t2v={t2v} />
+          <Filmstrip clips={clips} currentClip={report.currentClip} t2v={t2v} landed={landed} />
           {idle ? (
             <button
               type="button"

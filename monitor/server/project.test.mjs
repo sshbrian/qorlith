@@ -24,6 +24,7 @@ const {
   createStudioProject,
   findProjectCover,
   loadProjectRecord,
+  setProjectCover,
   migrateProject,
   planRecordPath,
   projectDir,
@@ -152,6 +153,21 @@ describe('project folder', () => {
     fs.writeFileSync(still, Buffer.alloc(3000))
     assert.equal(findProjectCover(project.id), still)
     assert.equal(coverKindFromPath(still), 'image')
+  })
+
+  it('hangs a print as the lobby cover', () => {
+    const { project } = createStudioProject({ title: 'Hung Print' })
+    const dir = projectDir(project.id)
+    const board = path.join(dir, 'board', 'S02')
+    fs.mkdirSync(board, { recursive: true })
+    const still = path.join(board, 'S02.png')
+    fs.writeFileSync(still, Buffer.alloc(3000))
+    const hung = setProjectCover(project.id, still)
+    assert.ok(hung)
+    assert.equal(path.basename(hung), 'cover.png')
+    assert.equal(findProjectCover(project.id), hung)
+    const rec = loadProjectRecord(project.id)
+    assert.equal(rec.cover, 'cover.png')
   })
 
   it('T2V cover prefers the film over a continue last-frame', () => {

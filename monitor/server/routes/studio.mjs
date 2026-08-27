@@ -19,12 +19,14 @@ import { approvePlan, archivePlanProject, generateMoviePlan, plannerSpec, unarch
 import { plannerNeedsLms, resolvePlanner } from '../plannerProvider.mjs'
 import { listProjectWorkflows, writeStoryboard } from '../storyboard.mjs'
 import {
+  coverKindFromPath,
   coverMissingHint,
   createStudioProject,
   findProjectCover,
   listArchivedStudioProjects,
   listStudioProjects,
   projectDir,
+  setProjectCover,
   syncBoardFromPlan,
 } from '../project.mjs'
 import { slugifyProjectId } from '../ids.mjs'
@@ -215,6 +217,26 @@ export function mountStudio(app) {
       res.setHeader('Content-Type', types[ext] || 'application/octet-stream')
       res.setHeader('Cache-Control', 'private, max-age=120')
       fs.createReadStream(resolved).pipe(res)
+    }),
+  )
+
+  app.put(
+    '/api/studio/projects/:id/cover',
+    wrap(async (req, res) => {
+      const id = String(req.params.id || '').trim()
+      const src = String(req.body?.src || '').trim()
+      if (!src) {
+        fail(400, 'bad_request', 'Need a still or clip to hang', {
+          hint: 'Hang a print from Watch or the board.',
+        })
+      }
+      const abs = setProjectCover(id, src)
+      if (!abs) {
+        fail(400, 'no_cover', 'Could not hang that print', {
+          hint: 'The file has to be a still or clip in this house.',
+        })
+      }
+      res.json({ ok: true, coverKind: coverKindFromPath(abs) })
     }),
   )
 

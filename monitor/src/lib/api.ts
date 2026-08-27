@@ -629,6 +629,8 @@ export const api = {
       project: StudioProject
       record?: StudioPlanRecord
     }>('/api/studio/projects', body || {}),
+  studioCoverHang: (id: string, src: string) =>
+    put<{ ok: boolean; coverKind?: string }>(`/api/studio/projects/${encodeURIComponent(id)}/cover`, { src }),
   studioPlanGet: (id: string) =>
     get<{ ok: boolean; record: StudioPlanRecord }>(
       `/api/studio/plans/${encodeURIComponent(id)}`,

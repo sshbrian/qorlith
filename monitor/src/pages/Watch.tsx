@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { FailNote } from '../components/FailNote'
 import { useStudioLive, useStudioProjects, useStudioSession } from '../components/StudioSession'
 import { api, type BrainClip } from '../lib/api'
-import { houseLights } from '../lib/houseSound'
+import { houseLights, housePin, houseWhoosh } from '../lib/houseSound'
 import {
   clipBeat,
   clipFracAtTime,
   clipIndexAtTime,
   clipJoinNote,
   clipPoster,
+  clipStartTime,
   clipsDuration,
   timeAtReel,
   watchFirstFrame,
@@ -64,6 +65,7 @@ function WorkprintFrame({
   index,
   frac,
   cue,
+  hung,
 }: {
   clip: BrainClip
   t2v: boolean
@@ -72,6 +74,7 @@ function WorkprintFrame({
   index: number
   frac?: number
   cue?: boolean
+  hung?: boolean
 }) {
   const poster = clipPoster(clip, t2v ? 't2v' : 'stills')
   const beat = clipBeat(clip)
@@ -86,6 +89,7 @@ function WorkprintFrame({
         on ? 'is-on' : '',
         join === 'cut' ? 'is-cut' : '',
         cue ? 'is-cue' : '',
+        hung ? 'is-hung' : '',
       ].join(' ')}
       title={title}
     >
@@ -130,6 +134,8 @@ function TheaterPlayer({
   const [print, setPrint] = useState(false)
   const [onIndex, setOnIndex] = useState(0)
   const [playhead, setPlayhead] = useState(0)
+  const [hungId, setHungId] = useState<string | null>(null)
+  const { refreshProjects } = useStudioProjects()
   const posterHref = firstFrame?.kind === 'image' ? frameHref(firstFrame) : undefined
 
   useEffect(() => {
@@ -140,6 +146,7 @@ function TheaterPlayer({
     setPrint(false)
     setOnIndex(0)
     setPlayhead(0)
+    setHungId(null)
     onOver?.(false)
     const el = videoRef.current
     if (!el) return
@@ -162,10 +169,67 @@ function TheaterPlayer({
     void el.play()
   }, [onOver])
 
+  const holdAt = useCallback(
+    (t: number) => {
+      const el = videoRef.current
+      if (!el) return
+      const total = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : clipsDuration(clips)
+      const x = Math.max(0, Math.min(t, Math.max(0, total - 0.05)))
+      el.currentTime = x
+      el.pause()
+      setPlayhead(x)
+      setOnIndex(clipIndexAtTime(clips, x))
+      setLit(true)
+      setEnded(false)
+      setPrint(true)
+      setPaused(true)
+      onOver?.(false)
+    },
+    [clips, onOver],
+  )
+
+  const hangPrint = useCallback(async () => {
+    const clip = clips[onIndex]
+    if (!clip) return
+    const still = String(clip.still || '')
+    const src =
+      !t2v && still && !/_from_prev\./i.test(still)
+        ? still
+        : clipPoster(clip, t2v ? 't2v' : 'stills')?.src
+    if (!src) return
+    try {
+      await api.studioCoverHang(projectId, src)
+      housePin()
+      setHungId(clip.id)
+      await refreshProjects()
+    } catch {
+      /* ignore */
+    }
+  }, [clips, onIndex, t2v, projectId, refreshProjects])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target
       if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault()
+        void hangPrint()
+        return
+      }
+      if (e.key === 'j' || e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        if (!clips.length) return
+        const i = Math.max(0, Math.min(clips.length - 1, onIndex + 1))
+        holdAt(clipStartTime(clips, i) + 0.04)
+        return
+      }
+      if (e.key === 'k' || e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        if (!clips.length) return
+        const i = Math.max(0, Math.min(clips.length - 1, onIndex - 1))
+        holdAt(clipStartTime(clips, i) + 0.04)
+        return
+      }
       if (e.code !== 'Space' && e.key !== ' ') return
       e.preventDefault()
       const el = videoRef.current
@@ -189,7 +253,7 @@ function TheaterPlayer({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [ended, replay])
+  }, [ended, replay, hangPrint, clips, onIndex, holdAt])
 
   const unmute = (e: MouseEvent) => {
     e.stopPropagation()
@@ -204,22 +268,6 @@ function TheaterPlayer({
     }
     void el.play()
     setPaused(false)
-  }
-
-  const holdAt = (t: number) => {
-    const el = videoRef.current
-    if (!el) return
-    const total = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : clipsDuration(clips)
-    const x = Math.max(0, Math.min(t, Math.max(0, total - 0.05)))
-    el.currentTime = x
-    el.pause()
-    setPlayhead(x)
-    setOnIndex(clipIndexAtTime(clips, x))
-    setLit(true)
-    setEnded(false)
-    setPrint(true)
-    setPaused(true)
-    onOver?.(false)
   }
 
   const scrubFromPointer = (clientX: number) => {
@@ -398,6 +446,7 @@ function TheaterPlayer({
               on={!ended && onIndex === i}
               frac={!ended && onIndex === i ? frac : undefined}
               cue
+              hung={hungId === c.id}
             />
           ))}
         </ol>
@@ -408,6 +457,7 @@ function TheaterPlayer({
 
 export function Watch() {
   const { projectId } = useParams()
+  const navigate = useNavigate()
   const { brain, err } = useStudioSession()
   const { current } = useStudioProjects()
   const { comfy } = useStudioLive()
@@ -426,6 +476,19 @@ export function Watch() {
   useEffect(() => {
     if (projectId && brain?.master) writeTonightId(projectId)
   }, [projectId, brain?.master])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target
+      if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      houseWhoosh()
+      navigate('/studio', { viewTransition: true })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [navigate])
 
   if (!projectId) {
     return <p className="text-[15px] text-ghost">Open a project to watch the film.</p>
