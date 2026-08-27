@@ -1299,6 +1299,27 @@ select {
   opacity: 0.38;
 }
 
+.theater.is-playing .theater-meta {
+  opacity: 0.28;
+}
+
+.theater.is-playing:hover .theater-meta {
+  opacity: 1;
+}
+
+html.is-picture .studio-rail,
+html.is-picture .studio-main-header {
+  opacity: 0.32;
+  transition: opacity 0.85s ease;
+}
+
+html.is-picture .studio-rail:hover,
+html.is-picture .studio-rail:focus-within,
+html.is-picture .studio-main-header:hover,
+html.is-picture .studio-main-header:focus-within {
+  opacity: 1;
+}
+
 .theater-save {
   color: var(--color-ghost);
   font-size: 13px;
@@ -1962,7 +1983,9 @@ video.theater-poster {
 
   .theater-first,
   .theater-player,
-  .theater-meta {
+  .theater-meta,
+  html.is-picture .studio-rail,
+  html.is-picture .studio-main-header {
     transition: none;
   }
   .poster-card,

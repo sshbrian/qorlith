@@ -53,8 +53,23 @@ const Filmstrip = memo(function Filmstrip({
   currentClip: string | null | undefined
   t2v: boolean
 }) {
+  const rootRef = useRef<HTMLUListElement>(null)
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || !currentClip) return
+    const el = root.querySelector('li.is-live')
+    if (!(el instanceof HTMLElement)) return
+    const left = el.offsetLeft - root.clientWidth / 2 + el.clientWidth / 2
+    let reduce = false
+    try {
+      reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    } catch {
+      /* ignore */
+    }
+    root.scrollTo({ left: Math.max(0, left), behavior: reduce ? 'auto' : 'smooth' })
+  }, [currentClip])
   return (
-    <ul className="filmstrip">
+    <ul ref={rootRef} className="filmstrip">
       {clips.map((c, i) => {
         const poster = clipPoster(c, t2v ? 't2v' : 'stills')
         const join = clipJoinNote(i, c.cut)

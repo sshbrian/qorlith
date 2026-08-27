@@ -116,6 +116,7 @@ function TheaterPlayer({
   onOver?: (over: boolean) => void
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const reelRef = useRef<HTMLOListElement>(null)
   const [needSound, setNeedSound] = useState(true)
   const [paused, setPaused] = useState(false)
   const [lit, setLit] = useState(false)
@@ -241,6 +242,27 @@ function TheaterPlayer({
     setOnIndex((prev) => (prev === i ? prev : i))
   }
 
+  useEffect(() => {
+    const on = !ended
+    document.documentElement.classList.toggle('is-picture', on)
+    return () => document.documentElement.classList.remove('is-picture')
+  }, [ended, projectId])
+
+  useEffect(() => {
+    const root = reelRef.current
+    if (!root || ended || onIndex < 0) return
+    const el = root.children[onIndex]
+    if (!(el instanceof HTMLElement)) return
+    const left = el.offsetLeft - root.clientWidth / 2 + el.clientWidth / 2
+    let reduce = false
+    try {
+      reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    } catch {
+      /* ignore */
+    }
+    root.scrollTo({ left: Math.max(0, left), behavior: reduce ? 'auto' : 'smooth' })
+  }, [onIndex, ended])
+
   const playing = lit && !paused && !ended
 
   return (
@@ -297,7 +319,7 @@ function TheaterPlayer({
         </div>
       </div>
       {clips.length ? (
-        <ol className="workprint" aria-label="Workprint">
+        <ol ref={reelRef} className="workprint" aria-label="Workprint">
           {clips.map((c, i) => (
             <WorkprintFrame
               key={c.id}

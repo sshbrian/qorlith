@@ -297,9 +297,13 @@ describe('UI contract — brain is shipped', () => {
     assert.match(t, /watchFirstFrame/)
     assert.match(t, /clipIndexAtTime/)
     assert.match(t, /houseLights/)
+    assert.match(t, /is-picture/)
+    assert.match(t, /scrollTo/)
     assert.match(read(path.join(src, 'index.css')), /now-breathe/)
+    assert.match(read(path.join(src, 'index.css')), /html\.is-picture/)
     assert.match(read(path.join(src, 'lib', 'houseSound.ts')), /houseLights/)
     assert.match(page('Brain.tsx'), /aria-current=\{currentClip === c\.id/)
+    assert.match(page('Brain.tsx'), /scrollTo/)
   })
 
   it('Brain page can stop and show a master', () => {
