@@ -177,7 +177,7 @@ export function EpisodePlan() {
         {viewing ? (
           <button
             type="button"
-            className="table-hero"
+            className={['table-hero', pinned ? 'is-pinned' : ''].join(' ')}
             onDoubleClick={() => void pickStill(viewing.rel)}
             title="Double-click to pin this frame"
           >

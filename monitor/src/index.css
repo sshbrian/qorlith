@@ -261,10 +261,42 @@ select {
     0 16px 36px rgba(0, 0, 0, 0.5);
 }
 
+.table-print.is-pinned {
+  position: relative;
+}
+
 .table-print.is-pinned img {
   box-shadow:
-    0 0 0 1px rgba(10, 132, 255, 0.8),
-    0 14px 32px rgba(10, 132, 255, 0.16);
+    0 0 0 1px rgba(255, 214, 170, 0.7),
+    0 14px 32px rgba(255, 186, 120, 0.18);
+}
+
+.table-print.is-pinned::after,
+.table-hero.is-pinned::after {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff7ea, #e2b16a 58%, #7a4e24);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.5);
+}
+
+.table-hero.is-pinned::after {
+  top: 18%;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+}
+
+.table-hero.is-pinned img {
+  box-shadow:
+    0 0 0 1px rgba(255, 214, 170, 0.42),
+    0 22px 60px rgba(0, 0, 0, 0.55);
 }
 
 .table-clips {
@@ -299,7 +331,7 @@ select {
 }
 
 .table-clip.is-pinned .workprint-mark {
-  color: #409cff;
+  color: rgba(255, 214, 170, 0.88);
 }
 
 .script {
@@ -527,6 +559,18 @@ select {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+}
+
+.lobby.has-night .poster-wall-grid .poster-card {
+  opacity: 0.58;
+  filter: saturate(0.78);
+  transition: opacity 0.45s ease, filter 0.45s ease, transform 0.45s ease;
+}
+
+.lobby.has-night .poster-wall-grid .poster-card:hover,
+.lobby.has-night .poster-wall-grid .poster-card:focus-visible {
+  opacity: 1;
+  filter: none;
 }
 
 .studio-scroll,
@@ -1994,7 +2038,8 @@ video.theater-poster {
   .archive-card-still img,
   .archive-card-still video,
   .title-card-field,
-  .btn {
+  .btn,
+  .lobby.has-night .poster-wall-grid .poster-card {
     transition: none;
   }
 
