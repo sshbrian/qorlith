@@ -185,6 +185,8 @@ describe('UI contract — stages, not tools', () => {
     assert.match(page('StudioPlanner.tsx'), /script-cover-field/)
     assert.match(page('StudioPlanner.tsx'), /script-title/)
     assert.match(page('StudioPlanner.tsx'), /script-logline/)
+    assert.match(read(path.join(src, 'index.css')), /script-sheet \{/)
+    assert.match(read(path.join(src, 'index.css')), /view-transition-name: title-card/)
     assert.match(read(path.join(src, 'lib', 'api.ts')), /videoMode/)
   })
 
