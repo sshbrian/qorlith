@@ -1228,6 +1228,11 @@ select {
     0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
+.theater.is-over + .workprint {
+  opacity: 0.42;
+  transition: opacity 1.1s ease;
+}
+
 .theater-video {
   display: block;
   width: 100%;
@@ -1866,6 +1871,10 @@ video.theater-poster {
   text-transform: uppercase;
 }
 
+.set .filmstrip > li.is-live .filmstrip-id {
+  color: rgba(255, 224, 190, 0.82);
+}
+
 @keyframes now-breathe {
   0%,
   100% {
@@ -2028,6 +2037,7 @@ video.theater-poster {
   .theater-first,
   .theater-player,
   .theater-meta,
+  .theater.is-over + .workprint,
   html.is-picture .studio-rail,
   html.is-picture .studio-main-header {
     transition: none;
