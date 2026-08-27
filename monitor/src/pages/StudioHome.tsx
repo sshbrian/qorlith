@@ -35,7 +35,17 @@ export function StudioHome() {
   }
 
   if (!projectsReady) {
-    return <div className="lobby lobby-hold" />
+    return (
+      <div className="lobby is-empty lobby-hold">
+        <header className="lobby-hero">
+          <div className="lobby-mark is-waking" aria-hidden>
+            <BrandMark className="h-11 w-11" title="Qorlith" />
+          </div>
+          <h1 className="lobby-word">Make a movie</h1>
+          <p className="lobby-kicker">The lights are coming up.</p>
+        </header>
+      </div>
+    )
   }
 
   return (

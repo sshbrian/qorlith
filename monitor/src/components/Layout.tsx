@@ -303,7 +303,7 @@ function LayoutBody({
             ) : null}
             {projects.length === 0 && !railCollapsed ? (
               <p className="px-2 py-5 text-[13px] text-ghost leading-relaxed">
-                No projects yet. Press + to start one.
+                The rail is waiting. Press + for the first film.
               </p>
             ) : null}
             <div className="space-y-0.5">

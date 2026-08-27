@@ -368,6 +368,20 @@ select {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 12px 40px rgba(10, 132, 255, 0.16);
 }
 
+.lobby-mark.is-waking {
+  animation: mark-wake 1.8s ease-in-out infinite;
+}
+
+@keyframes mark-wake {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 12px 40px rgba(10, 132, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.35), 0 16px 48px rgba(10, 132, 255, 0.32);
+  }
+}
+
 .lobby-word {
   margin: 22px 0 0;
   font-size: clamp(44px, 7vw, 72px);
@@ -1190,6 +1204,12 @@ select {
   color: var(--color-ghost);
 }
 
+.theater-empty {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 42%, rgba(10, 132, 255, 0.08), transparent 70%),
+    #000;
+}
+
 .theater-empty,
 .theater-making {
   display: flex;
@@ -1716,6 +1736,10 @@ video.theater-poster {
   .set,
   .script,
   .table {
+    animation: none;
+  }
+
+  .lobby-mark.is-waking {
     animation: none;
   }
 

@@ -208,7 +208,7 @@ export function Watch() {
               ▶
             </div>
             <p className="page-lead mt-5 text-center">
-              {sceneClips.length ? 'The film is not made yet.' : 'Nothing to watch yet.'}
+              {sceneClips.length ? 'The film is not made yet.' : 'The house is dark. Sit down when there is a picture.'}
             </p>
             {sceneClips.length && runtime ? (
               <p className="theater-runtime mt-2">{runtime} planned</p>

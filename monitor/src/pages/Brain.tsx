@@ -206,7 +206,7 @@ export function Brain() {
           <div className="play-mark" aria-hidden>
             ▶
           </div>
-          <p className="page-lead mt-5 text-center">Nothing is rendering yet.</p>
+          <p className="page-lead mt-5 text-center">The set is quiet. Call action when you are ready.</p>
           <button
             type="button"
             disabled={!canStart}
