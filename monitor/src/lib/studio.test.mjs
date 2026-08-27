@@ -2,12 +2,15 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   clipBeat,
+  clipFracAtTime,
   clipIndexAtTime,
   clipJoinNote,
   clipPoster,
   clipStartTime,
+  clipsDuration,
   mediaStudioCta,
   mediaStudioPath,
+  timeAtReel,
   tonightFilm,
   watchFirstFrame,
   watchFrameHref,
@@ -80,6 +83,9 @@ describe('clipIndexAtTime', () => {
     assert.equal(clipIndexAtTime([], 1), -1)
     assert.equal(clipStartTime(clips, 0), 0)
     assert.equal(clipStartTime(clips, 2), 10)
+    assert.equal(clipsDuration(clips), 15)
+    assert.equal(clipFracAtTime(clips, 2), 0.5)
+    assert.equal(timeAtReel(clips, 1, 0.5), 7)
   })
 })
 
@@ -99,6 +105,25 @@ describe('tonightFilm', () => {
       { id: 'making', stage: 'make', active: true, updatedAt: '2026-08-26T18:00:00.000Z' },
     ])
     assert.equal(night?.id, 'new')
+  })
+
+  it('remembers the film you sat with, if it is still ready', () => {
+    const films = [
+      { id: 'old', stage: 'watch', active: false, updatedAt: '2026-08-20T12:00:00.000Z' },
+      { id: 'new', stage: 'watch', active: false, updatedAt: '2026-08-26T12:00:00.000Z' },
+    ]
+    assert.equal(tonightFilm(films, 'old')?.id, 'old')
+    assert.equal(tonightFilm(films, 'missing')?.id, 'new')
+    assert.equal(
+      tonightFilm(
+        [
+          { id: 'old', stage: 'watch', active: true, updatedAt: '2026-08-26T18:00:00.000Z' },
+          { id: 'new', stage: 'watch', active: false, updatedAt: '2026-08-26T12:00:00.000Z' },
+        ],
+        'old',
+      )?.id,
+      'new',
+    )
   })
 })
 

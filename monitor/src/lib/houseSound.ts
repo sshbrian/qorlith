@@ -1,4 +1,23 @@
+export const HOUSE_MUTE_KEY = 'qorlith.house.mute'
+
 let ctx: AudioContext | null = null
+
+export function readHouseMute() {
+  try {
+    return localStorage.getItem(HOUSE_MUTE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function writeHouseMute(on: boolean) {
+  try {
+    if (on) localStorage.setItem(HOUSE_MUTE_KEY, '1')
+    else localStorage.removeItem(HOUSE_MUTE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
 
 function silent() {
   if (typeof window === 'undefined') return true
@@ -7,12 +26,24 @@ function silent() {
   } catch {
     /* ignore */
   }
+  if (readHouseMute()) return true
+  return false
+}
+
+export function syncHouseQuiet() {
   try {
-    if (localStorage.getItem('qorlith.house.mute') === '1') return true
+    document.documentElement.classList.toggle('is-quiet', readHouseMute())
   } catch {
     /* ignore */
   }
-  return false
+}
+
+/** The house remembers. Click the word to sit in silence. */
+export function toggleHouseMute() {
+  const next = !readHouseMute()
+  writeHouseMute(next)
+  syncHouseQuiet()
+  return next
 }
 
 function audio() {

@@ -6,20 +6,21 @@ import { CoverThumb, PosterCard } from '../components/PosterCard'
 import { VideoModeToggle, type VideoMode } from '../components/VideoModeToggle'
 import { useStudioSession } from '../components/StudioSession'
 import { api } from '../lib/api'
-import { houseWhoosh } from '../lib/houseSound'
+import { houseWhoosh, toggleHouseMute } from '../lib/houseSound'
 import {
   canonicalStage,
   projectPath,
   PROMPT_PLACEHOLDER,
   PROMPT_STARTERS,
   VIDEO_MODE_HINT,
+  readTonightId,
   tonightFilm,
 } from '../lib/studio'
 
 export function StudioHome() {
   const { projects, projectsReady, refreshProjects } = useStudioSession()
   const navigate = useNavigate()
-  const tonight = tonightFilm(projects)
+  const tonight = tonightFilm(projects, readTonightId())
   const recents = projects.filter((p) => p.id !== tonight?.id).slice(0, 8)
   const [prompt, setPrompt] = useState('')
   const [videoMode, setVideoMode] = useState<VideoMode>('stills')
@@ -69,9 +70,9 @@ export function StudioHome() {
         </div>
       ) : null}
       <header className="lobby-hero">
-        <div className="lobby-mark" aria-hidden>
+        <button type="button" className="lobby-mark" onClick={() => toggleHouseMute()} title="The house">
           <BrandMark className="h-11 w-11" title="Qorlith" />
-        </div>
+        </button>
         <h1 className="lobby-word">Make a movie</h1>
         <p className="lobby-kicker">
           {emptyHouse ? 'The house is dark. A sentence becomes a film.' : 'A sentence becomes a film.'}

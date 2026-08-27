@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { houseLights, housePin, houseWhoosh } from './houseSound.ts'
+import { houseLights, housePin, houseWhoosh, readHouseMute, syncHouseQuiet, toggleHouseMute, writeHouseMute } from './houseSound.ts'
 
 describe('house sound', () => {
   it('is silent without a window and does not throw', () => {
@@ -10,5 +10,10 @@ describe('house sound', () => {
     houseWhoosh()
     housePin()
     houseLights()
+    syncHouseQuiet()
+    writeHouseMute(false)
+    assert.equal(readHouseMute(), false)
+    toggleHouseMute()
+    writeHouseMute(false)
   })
 })

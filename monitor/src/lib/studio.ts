@@ -1,5 +1,6 @@
 export const LAST_PROJECT_KEY = 'qorlith.studio.lastProject'
 export const RAIL_COLLAPSED_KEY = 'qorlith.studio.railCollapsed'
+export const TONIGHT_KEY = 'qorlith.house.tonight'
 
 export const PROMPT_PLACEHOLDER = 'Example: 20 second rooftop fight, rain, no talking.'
 
@@ -66,6 +67,23 @@ export function readRailCollapsed(): boolean {
 export function writeRailCollapsed(collapsed: boolean) {
   try {
     localStorage.setItem(RAIL_COLLAPSED_KEY, collapsed ? '1' : '0')
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readTonightId(): string | null {
+  try {
+    const id = localStorage.getItem(TONIGHT_KEY)
+    return id && id.trim() ? id.trim() : null
+  } catch {
+    return null
+  }
+}
+
+export function writeTonightId(id: string) {
+  try {
+    localStorage.setItem(TONIGHT_KEY, id)
   } catch {
     /* ignore */
   }
@@ -141,6 +159,36 @@ export function clipStartTime(clips: Array<{ durationSec?: number | null }> = []
   return t
 }
 
+export function clipsDuration(clips: Array<{ durationSec?: number | null }> = []) {
+  return clips.reduce((n, c) => n + (Number(c.durationSec) || 0), 0)
+}
+
+/** Where you are inside the take on screen. */
+export function clipFracAtTime(clips: Array<{ durationSec?: number | null }> = [], t: number) {
+  const i = clipIndexAtTime(clips, t)
+  if (i < 0) return 0
+  const dur = Number(clips[i].durationSec) || 0
+  if (dur <= 0) return 0
+  return Math.min(1, Math.max(0, (t - clipStartTime(clips, i)) / dur))
+}
+
+/** Pointer on the reel → time in the cut. */
+export function timeAtReel(
+  clips: Array<{ durationSec?: number | null }> = [],
+  index: number,
+  frac: number,
+) {
+  if (!clips.length) return 0
+  const i = Math.max(0, Math.min(index, clips.length - 1))
+  const start = clipStartTime(clips, i)
+  const dur = Number(clips[i].durationSec) || 0
+  const x = Math.min(1, Math.max(0, frac))
+  const t = start + dur * x
+  const total = clipsDuration(clips)
+  if (total <= 0) return t
+  return Math.min(Math.max(0, t), Math.max(0, total - 0.05))
+}
+
 type TonightFilm = {
   id: string
   title?: string
@@ -152,11 +200,13 @@ type TonightFilm = {
   clipCount?: number
 }
 
-/** Last finished film — tonight's reel. Live jobs never count. */
-export function tonightFilm(projects: TonightFilm[] = []): TonightFilm | null {
+/** Last film you sat with — tonight's reel. Live jobs never count. */
+export function tonightFilm(projects: TonightFilm[] = [], rememberedId?: string | null): TonightFilm | null {
   const ready = projects.filter((p) => p && !p.active && p.stage === 'watch')
   const pool = ready.length ? ready : projects.filter((p) => p && !p.active && p.coverUrl)
   if (!pool.length) return null
+  const remembered = rememberedId && pool.find((p) => p.id === rememberedId)
+  if (remembered) return remembered
   return [...pool].sort((a, b) => {
     const tb = Date.parse(String(b.updatedAt || '')) || 0
     const ta = Date.parse(String(a.updatedAt || '')) || 0

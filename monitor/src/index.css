@@ -350,20 +350,282 @@ select {
   padding: 4px 2px 8px;
 }
 
+.script-sheet {
+  position: relative;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 52px 44px 40px;
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015) 42%, rgba(0, 0, 0, 0.22)),
+    #141318;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 32px 90px rgba(0, 0, 0, 0.52);
+}
+
+.script-sheet::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='80' height='80' filter='url(%23n)' opacity='0.55'/></svg>");
+}
+
 .script-title {
-  font-size: 32px;
+  position: relative;
+  margin: 0;
+  font-size: clamp(36px, 5.5vw, 58px);
   font-weight: 620;
-  letter-spacing: -0.038em;
-  line-height: 1.05;
+  letter-spacing: -0.046em;
+  line-height: 0.94;
 }
 
 .script-logline {
-  margin: 10px 0 0;
-  max-width: 36rem;
-  font-size: 17px;
+  position: relative;
+  margin: 18px auto 0;
+  max-width: 28rem;
+  font-size: 18px;
   line-height: 1.4;
   letter-spacing: -0.022em;
   color: var(--color-ghost);
+}
+
+.script-colophon {
+  position: relative;
+  margin: 32px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(235, 235, 245, 0.4);
+}
+
+.script-music,
+.script-warn {
+  position: relative;
+  margin: 14px auto 0;
+  max-width: 28rem;
+  font-size: 13px;
+  color: var(--color-ghost);
+}
+
+.script-warn {
+  color: var(--color-amber);
+}
+
+.script-sheet-write {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 36px;
+}
+
+.script-sheet-write .script-colophon {
+  margin: 0 0 8px;
+}
+
+.script-cover-field,
+.script-sheet-write .title-card-field {
+  width: 100%;
+  min-height: 7.2rem;
+  resize: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+  color: var(--color-ink);
+  font-size: clamp(22px, 3.2vw, 30px);
+  font-weight: 510;
+  letter-spacing: -0.034em;
+  line-height: 1.28;
+  padding: 8px 4px 16px;
+  outline: none;
+}
+
+.script-sheet-write .title-card-field:focus {
+  box-shadow: none;
+}
+
+.script-sheet-write .title-card-starters,
+.script-sheet-write .title-card-hint,
+.script-sheet-write .title-card-go {
+  position: relative;
+  width: 100%;
+}
+
+.script-go {
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.script-reel {
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.script-reel-track {
+  display: flex;
+  gap: 3px;
+  height: 36px;
+  align-items: stretch;
+}
+
+.script-reel-take {
+  min-width: 0;
+  border: 0;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--color-ghost);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.script-reel-take.is-on {
+  background: rgba(255, 214, 170, 0.22);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(255, 214, 170, 0.35);
+}
+
+.script-reel-take.is-cut {
+  margin-left: 10px;
+}
+
+.script-reel-time {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-ghost);
+}
+
+.script-cast {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px 28px;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.script-cast-name {
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.script-cast-name p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-ghost);
+}
+
+.script-takes {
+  display: grid;
+  grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+  gap: 22px;
+  max-width: 52rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.script-take-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 28rem;
+  overflow-y: auto;
+}
+
+.script-take {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.script-take-id {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(235, 235, 245, 0.4);
+}
+
+.script-take-title {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.script-take-dur {
+  font-size: 11px;
+  color: var(--color-ghost);
+}
+
+.script-take.is-on .script-take-id,
+.script-take.is-on .script-take-title {
+  color: rgba(255, 224, 190, 0.92);
+}
+
+.script-page {
+  min-height: 16rem;
+  padding: 4px 2px 8px;
+}
+
+.script-scene {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 510;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(235, 235, 245, 0.42);
+}
+
+.script-scene span {
+  display: block;
+  margin-top: 8px;
+  font-size: 26px;
+  font-weight: 620;
+  letter-spacing: -0.032em;
+  text-transform: none;
+  color: var(--color-ink);
+}
+
+.script-join {
+  margin: 8px 0 18px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ghost);
+}
+
+.script-field {
+  margin: 0 0 18px;
+}
+
+.script-kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(235, 235, 245, 0.34);
+}
+
+.script-body {
+  font-size: 17px;
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+  white-space: pre-wrap;
 }
 
 .lobby {
@@ -420,10 +682,13 @@ select {
 .lobby-mark {
   height: 44px;
   width: 44px;
+  padding: 0;
+  border: 0;
   border-radius: 12px;
   overflow: hidden;
   background: #0a0a0b;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 12px 40px rgba(10, 132, 255, 0.16);
+  cursor: pointer;
 }
 
 .lobby-mark.is-waking {
@@ -1348,12 +1613,21 @@ select {
   opacity: 0.38;
 }
 
-.theater.is-playing .theater-meta {
+.theater.is-playing .theater-meta,
+.theater.is-print .theater-meta {
   opacity: 0.28;
 }
 
-.theater.is-playing:hover .theater-meta {
+.theater.is-playing:hover .theater-meta,
+.theater.is-print:hover .theater-meta {
   opacity: 1;
+}
+
+.theater.is-print .theater-player {
+  box-shadow:
+    0 40px 120px rgba(0, 0, 0, 0.55),
+    0 20px 48px rgba(255, 210, 160, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 html.is-picture .studio-rail,
@@ -1367,6 +1641,30 @@ html.is-picture .studio-rail:focus-within,
 html.is-picture .studio-main-header:hover,
 html.is-picture .studio-main-header:focus-within {
   opacity: 1;
+}
+
+html.is-quiet .lobby-mark,
+html.is-quiet .studio-rail .brand-hit {
+  filter: grayscale(0.85) brightness(0.72);
+}
+
+html.is-quiet .house-word {
+  opacity: 0.42;
+}
+
+.house-word {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  letter-spacing: inherit;
+}
+
+.brand-hit {
+  display: block;
 }
 
 .theater-save {
@@ -1656,11 +1954,32 @@ video.theater-poster {
   background: rgba(255, 255, 255, 0.22);
 }
 
+.workprint {
+  touch-action: none;
+  user-select: none;
+}
+
+.workprint.is-print .workprint-frame:not(.is-on) {
+  opacity: 0.48;
+}
+
 .workprint-still {
+  position: relative;
   aspect-ratio: 16 / 9;
   background: #0a0a0b;
   overflow: hidden;
   border-radius: 2px;
+}
+
+.workprint-hair {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  margin-left: -0.5px;
+  background: rgba(255, 230, 200, 0.92);
+  box-shadow: 0 0 10px rgba(255, 214, 170, 0.55);
+  pointer-events: none;
 }
 
 .workprint-still img,
@@ -1685,7 +2004,7 @@ video.theater-poster {
 }
 
 .workprint-frame.is-cue {
-  cursor: pointer;
+  cursor: ew-resize;
 }
 
 .workprint-frame.is-cue:hover .workprint-still img,
@@ -1944,6 +2263,10 @@ video.theater-poster {
 }
 
 @media (max-width: 860px) {
+  .script-takes {
+    grid-template-columns: 1fr;
+  }
+
   .studio-menu {
     display: inline-flex;
   }
@@ -2050,6 +2373,11 @@ video.theater-poster {
   .title-card-field,
   .btn,
   .lobby.has-night .poster-wall-grid .poster-card {
+    transition: none;
+  }
+
+  .script-cover-field,
+  .script-sheet-write .title-card-field {
     transition: none;
   }
 

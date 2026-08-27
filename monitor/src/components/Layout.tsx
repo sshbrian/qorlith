@@ -24,7 +24,7 @@ import {
   writeRailCollapsed,
 } from '../lib/studio'
 import { usePinnedScroll } from '../lib/studioScroll'
-import { houseWhoosh } from '../lib/houseSound'
+import { houseWhoosh, readHouseMute, syncHouseQuiet, toggleHouseMute } from '../lib/houseSound'
 import { BrandMark } from './BrandMark'
 import { CoverThumb } from './PosterCard'
 import { VideoModeToggle, type VideoMode } from './VideoModeToggle'
@@ -106,6 +106,7 @@ function LayoutBody({
   const projectId = params.projectId || ''
   const stage = stageFromPath(location.pathname)
   const scroller = usePinnedScroll(location.pathname)
+  const [quiet, setQuiet] = useState(readHouseMute)
   const searchPanel = new URLSearchParams(location.search).get('panel') as Overlay
   const [railCollapsed, setRailCollapsed] = useState(readRailCollapsed)
   const [railMobileOpen, setRailMobileOpen] = useState(false)
@@ -119,6 +120,10 @@ function LayoutBody({
   const { projects, current, refreshProjects, openNew } = useStudioProjects()
   const { brain } = useStudioSession()
   const t2v = brain?.videoMode === 't2v' || current?.videoMode === 't2v'
+
+  useEffect(() => {
+    syncHouseQuiet()
+  }, [])
   const stages = t2v ? STAGES.filter((s) => s.id !== 'board') : STAGES
 
   const walk = (to: string | { pathname: string; search?: string }, opts: { replace?: boolean } = {}) => {
@@ -276,14 +281,22 @@ function LayoutBody({
             <button
               type="button"
               onClick={() => walk('/studio')}
-              className="h-8 w-8 shrink-0 rounded-[9px] overflow-hidden bg-void ring-1 ring-white/[0.08] hover:ring-white/[0.16]"
+              className="brand-hit h-8 w-8 shrink-0 rounded-[9px] overflow-hidden bg-void ring-1 ring-white/[0.08] hover:ring-white/[0.16]"
               title="Qorlith"
             >
               <BrandMark className="h-8 w-8 block" title="Qorlith" />
             </button>
             {!railCollapsed ? (
               <div className="min-w-0 flex-1">
-                <div className="text-[17px] font-semibold tracking-tight">Qorlith</div>
+                <button
+                  type="button"
+                  className="house-word text-[17px] font-semibold tracking-tight"
+                  aria-pressed={quiet ? 'true' : 'false'}
+                  title="The house"
+                  onClick={() => setQuiet(toggleHouseMute())}
+                >
+                  Qorlith
+                </button>
               </div>
             ) : null}
             <button

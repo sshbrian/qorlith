@@ -24,19 +24,12 @@ function ClipCard({
 }) {
   const join = clipJoinNote(index, clip.cut)
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`w-full text-left rounded-[12px] px-3 py-2.5 ${
-        selected ? 'bg-white/[0.1]' : 'bg-white/[0.03] hover:bg-white/[0.06]'
-      }`}
-    >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[15px] truncate">{clip.title}</span>
-        <span className="text-[12px] text-ghost shrink-0">
-          {clip.durationSec}s{join ? ` · ${join}` : ''}
-        </span>
-      </div>
+    <button type="button" onClick={onSelect} className={['script-take', selected ? 'is-on' : ''].join(' ')}>
+      <span className="script-take-id">{clip.id}</span>
+      <span className="script-take-title">{clip.title}</span>
+      <span className="script-take-dur">
+        {clip.durationSec}s{join ? ` · ${join}` : ''}
+      </span>
     </button>
   )
 }
@@ -56,8 +49,8 @@ function Timeline({
     clips.reduce((a, c) => a + (c.durationSec || 0), 0),
   )
   return (
-    <div className="mt-3">
-      <div className="flex gap-0.5 h-10 items-stretch">
+    <div className="script-reel">
+      <div className="script-reel-track">
         {clips.map((c, i) => {
           const w = Math.max(8, ((c.durationSec || 8) / total) * 100)
           const sel = selectedId === c.id
@@ -69,16 +62,14 @@ function Timeline({
               title={`${c.id} ${c.title} · ${c.durationSec}s${join ? ` · ${join}` : ''}`}
               onClick={() => onSelect(c.id)}
               style={{ flex: `${c.durationSec || 8} 1 0`, minWidth: `${w * 0.4}%` }}
-              className={`rounded-[8px] text-[11px] transition ${
-                sel ? 'bg-cyan text-white' : 'bg-white/[0.08] text-ghost hover:text-ink'
-              } ${c.cut && i > 0 ? 'ml-1' : ''}`}
+              className={`script-reel-take ${sel ? 'is-on' : ''} ${c.cut && i > 0 ? 'is-cut' : ''}`}
             >
               {c.id}
             </button>
           )
         })}
       </div>
-      <div className="mt-1.5 flex justify-between text-[12px] text-ghost">
+      <div className="script-reel-time">
         <span>0s</span>
         <span>{Math.round(total)}s</span>
       </div>
@@ -105,42 +96,34 @@ function PlanVisual({ plan }: { plan: StudioMoviePlan }) {
 
   return (
     <div className="script-pages">
-      <div className="script-cover">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="script-title">{plan.title}</div>
-            <p className="script-logline">{plan.logline}</p>
-          </div>
-          <div className="text-[13px] text-ghost">
-            {plan.durationTargetSec}s · {plan.clips.length} clips
-            {plan.rating ? ` · ${plan.rating}` : ''}
-          </div>
-        </div>
-        <Timeline clips={plan.clips} selectedId={selectedId} onSelect={setSelectedId} />
-        {plan.musicPalette ? (
-          <div className="mt-4 text-[13px] text-ghost">{plan.musicPalette}</div>
-        ) : null}
+      <div className="script-sheet">
+        <h1 className="script-title">{plan.title}</h1>
+        {plan.logline ? <p className="script-logline">{plan.logline}</p> : null}
+        <p className="script-colophon">
+          {plan.durationTargetSec}s · {plan.clips.length} clips
+          {plan.rating ? ` · ${plan.rating}` : ''}
+        </p>
+        {plan.musicPalette ? <p className="script-music">{plan.musicPalette}</p> : null}
         {plan.warnings?.length ? (
-          <div className="mt-3 text-[13px] text-amber">{plan.warnings.join(' · ')}</div>
+          <p className="script-warn">{plan.warnings.join(' · ')}</p>
         ) : null}
       </div>
 
+      <Timeline clips={plan.clips} selectedId={selectedId} onSelect={setSelectedId} />
+
       {plan.characters?.length ? (
-        <div className="card">
-          <div className="text-[13px] text-ghost mb-3">Cast</div>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {plan.characters.map((ch) => (
-              <div key={ch.id}>
-                <div className="text-[15px]">{ch.name}</div>
-                <div className="text-[13px] text-ghost mt-0.5">{ch.look || '—'}</div>
-              </div>
-            ))}
-          </div>
+        <div className="script-cast">
+          {plan.characters.map((ch) => (
+            <div key={ch.id} className="script-cast-name">
+              <div>{ch.name}</div>
+              {ch.look ? <p>{ch.look}</p> : null}
+            </div>
+          ))}
         </div>
       ) : null}
 
-      <div className="grid lg:grid-cols-[240px_1fr] gap-3">
-        <aside className="space-y-1 max-h-[420px] overflow-y-auto">
+      <div className="script-takes">
+        <aside className="script-take-list">
           {plan.clips.map((c, i) => (
             <ClipCard
               key={c.id}
@@ -151,24 +134,22 @@ function PlanVisual({ plan }: { plan: StudioMoviePlan }) {
             />
           ))}
         </aside>
-        <section className="card min-h-[280px]">
+        <section className="script-page">
           {selected ? (
-            <div className="space-y-4 text-[15px]">
-              <div>
-                <h2 className="text-[20px] font-semibold tracking-tight">{selected.title}</h2>
-                <div className="text-[13px] text-ghost mt-0.5">
-                  {selected.id}
-                  {selectedJoin ? ` · ${selectedJoin}` : ''}
-                </div>
-              </div>
+            <>
+              <h2 className="script-scene">
+                {selected.id}
+                <span>{selected.title}</span>
+              </h2>
+              {selectedJoin ? <p className="script-join">{selectedJoin}</p> : null}
               {t2v ? null : <Field label="Still" value={selected.stillBrief} />}
               <Field label={t2v ? 'Scene' : 'Clip'} value={selected.motionBrief} />
               <Field label="Dialogue" value={selected.dialogue} />
               <Field label="Sound" value={selected.soundscape} />
               <Field label="Music" value={selected.musicNote} />
-            </div>
+            </>
           ) : (
-            <p className="text-ghost text-[15px]">Select a clip</p>
+            <p className="script-join">The page is blank.</p>
           )}
         </section>
       </div>
@@ -188,9 +169,9 @@ function PlanVisual({ plan }: { plan: StudioMoviePlan }) {
 function Field({ label, value }: { label: string; value?: string }) {
   if (!value) return null
   return (
-    <div>
-      <div className="text-[13px] text-ghost mb-1">{label}</div>
-      <div className="text-[15px] leading-relaxed whitespace-pre-wrap">{value}</div>
+    <div className="script-field">
+      <div className="script-kicker">{label}</div>
+      <div className="script-body">{value}</div>
     </div>
   )
 }
@@ -330,49 +311,47 @@ export function StudioPlanner() {
 
   return (
     <div className="script">
-      <div className="set-slate">
-        <p className="set-call">Type what happens. Press Make movie. That is the whole job.</p>
-        <div className="text-[13px] text-ghost">{writerLabel(health)}</div>
-      </div>
-
-      <div className="title-card">
-        <label className="sr-live" htmlFor="script-prompt">
-          What happens in the film?
-        </label>
-        <textarea
-          id="script-prompt"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void makeMovie()
-          }}
-          rows={4}
-          placeholder={PROMPT_PLACEHOLDER}
-          className="title-card-field"
-        />
-        <div className="title-card-starters">
-          {PROMPT_STARTERS.map((s) => (
-            <button key={s.label} type="button" className="chip" onClick={() => setPrompt(s.text)}>
-              {s.label}
-            </button>
-          ))}
+      {plan ? null : (
+        <div className="script-sheet script-sheet-write">
+          <p className="script-colophon">{writerLabel(health)}</p>
+          <label className="sr-live" htmlFor="script-prompt">
+            What happens in the film?
+          </label>
+          <textarea
+            id="script-prompt"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void makeMovie()
+            }}
+            rows={4}
+            placeholder={PROMPT_PLACEHOLDER}
+            className="script-cover-field title-card-field"
+          />
+          <div className="title-card-starters">
+            {PROMPT_STARTERS.map((s) => (
+              <button key={s.label} type="button" className="chip" onClick={() => setPrompt(s.text)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <VideoModeToggle value={videoMode} onChange={setVideoMode} />
+          <p className="title-card-hint">{VIDEO_MODE_HINT[videoMode]}</p>
+          {health && !health.ok && health.planner?.provider === 'local' ? (
+            <span className="text-[13px] text-amber">
+              Local writer is offline — paste a plan under More, or start LM Studio.
+            </span>
+          ) : null}
+          <button
+            type="button"
+            disabled={busy || (!prompt.trim() && !importText.trim())}
+            onClick={() => void makeMovie()}
+            className="btn btn-primary btn-xl title-card-go"
+          >
+            {busy ? 'Starting…' : 'Make movie'}
+          </button>
         </div>
-        <VideoModeToggle value={videoMode} onChange={setVideoMode} />
-        <p className="title-card-hint">{VIDEO_MODE_HINT[videoMode]}</p>
-        {health && !health.ok && health.planner?.provider === 'local' ? (
-          <span className="text-[13px] text-amber">
-            Local writer is offline — paste a plan under More, or start LM Studio.
-          </span>
-        ) : null}
-        <button
-          type="button"
-          disabled={busy || (!prompt.trim() && !importText.trim())}
-          onClick={() => void makeMovie()}
-          className="btn btn-primary btn-xl title-card-go"
-        >
-          {busy ? 'Starting…' : 'Make movie'}
-        </button>
-      </div>
+      )}
 
       <FailNote error={err} />
 
@@ -382,7 +361,19 @@ export function StudioPlanner() {
         </div>
       ) : null}
 
-      {plan ? <PlanVisual plan={plan} /> : null}
+      {plan ? (
+        <>
+          <PlanVisual plan={plan} />
+          <button
+            type="button"
+            disabled={busy || (!prompt.trim() && !importText.trim())}
+            onClick={() => void makeMovie()}
+            className="btn btn-primary btn-xl title-card-go script-go"
+          >
+            {busy ? 'Starting…' : 'Make movie'}
+          </button>
+        </>
+      ) : null}
 
       <details className="card">
         <summary className="text-[13px] text-ghost cursor-pointer">More (plan only, import JSON, archive)</summary>

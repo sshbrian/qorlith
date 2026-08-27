@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FailNote } from '../components/FailNote'
 import { useStudioLive, useStudioProjects, useStudioSession } from '../components/StudioSession'
@@ -6,12 +6,15 @@ import { api, type BrainClip } from '../lib/api'
 import { houseLights } from '../lib/houseSound'
 import {
   clipBeat,
+  clipFracAtTime,
   clipIndexAtTime,
   clipJoinNote,
   clipPoster,
-  clipStartTime,
+  clipsDuration,
+  timeAtReel,
   watchFirstFrame,
   watchFrameHref,
+  writeTonightId,
   type WatchFrame,
 } from '../lib/studio'
 import { preferBrainComfy, runIsLive } from '../lib/studioSession'
@@ -59,19 +62,22 @@ function WorkprintFrame({
   live,
   on,
   index,
-  onCue,
+  frac,
+  cue,
 }: {
   clip: BrainClip
   t2v: boolean
   live?: boolean
   on?: boolean
   index: number
-  onCue?: () => void
+  frac?: number
+  cue?: boolean
 }) {
   const poster = clipPoster(clip, t2v ? 't2v' : 'stills')
   const beat = clipBeat(clip)
   const join = clipJoinNote(index, clip.cut)
   const title = [clip.title || clip.id, beat, join].filter(Boolean).join(' · ')
+  const hair = on && frac != null ? Math.min(100, Math.max(0, frac * 100)) : null
   return (
     <li
       className={[
@@ -79,10 +85,9 @@ function WorkprintFrame({
         live ? 'is-live' : '',
         on ? 'is-on' : '',
         join === 'cut' ? 'is-cut' : '',
-        onCue ? 'is-cue' : '',
+        cue ? 'is-cue' : '',
       ].join(' ')}
       title={title}
-      onClick={onCue}
     >
       <div className="workprint-still">
         {poster?.kind === 'image' ? (
@@ -92,6 +97,7 @@ function WorkprintFrame({
         ) : (
           <div className="workprint-empty">{live ? 'Making now' : ''}</div>
         )}
+        {hair != null ? <i className="workprint-hair" style={{ left: `${hair}%` }} /> : null}
       </div>
       <span className="workprint-mark">{clip.id}</span>
     </li>
@@ -121,7 +127,9 @@ function TheaterPlayer({
   const [paused, setPaused] = useState(false)
   const [lit, setLit] = useState(false)
   const [ended, setEnded] = useState(false)
+  const [print, setPrint] = useState(false)
   const [onIndex, setOnIndex] = useState(0)
+  const [playhead, setPlayhead] = useState(0)
   const posterHref = firstFrame?.kind === 'image' ? frameHref(firstFrame) : undefined
 
   useEffect(() => {
@@ -129,7 +137,9 @@ function TheaterPlayer({
     setPaused(false)
     setLit(false)
     setEnded(false)
+    setPrint(false)
     setOnIndex(0)
+    setPlayhead(0)
     onOver?.(false)
     const el = videoRef.current
     if (!el) return
@@ -143,7 +153,9 @@ function TheaterPlayer({
     setEnded(false)
     setLit(false)
     setPaused(false)
+    setPrint(false)
     setOnIndex(0)
+    setPlayhead(0)
     onOver?.(false)
     if (!el) return
     el.currentTime = 0
@@ -167,6 +179,7 @@ function TheaterPlayer({
         return
       }
       if (el.paused) {
+        setPrint(false)
         void el.play()
         setPaused(false)
       } else {
@@ -193,16 +206,60 @@ function TheaterPlayer({
     setPaused(false)
   }
 
-  const cue = (index: number) => {
+  const holdAt = (t: number) => {
     const el = videoRef.current
     if (!el) return
-    setEnded(false)
+    const total = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : clipsDuration(clips)
+    const x = Math.max(0, Math.min(t, Math.max(0, total - 0.05)))
+    el.currentTime = x
+    el.pause()
+    setPlayhead(x)
+    setOnIndex(clipIndexAtTime(clips, x))
     setLit(true)
-    setPaused(false)
-    setOnIndex(index)
+    setEnded(false)
+    setPrint(true)
+    setPaused(true)
     onOver?.(false)
-    el.currentTime = clipStartTime(clips, index)
-    void el.play()
+  }
+
+  const scrubFromPointer = (clientX: number) => {
+    const root = reelRef.current
+    if (!root || !clips.length) return
+    const frames = [...root.children]
+    let index = 0
+    let frac = 0
+    for (let i = 0; i < frames.length; i++) {
+      const r = frames[i].getBoundingClientRect()
+      if (clientX < r.left) {
+        index = i
+        frac = 0
+        break
+      }
+      if (clientX <= r.right || i === frames.length - 1) {
+        index = i
+        frac = r.width <= 0 ? 0 : (clientX - r.left) / r.width
+        break
+      }
+    }
+    holdAt(timeAtReel(clips, index, frac))
+  }
+
+  const onReelPointer = (e: ReactPointerEvent<HTMLOListElement>) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      /* ignore */
+    }
+    scrubFromPointer(e.clientX)
+  }
+
+  const onReelMove = (e: ReactPointerEvent<HTMLOListElement>) => {
+    if ((e.buttons & 1) !== 1) return
+    e.preventDefault()
+    scrubFromPointer(e.clientX)
   }
 
   const togglePlay = () => {
@@ -213,6 +270,7 @@ function TheaterPlayer({
       return
     }
     if (el.paused) {
+      setPrint(false)
       void el.play()
       setPaused(false)
     } else {
@@ -225,6 +283,7 @@ function TheaterPlayer({
     setLit(true)
     setPaused(false)
     setEnded(false)
+    setPrint(false)
   }
 
   const onFilmEnded = () => {
@@ -238,7 +297,9 @@ function TheaterPlayer({
     const el = videoRef.current
     if (!el || ended) return
     if (!lit && el.currentTime > 0.04) setLit(true)
-    const i = clipIndexAtTime(clips, el.currentTime)
+    const t = el.currentTime
+    setPlayhead(t)
+    const i = clipIndexAtTime(clips, t)
     setOnIndex((prev) => (prev === i ? prev : i))
   }
 
@@ -264,10 +325,12 @@ function TheaterPlayer({
   }, [onIndex, ended])
 
   const playing = lit && !paused && !ended
+  const printing = print && paused && !ended
+  const frac = clipFracAtTime(clips, playhead)
 
   return (
     <>
-      <div className={['theater', ended ? 'is-over' : playing ? 'is-playing' : ''].join(' ')}>
+      <div className={['theater', ended ? 'is-over' : playing ? 'is-playing' : printing ? 'is-print' : ''].join(' ')}>
         <div
           className={['theater-player', ended ? 'is-over' : lit ? 'is-lit' : 'is-down'].join(' ')}
           onClick={togglePlay}
@@ -295,7 +358,7 @@ function TheaterPlayer({
               Tap for sound
             </button>
           ) : null}
-          {paused && !needSound && !ended && lit ? (
+          {paused && !needSound && !ended && lit && !print ? (
             <div className="play-mark theater-pause-mark" aria-hidden>
               ▶
             </div>
@@ -319,7 +382,13 @@ function TheaterPlayer({
         </div>
       </div>
       {clips.length ? (
-        <ol ref={reelRef} className="workprint" aria-label="Workprint">
+        <ol
+          ref={reelRef}
+          className={['workprint', printing ? 'is-print' : ''].join(' ')}
+          aria-label="Workprint"
+          onPointerDown={onReelPointer}
+          onPointerMove={onReelMove}
+        >
           {clips.map((c, i) => (
             <WorkprintFrame
               key={c.id}
@@ -327,7 +396,8 @@ function TheaterPlayer({
               t2v={t2v}
               index={i}
               on={!ended && onIndex === i}
-              onCue={() => cue(i)}
+              frac={!ended && onIndex === i ? frac : undefined}
+              cue
             />
           ))}
         </ol>
@@ -352,6 +422,10 @@ export function Watch() {
   useEffect(() => {
     setOver(false)
   }, [projectId])
+
+  useEffect(() => {
+    if (projectId && brain?.master) writeTonightId(projectId)
+  }, [projectId, brain?.master])
 
   if (!projectId) {
     return <p className="text-[15px] text-ghost">Open a project to watch the film.</p>
