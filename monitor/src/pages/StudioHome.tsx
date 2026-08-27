@@ -2,21 +2,29 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BrandMark } from '../components/BrandMark'
 import { FailNote } from '../components/FailNote'
-import { PosterCard } from '../components/PosterCard'
+import { CoverThumb, PosterCard } from '../components/PosterCard'
 import { VideoModeToggle, type VideoMode } from '../components/VideoModeToggle'
 import { useStudioSession } from '../components/StudioSession'
 import { api } from '../lib/api'
-import { canonicalStage, projectPath, PROMPT_PLACEHOLDER, PROMPT_STARTERS, VIDEO_MODE_HINT } from '../lib/studio'
+import {
+  canonicalStage,
+  projectPath,
+  PROMPT_PLACEHOLDER,
+  PROMPT_STARTERS,
+  VIDEO_MODE_HINT,
+  tonightFilm,
+} from '../lib/studio'
 
 export function StudioHome() {
   const { projects, projectsReady, refreshProjects } = useStudioSession()
   const navigate = useNavigate()
-  const recents = projects.slice(0, 9)
+  const tonight = tonightFilm(projects)
+  const recents = projects.filter((p) => p.id !== tonight?.id).slice(0, 8)
   const [prompt, setPrompt] = useState('')
   const [videoMode, setVideoMode] = useState<VideoMode>('stills')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<unknown>(null)
-  const emptyHouse = recents.length === 0
+  const emptyHouse = recents.length === 0 && !tonight
 
   const makeMovie = async () => {
     const text = prompt.trim()
@@ -48,8 +56,16 @@ export function StudioHome() {
     )
   }
 
+  const openWatch = (id: string) =>
+    navigate(projectPath(id, 'watch'), { viewTransition: true })
+
   return (
-    <div className={['lobby', emptyHouse ? 'is-empty' : ''].join(' ')}>
+    <div className={['lobby', emptyHouse ? 'is-empty' : '', tonight ? 'has-night' : ''].join(' ')}>
+      {tonight?.coverUrl ? (
+        <div className="lobby-night" aria-hidden>
+          <CoverThumb url={tonight.coverUrl} kind={tonight.coverKind} />
+        </div>
+      ) : null}
       <header className="lobby-hero">
         <div className="lobby-mark" aria-hidden>
           <BrandMark className="h-11 w-11" title="Qorlith" />
@@ -101,6 +117,26 @@ export function StudioHome() {
         </button>
         <p className="title-card-key">Ctrl+Enter also starts it.</p>
       </div>
+
+      {tonight ? (
+        <section className="tonight" aria-label="Tonight">
+          <h2 className="poster-wall-kicker">Tonight</h2>
+          <div className="tonight-reel">
+            <PosterCard
+              overlay
+              featured
+              title={tonight.title || tonight.id}
+              coverUrl={tonight.coverUrl}
+              coverKind={tonight.coverKind}
+              meta={tonight.clipCount ? `${tonight.clipCount} clips` : 'Ready'}
+              onClick={() => openWatch(tonight.id)}
+            />
+            <button type="button" className="theater-save" onClick={() => openWatch(tonight.id)}>
+              Watch again
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {recents.length ? (
         <section className="poster-wall" aria-label="Recent films">

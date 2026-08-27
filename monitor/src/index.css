@@ -335,11 +335,37 @@ select {
 }
 
 .lobby {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 40px;
   min-height: calc(100vh - 120px);
   contain: layout;
+}
+
+.lobby-night {
+  pointer-events: none;
+  position: absolute;
+  inset: -8% -6% auto;
+  height: 62%;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 0.22;
+  filter: blur(42px) saturate(1.15);
+  transform: scale(1.08);
+  mask-image: linear-gradient(180deg, #000 40%, transparent 100%);
+}
+
+.lobby-night img,
+.lobby-night video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lobby > *:not(.lobby-night) {
+  position: relative;
+  z-index: 1;
 }
 
 .lobby.is-empty {
@@ -465,6 +491,20 @@ select {
   width: 100%;
   min-height: 52px;
   font-size: 17px;
+}
+
+.tonight {
+  margin-top: 4px;
+}
+
+.tonight-reel {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.poster-card.is-featured .poster-still {
+  aspect-ratio: 21 / 9;
 }
 
 .poster-wall {

@@ -94,6 +94,29 @@ export function clipPoster(
   return still ? { src: still, kind: 'image' } : null
 }
 
+type TonightFilm = {
+  id: string
+  title?: string
+  stage?: string
+  active?: boolean
+  coverUrl?: string | null
+  coverKind?: string | null
+  updatedAt?: string | null
+  clipCount?: number
+}
+
+/** Last finished film — tonight's reel. Live jobs never count. */
+export function tonightFilm(projects: TonightFilm[] = []): TonightFilm | null {
+  const ready = projects.filter((p) => p && !p.active && p.stage === 'watch')
+  const pool = ready.length ? ready : projects.filter((p) => p && !p.active && p.coverUrl)
+  if (!pool.length) return null
+  return [...pool].sort((a, b) => {
+    const tb = Date.parse(String(b.updatedAt || '')) || 0
+    const ta = Date.parse(String(a.updatedAt || '')) || 0
+    return tb - ta
+  })[0]
+}
+
 export function projectPath(id: string, stage?: StudioStage) {
   const base = `/studio/${encodeURIComponent(id)}`
   return stage ? `${base}/${stage}` : base

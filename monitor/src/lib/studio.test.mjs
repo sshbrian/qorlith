@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { clipBeat, clipJoinNote, clipPoster, mediaStudioCta, mediaStudioPath } from './studio.ts'
+import { clipBeat, clipJoinNote, clipPoster, mediaStudioCta, mediaStudioPath, tonightFilm } from './studio.ts'
 
 describe('clipJoinNote', () => {
   it('S01 is an open take; later clips continue or cut', () => {
@@ -34,6 +34,25 @@ describe('clipPoster', () => {
     assert.deepEqual(clipPoster({ still: '/x.png' }, 'stills'), { src: '/x.png', kind: 'image' })
     assert.equal(clipPoster({ still: '/video/S02_from_prev.png' }, 't2v'), null)
     assert.equal(clipPoster({}, 't2v'), null)
+  })
+})
+
+describe('tonightFilm', () => {
+  it('picks the last finished film, never a live job', () => {
+    assert.equal(tonightFilm([]), null)
+    assert.equal(
+      tonightFilm([
+        { id: 'draft', stage: 'plan', active: false, updatedAt: '2026-08-26T12:00:00.000Z' },
+        { id: 'live', stage: 'watch', active: true, updatedAt: '2026-08-26T13:00:00.000Z' },
+      ]),
+      null,
+    )
+    const night = tonightFilm([
+      { id: 'old', stage: 'watch', active: false, updatedAt: '2026-08-20T12:00:00.000Z' },
+      { id: 'new', stage: 'watch', active: false, updatedAt: '2026-08-26T12:00:00.000Z' },
+      { id: 'making', stage: 'make', active: true, updatedAt: '2026-08-26T18:00:00.000Z' },
+    ])
+    assert.equal(night?.id, 'new')
   })
 })
 
