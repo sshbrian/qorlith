@@ -1168,6 +1168,20 @@ select {
   box-shadow:
     0 40px 120px rgba(0, 0, 0, 0.72),
     0 0 0 1px rgba(255, 255, 255, 0.04);
+  transition: box-shadow 1.1s ease;
+}
+
+.theater.is-playing .theater-player {
+  box-shadow:
+    0 40px 120px rgba(0, 0, 0, 0.55),
+    0 28px 56px rgba(255, 210, 160, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.theater.is-over .theater-player {
+  box-shadow:
+    0 20px 64px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .theater-video {
@@ -1176,6 +1190,76 @@ select {
   height: 100%;
   object-fit: contain;
   background: #000;
+}
+
+.theater-first {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: #000;
+  opacity: 1;
+  transition: opacity 1.05s ease;
+}
+
+.theater-first.is-gone {
+  opacity: 0;
+}
+
+.theater-first-pic {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.theater-credits {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 24px 40px;
+  background:
+    radial-gradient(ellipse at 50% 46%, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.62) 58%, rgba(0, 0, 0, 0.78));
+  text-align: center;
+  animation: credits-in 1.35s ease both;
+}
+
+.theater-credits-title {
+  margin: 0;
+  font-size: clamp(26px, 4vw, 40px);
+  font-weight: 620;
+  letter-spacing: -0.034em;
+  line-height: 1.08;
+  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.55);
+}
+
+.theater-credits-runtime {
+  margin: 0;
+  font-size: 15px;
+  color: var(--color-ghost);
+}
+
+.theater-credits-house {
+  margin: 22px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(235, 235, 245, 0.52);
+  text-shadow: 0 1px 16px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes credits-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .theater-unmute {
@@ -1208,6 +1292,11 @@ select {
   gap: 16px;
   margin-top: 10px;
   padding: 0 2px;
+  transition: opacity 0.8s ease;
+}
+
+.screening.is-over .theater-meta {
+  opacity: 0.38;
 }
 
 .theater-save {
@@ -1225,6 +1314,7 @@ select {
   position: absolute;
   left: 50%;
   top: 50%;
+  z-index: 2;
   transform: translate(-50%, -50%);
   pointer-events: none;
   opacity: 0.9;
@@ -1257,6 +1347,13 @@ select {
   align-items: center;
   justify-content: center;
   padding: 32px 24px;
+}
+
+.theater-empty > .play-mark,
+.theater-empty > p,
+.theater-empty > a {
+  position: relative;
+  z-index: 1;
 }
 
 .theater-poster {
@@ -1505,8 +1602,25 @@ video.theater-poster {
   opacity: 0.88;
 }
 
-.workprint-frame.is-live .workprint-still {
-  box-shadow: 0 0 0 1px #0a84ff;
+.workprint-frame.is-live .workprint-still,
+.workprint-frame.is-on .workprint-still {
+  box-shadow:
+    0 0 0 1px rgba(255, 224, 186, 0.55),
+    0 0 16px rgba(255, 186, 120, 0.18);
+}
+
+.workprint-frame.is-on .workprint-still img,
+.workprint-frame.is-on .workprint-still video {
+  opacity: 1;
+}
+
+.workprint-frame.is-cue {
+  cursor: pointer;
+}
+
+.workprint-frame.is-cue:hover .workprint-still img,
+.workprint-frame.is-cue:hover .workprint-still video {
+  opacity: 1;
 }
 
 .workprint-empty {
@@ -1656,7 +1770,69 @@ video.theater-poster {
 }
 
 .filmstrip > li.is-live {
-  box-shadow: 0 0 0 2px #0a84ff;
+  box-shadow:
+    0 0 0 1px rgba(255, 214, 170, 0.42),
+    0 0 18px rgba(255, 186, 120, 0.2);
+}
+
+.set .filmstrip > li.is-live {
+  animation: now-breathe 2.7s ease-in-out infinite;
+}
+
+.set .filmstrip > li.is-live img,
+.set .filmstrip > li.is-live video,
+.set .filmstrip > li.is-live .filmstrip-empty {
+  animation: now-glow 2.7s ease-in-out infinite;
+}
+
+.set .filmstrip > li.is-live::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 34px rgba(255, 196, 130, 0.2);
+  animation: now-inset 2.7s ease-in-out infinite;
+}
+
+.set .filmstrip > li.is-live .filmstrip-empty {
+  color: rgba(255, 228, 196, 0.88);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@keyframes now-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 214, 170, 0.22),
+      0 0 12px rgba(255, 186, 120, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 230, 200, 0.7),
+      0 0 28px rgba(255, 186, 120, 0.36);
+  }
+}
+
+@keyframes now-glow {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.13);
+  }
+}
+
+@keyframes now-inset {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .filmstrip img,
@@ -1774,8 +1950,20 @@ video.theater-poster {
   .pulse-dot,
   .weave-pulse,
   .graph-wire-live,
-  .graph-mark.is-live .graph-mark-ring {
+  .graph-mark.is-live .graph-mark-ring,
+  .set .filmstrip > li.is-live,
+  .set .filmstrip > li.is-live img,
+  .set .filmstrip > li.is-live video,
+  .set .filmstrip > li.is-live .filmstrip-empty,
+  .set .filmstrip > li.is-live::after,
+  .theater-credits {
     animation: none;
+  }
+
+  .theater-first,
+  .theater-player,
+  .theater-meta {
+    transition: none;
   }
   .poster-card,
   .poster-still img,

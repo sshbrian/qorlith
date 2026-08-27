@@ -94,6 +94,53 @@ export function clipPoster(
   return still ? { src: still, kind: 'image' } : null
 }
 
+export type WatchFrame = {
+  src: string
+  kind: 'image' | 'video'
+  via: 'media' | 'cover'
+}
+
+/** Poster on the wall as the lights go down — painted still, then cover, then the first clip. */
+export function watchFirstFrame(
+  clips: Array<{ still?: string | null; video?: string | null }> = [],
+  videoMode?: string | null,
+  cover?: { coverUrl?: string | null; coverKind?: string | null } | null,
+): WatchFrame | null {
+  const first = clips.find((c) => c.still || c.video)
+  if (first?.still && videoMode !== 't2v') return { src: first.still, kind: 'image', via: 'media' }
+  if (cover?.coverUrl && cover.coverKind !== 'video') return { src: cover.coverUrl, kind: 'image', via: 'cover' }
+  if (first?.video) return { src: first.video, kind: 'video', via: 'media' }
+  if (cover?.coverUrl) {
+    return { src: cover.coverUrl, kind: cover.coverKind === 'video' ? 'video' : 'image', via: 'cover' }
+  }
+  return null
+}
+
+export function watchFrameHref(frame: WatchFrame, mediaUrl: (src: string) => string) {
+  return frame.via === 'cover' ? frame.src : mediaUrl(frame.src)
+}
+
+export function clipIndexAtTime(clips: Array<{ durationSec?: number | null }> = [], t: number) {
+  if (!clips.length) return -1
+  const times = clips.map((c) => Number(c.durationSec) || 0)
+  const total = times.reduce((n, s) => n + s, 0)
+  if (total <= 0) return 0
+  const x = Math.max(0, t)
+  let acc = 0
+  for (let i = 0; i < times.length; i++) {
+    acc += times[i]
+    if (x < acc) return i
+  }
+  return times.length - 1
+}
+
+export function clipStartTime(clips: Array<{ durationSec?: number | null }> = [], index: number) {
+  let t = 0
+  const n = Math.max(0, Math.min(index, clips.length))
+  for (let i = 0; i < n; i++) t += Number(clips[i].durationSec) || 0
+  return t
+}
+
 type TonightFilm = {
   id: string
   title?: string

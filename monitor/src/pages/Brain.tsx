@@ -8,7 +8,7 @@ import { WorkflowModal } from '../components/WorkflowModal'
 import { useStudioLive, useStudioSession } from '../components/StudioSession'
 import { api, type BrainClip, type BrainStep } from '../lib/api'
 import { idleBrainReport, preferBrainComfy, runIsLive } from '../lib/studioSession'
-import { clipJoinNote, clipPoster } from '../lib/studio'
+import { clipJoinNote, clipPoster, watchFirstFrame, watchFrameHref } from '../lib/studio'
 
 function StepNode({ step }: { step: BrainStep }) {
   const on = step.state === 'active'
@@ -62,6 +62,7 @@ const Filmstrip = memo(function Filmstrip({
           <li
             key={c.id}
             className={[currentClip === c.id ? 'is-live' : '', join === 'cut' ? 'is-cut' : ''].join(' ')}
+            aria-current={currentClip === c.id ? 'true' : undefined}
           >
             {poster?.kind === 'image' ? (
               <img src={api.mediaUrl(poster.src)} alt="" decoding="async" />
@@ -116,6 +117,8 @@ export function Brain() {
   }
 
   const clips = report.clips || []
+  const printFrame = watchFirstFrame(clips, t2v ? 't2v' : 'stills', current)
+  const printPoster = printFrame?.kind === 'image' ? watchFrameHref(printFrame, api.mediaUrl) : undefined
   const openNode = (id: string) => {
     if (id === 'plan') setSheet('story')
     else if (id === 'stills') {
@@ -272,7 +275,14 @@ export function Brain() {
           className="set-print"
           title="Watch the film"
         >
-          <video src={api.brainMasterUrl(projectId)} muted playsInline preload="metadata" className="theater-video" />
+          <video
+            src={api.brainMasterUrl(projectId)}
+            poster={printPoster}
+            muted
+            playsInline
+            preload="metadata"
+            className="theater-video"
+          />
         </Link>
       ) : null}
 

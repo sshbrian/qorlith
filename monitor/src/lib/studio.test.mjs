@@ -1,6 +1,17 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { clipBeat, clipJoinNote, clipPoster, mediaStudioCta, mediaStudioPath, tonightFilm } from './studio.ts'
+import {
+  clipBeat,
+  clipIndexAtTime,
+  clipJoinNote,
+  clipPoster,
+  clipStartTime,
+  mediaStudioCta,
+  mediaStudioPath,
+  tonightFilm,
+  watchFirstFrame,
+  watchFrameHref,
+} from './studio.ts'
 
 describe('clipJoinNote', () => {
   it('S01 is an open take; later clips continue or cut', () => {
@@ -34,6 +45,41 @@ describe('clipPoster', () => {
     assert.deepEqual(clipPoster({ still: '/x.png' }, 'stills'), { src: '/x.png', kind: 'image' })
     assert.equal(clipPoster({ still: '/video/S02_from_prev.png' }, 't2v'), null)
     assert.equal(clipPoster({}, 't2v'), null)
+  })
+})
+
+describe('watchFirstFrame', () => {
+  it('holds the painted still as the lights go down; T2V never uses a leftover still', () => {
+    const clip = { still: '/board/S01.png', video: '/video/S01.mp4' }
+    assert.deepEqual(watchFirstFrame([clip], 'stills'), { src: '/board/S01.png', kind: 'image', via: 'media' })
+    assert.deepEqual(watchFirstFrame([clip], 't2v'), { src: '/video/S01.mp4', kind: 'video', via: 'media' })
+    assert.deepEqual(
+      watchFirstFrame([], 't2v', { coverUrl: '/api/studio/projects/x/cover', coverKind: 'image' }),
+      { src: '/api/studio/projects/x/cover', kind: 'image', via: 'cover' },
+    )
+    assert.equal(watchFirstFrame([{ still: '/video/S01_from_prev.png' }], 't2v'), null)
+    assert.equal(
+      watchFrameHref({ src: '/board/S01.png', kind: 'image', via: 'media' }, (s) => `/m?${s}`),
+      '/m?/board/S01.png',
+    )
+    assert.equal(
+      watchFrameHref({ src: '/api/cover', kind: 'image', via: 'cover' }, (s) => `/m?${s}`),
+      '/api/cover',
+    )
+  })
+})
+
+describe('clipIndexAtTime', () => {
+  it('maps the playhead onto the take reel', () => {
+    const clips = [{ durationSec: 4 }, { durationSec: 6 }, { durationSec: 5 }]
+    assert.equal(clipIndexAtTime(clips, 0), 0)
+    assert.equal(clipIndexAtTime(clips, 3.9), 0)
+    assert.equal(clipIndexAtTime(clips, 4), 1)
+    assert.equal(clipIndexAtTime(clips, 10), 2)
+    assert.equal(clipIndexAtTime(clips, 99), 2)
+    assert.equal(clipIndexAtTime([], 1), -1)
+    assert.equal(clipStartTime(clips, 0), 0)
+    assert.equal(clipStartTime(clips, 2), 10)
   })
 })
 

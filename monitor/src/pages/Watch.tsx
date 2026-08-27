@@ -1,9 +1,19 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FailNote } from '../components/FailNote'
 import { useStudioLive, useStudioProjects, useStudioSession } from '../components/StudioSession'
 import { api, type BrainClip } from '../lib/api'
-import { clipBeat, clipJoinNote, clipPoster } from '../lib/studio'
+import { houseLights } from '../lib/houseSound'
+import {
+  clipBeat,
+  clipIndexAtTime,
+  clipJoinNote,
+  clipPoster,
+  clipStartTime,
+  watchFirstFrame,
+  watchFrameHref,
+  type WatchFrame,
+} from '../lib/studio'
 import { preferBrainComfy, runIsLive } from '../lib/studioSession'
 
 function formatRuntime(clips: BrainClip[]) {
@@ -15,16 +25,48 @@ function formatRuntime(clips: BrainClip[]) {
   return r ? `${m}m ${r}s` : `${m}m`
 }
 
+function frameHref(frame: WatchFrame | null) {
+  return frame ? watchFrameHref(frame, api.mediaUrl) : ''
+}
+
+function FirstFrame({ frame }: { frame: WatchFrame }) {
+  const ref = useRef<HTMLVideoElement>(null)
+  const href = frameHref(frame)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const hold = () => {
+      el.pause()
+      try {
+        if (el.currentTime < 0.05) el.currentTime = 0.05
+      } catch {
+        /* ignore */
+      }
+    }
+    el.addEventListener('loadeddata', hold)
+    if (el.readyState >= 2) hold()
+    return () => el.removeEventListener('loadeddata', hold)
+  }, [href])
+
+  if (frame.kind === 'image') return <img src={href} alt="" className="theater-first-pic" />
+  return <video ref={ref} src={href} muted playsInline preload="auto" className="theater-first-pic" />
+}
+
 function WorkprintFrame({
   clip,
   t2v,
   live,
+  on,
   index,
+  onCue,
 }: {
   clip: BrainClip
   t2v: boolean
   live?: boolean
+  on?: boolean
   index: number
+  onCue?: () => void
 }) {
   const poster = clipPoster(clip, t2v ? 't2v' : 'stills')
   const beat = clipBeat(clip)
@@ -32,8 +74,15 @@ function WorkprintFrame({
   const title = [clip.title || clip.id, beat, join].filter(Boolean).join(' · ')
   return (
     <li
-      className={['workprint-frame', live ? 'is-live' : '', join === 'cut' ? 'is-cut' : ''].join(' ')}
+      className={[
+        'workprint-frame',
+        live ? 'is-live' : '',
+        on ? 'is-on' : '',
+        join === 'cut' ? 'is-cut' : '',
+        onCue ? 'is-cue' : '',
+      ].join(' ')}
       title={title}
+      onClick={onCue}
     >
       <div className="workprint-still">
         {poster?.kind === 'image' ? (
@@ -53,24 +102,52 @@ function TheaterPlayer({
   projectId,
   title,
   runtime,
+  firstFrame,
+  clips,
+  t2v,
+  onOver,
 }: {
   projectId: string
   title: string
   runtime: string
+  firstFrame: WatchFrame | null
+  clips: BrainClip[]
+  t2v: boolean
+  onOver?: (over: boolean) => void
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [needSound, setNeedSound] = useState(true)
   const [paused, setPaused] = useState(false)
+  const [lit, setLit] = useState(false)
+  const [ended, setEnded] = useState(false)
+  const [onIndex, setOnIndex] = useState(0)
+  const posterHref = firstFrame?.kind === 'image' ? frameHref(firstFrame) : undefined
 
   useEffect(() => {
     setNeedSound(true)
     setPaused(false)
+    setLit(false)
+    setEnded(false)
+    setOnIndex(0)
+    onOver?.(false)
     const el = videoRef.current
     if (!el) return
     el.muted = true
     const play = el.play()
     if (play && typeof play.catch === 'function') play.catch(() => setPaused(true))
-  }, [projectId])
+  }, [projectId, onOver])
+
+  const replay = useCallback(() => {
+    const el = videoRef.current
+    setEnded(false)
+    setLit(false)
+    setPaused(false)
+    setOnIndex(0)
+    onOver?.(false)
+    if (!el) return
+    el.currentTime = 0
+    void el.play()
+  }, [onOver])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -84,6 +161,10 @@ function TheaterPlayer({
         el.muted = false
         setNeedSound(false)
       }
+      if (ended || el.ended) {
+        replay()
+        return
+      }
       if (el.paused) {
         void el.play()
         setPaused(false)
@@ -94,7 +175,7 @@ function TheaterPlayer({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [ended, replay])
 
   const unmute = (e: MouseEvent) => {
     e.stopPropagation()
@@ -103,13 +184,33 @@ function TheaterPlayer({
     el.muted = false
     el.volume = 1
     setNeedSound(false)
+    if (ended) {
+      replay()
+      return
+    }
     void el.play()
     setPaused(false)
+  }
+
+  const cue = (index: number) => {
+    const el = videoRef.current
+    if (!el) return
+    setEnded(false)
+    setLit(true)
+    setPaused(false)
+    setOnIndex(index)
+    onOver?.(false)
+    el.currentTime = clipStartTime(clips, index)
+    void el.play()
   }
 
   const togglePlay = () => {
     const el = videoRef.current
     if (!el) return
+    if (ended) {
+      replay()
+      return
+    }
     if (el.paused) {
       void el.play()
       setPaused(false)
@@ -119,37 +220,97 @@ function TheaterPlayer({
     }
   }
 
+  const onPlaying = () => {
+    setLit(true)
+    setPaused(false)
+    setEnded(false)
+  }
+
+  const onFilmEnded = () => {
+    setEnded(true)
+    setPaused(true)
+    onOver?.(true)
+    houseLights()
+  }
+
+  const onTime = () => {
+    const el = videoRef.current
+    if (!el || ended) return
+    if (!lit && el.currentTime > 0.04) setLit(true)
+    const i = clipIndexAtTime(clips, el.currentTime)
+    setOnIndex((prev) => (prev === i ? prev : i))
+  }
+
+  const playing = lit && !paused && !ended
+
   return (
-    <div className="theater">
-      <div className="theater-player" onClick={togglePlay}>
-        <video
-          ref={videoRef}
-          src={api.brainMasterUrl(projectId)}
-          playsInline
-          preload="auto"
-          className="theater-video"
-        />
-        {needSound ? (
-          <button type="button" className="theater-unmute" onClick={unmute}>
-            Tap for sound
-          </button>
-        ) : null}
-        {paused && !needSound ? (
-          <div className="play-mark theater-pause-mark" aria-hidden>
-            ▶
-          </div>
-        ) : null}
-      </div>
-      <div className="theater-meta">
-        <div className="min-w-0">
-          <h1 className="theater-title">{title}</h1>
-          {runtime ? <p className="theater-runtime">{runtime}</p> : null}
+    <>
+      <div className={['theater', ended ? 'is-over' : playing ? 'is-playing' : ''].join(' ')}>
+        <div
+          className={['theater-player', ended ? 'is-over' : lit ? 'is-lit' : 'is-down'].join(' ')}
+          onClick={togglePlay}
+        >
+          <video
+            ref={videoRef}
+            src={api.brainMasterUrl(projectId)}
+            poster={posterHref}
+            playsInline
+            preload="auto"
+            className="theater-video"
+            onPlaying={onPlaying}
+            onEnded={onFilmEnded}
+            onTimeUpdate={onTime}
+            onPause={() => setPaused(true)}
+            onPlay={() => setPaused(false)}
+          />
+          {firstFrame && !ended ? (
+            <div className={['theater-first', lit ? 'is-gone' : ''].join(' ')} aria-hidden>
+              <FirstFrame frame={firstFrame} />
+            </div>
+          ) : null}
+          {needSound && !ended ? (
+            <button type="button" className="theater-unmute" onClick={unmute}>
+              Tap for sound
+            </button>
+          ) : null}
+          {paused && !needSound && !ended && lit ? (
+            <div className="play-mark theater-pause-mark" aria-hidden>
+              ▶
+            </div>
+          ) : null}
+          {ended ? (
+            <div className="theater-credits">
+              <p className="theater-credits-title">{title}</p>
+              {runtime ? <p className="theater-credits-runtime">{runtime}</p> : null}
+              <p className="theater-credits-house">Made with Qorlith</p>
+            </div>
+          ) : null}
         </div>
-        <a href={api.brainMasterUrl(projectId)} download className="theater-save">
-          Save film
-        </a>
+        <div className="theater-meta">
+          <div className="min-w-0">
+            <h1 className="theater-title">{title}</h1>
+            {runtime ? <p className="theater-runtime">{runtime}</p> : null}
+          </div>
+          <a href={api.brainMasterUrl(projectId)} download className="theater-save">
+            Save film
+          </a>
+        </div>
       </div>
-    </div>
+      {clips.length ? (
+        <ol className="workprint" aria-label="Workprint">
+          {clips.map((c, i) => (
+            <WorkprintFrame
+              key={c.id}
+              clip={c}
+              t2v={t2v}
+              index={i}
+              on={!ended && onIndex === i}
+              onCue={() => cue(i)}
+            />
+          ))}
+        </ol>
+      ) : null}
+    </>
   )
 }
 
@@ -163,6 +324,12 @@ export function Watch() {
   const makingPoster = clips.map((c) => clipPoster(c, t2v ? 't2v' : 'stills')).find(Boolean) || null
   const sceneClips = clips.filter((c) => c.id)
   const liveComfy = preferBrainComfy(brain, comfy)
+  const firstFrame = watchFirstFrame(sceneClips, t2v ? 't2v' : 'stills', current)
+  const [over, setOver] = useState(false)
+
+  useEffect(() => {
+    setOver(false)
+  }, [projectId])
 
   if (!projectId) {
     return <p className="text-[15px] text-ghost">Open a project to watch the film.</p>
@@ -176,11 +343,19 @@ export function Watch() {
   const makingLine = (liveComfy?.active && liveComfy.title) || brain?.label || 'Making your movie'
 
   return (
-    <div className="screening">
+    <div className={['screening', over ? 'is-over' : ''].join(' ')}>
       <FailNote error={err} />
 
       {brain?.master ? (
-        <TheaterPlayer projectId={projectId} title={title} runtime={runtime} />
+        <TheaterPlayer
+          projectId={projectId}
+          title={title}
+          runtime={runtime}
+          firstFrame={firstFrame}
+          clips={sceneClips}
+          t2v={t2v}
+          onOver={setOver}
+        />
       ) : running ? (
         <div className="theater">
           <div className="theater-player theater-making">
@@ -188,6 +363,12 @@ export function Watch() {
               <img src={api.mediaUrl(makingPoster.src)} alt="" className="theater-poster" />
             ) : makingPoster?.kind === 'video' ? (
               <video src={api.mediaUrl(makingPoster.src)} muted playsInline loop className="theater-poster" />
+            ) : firstFrame ? (
+              firstFrame.kind === 'image' ? (
+                <img src={frameHref(firstFrame)} alt="" className="theater-poster" />
+              ) : (
+                <video src={frameHref(firstFrame)} muted playsInline loop className="theater-poster" />
+              )
             ) : null}
             <div className="theater-making-scrim" />
             <div className="theater-making-copy">
@@ -204,6 +385,14 @@ export function Watch() {
       ) : (
         <div className="theater">
           <div className="theater-player theater-empty">
+            {firstFrame ? (
+              firstFrame.kind === 'image' ? (
+                <img src={frameHref(firstFrame)} alt="" className="theater-poster" />
+              ) : (
+                <video src={frameHref(firstFrame)} muted playsInline className="theater-poster" />
+              )
+            ) : null}
+            {firstFrame ? <div className="theater-making-scrim" /> : null}
             <div className="play-mark" aria-hidden>
               ▶
             </div>
@@ -220,7 +409,7 @@ export function Watch() {
         </div>
       )}
 
-      {sceneClips.length ? (
+      {!brain?.master && sceneClips.length ? (
         <ol className="workprint" aria-label="Workprint">
           {sceneClips.map((c, i) => (
             <WorkprintFrame

@@ -50,6 +50,26 @@ export function houseWhoosh() {
   src.start(now)
 }
 
+/** House lights after the picture. No-op under reduced motion or mute. */
+export function houseLights() {
+  if (silent()) return
+  const ac = audio()
+  if (!ac) return
+  const now = ac.currentTime
+  const osc = ac.createOscillator()
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(98, now)
+  osc.frequency.exponentialRampToValueAtTime(49, now + 0.82)
+  const gain = ac.createGain()
+  gain.gain.setValueAtTime(0.0001, now)
+  gain.gain.exponentialRampToValueAtTime(0.018, now + 0.22)
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.95)
+  osc.connect(gain)
+  gain.connect(ac.destination)
+  osc.start(now)
+  osc.stop(now + 1.05)
+}
+
 /** Pin a print on the light table. */
 export function housePin() {
   if (silent()) return
