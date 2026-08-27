@@ -8,7 +8,7 @@ import { WorkflowModal } from '../components/WorkflowModal'
 import { useStudioLive, useStudioSession } from '../components/StudioSession'
 import { api, type BrainClip, type BrainStep } from '../lib/api'
 import { idleBrainReport, preferBrainComfy, runIsLive } from '../lib/studioSession'
-import { clipPoster } from '../lib/studio'
+import { clipJoinNote, clipPoster } from '../lib/studio'
 
 function StepNode({ step }: { step: BrainStep }) {
   const on = step.state === 'active'
@@ -55,10 +55,14 @@ const Filmstrip = memo(function Filmstrip({
 }) {
   return (
     <ul className="filmstrip">
-      {clips.map((c) => {
+      {clips.map((c, i) => {
         const poster = clipPoster(c, t2v ? 't2v' : 'stills')
+        const join = clipJoinNote(i, c.cut)
         return (
-          <li key={c.id} className={currentClip === c.id ? 'is-live' : ''}>
+          <li
+            key={c.id}
+            className={[currentClip === c.id ? 'is-live' : '', join === 'cut' ? 'is-cut' : ''].join(' ')}
+          >
             {poster?.kind === 'image' ? (
               <img src={api.mediaUrl(poster.src)} alt="" decoding="async" />
             ) : poster?.kind === 'video' ? (

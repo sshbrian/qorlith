@@ -188,6 +188,8 @@ describe('UI contract — stages, not tools', () => {
     assert.match(t, /clipPoster/)
     assert.match(t, /preferBrainComfy/)
     assert.match(t, /className="set"/)
+    assert.match(t, /clipJoinNote/)
+    assert.match(t, /is-cut/)
     assert.match(t, /set-print/)
     assert.doesNotMatch(t, /controls className="theater-video"/)
     assert.match(t, /currentClip === c\.id \? 'Now'/)

@@ -1598,14 +1598,30 @@ video.theater-poster {
 }
 
 .set .filmstrip {
-  gap: 8px;
+  gap: 4px;
   padding: 4px 0 8px;
 }
 
 .set .filmstrip > li {
+  position: relative;
   flex: 0 0 220px;
   border-radius: 6px;
   background: #0a0a0b;
+}
+
+.set .filmstrip > li.is-cut {
+  margin-left: 18px;
+}
+
+.set .filmstrip > li.is-cut::before {
+  content: '';
+  position: absolute;
+  left: -11px;
+  top: 12px;
+  bottom: 36px;
+  width: 1px;
+  background: rgba(235, 235, 245, 0.32);
+  box-shadow: 0 0 0 0.5px rgba(235, 235, 245, 0.12);
 }
 
 .set .filmstrip img,
