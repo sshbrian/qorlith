@@ -61,15 +61,25 @@ const Filmstrip = memo(function Filmstrip({
     if (!root || !currentClip) return
     const el = root.querySelector('li.is-live')
     if (!(el instanceof HTMLElement)) return
-    const left = el.offsetLeft - root.clientWidth / 2 + el.clientWidth / 2
     let reduce = false
     try {
       reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     } catch {
       /* ignore */
     }
-    root.scrollTo({ left: Math.max(0, left), behavior: reduce ? 'auto' : 'smooth' })
-  }, [currentClip])
+    const keep = () => {
+      const left = el.offsetLeft
+      const right = left + el.offsetWidth
+      const viewL = root.scrollLeft
+      const viewR = viewL + root.clientWidth
+      if (left >= viewL + 8 && right <= viewR - 8) return
+      const dest = left - root.clientWidth / 2 + el.offsetWidth / 2
+      root.scrollTo({ left: Math.max(0, dest), behavior: reduce ? 'auto' : 'smooth' })
+    }
+    keep()
+    const id = window.requestAnimationFrame(keep)
+    return () => window.cancelAnimationFrame(id)
+  }, [currentClip, clips.length])
   return (
     <ul ref={rootRef} className="filmstrip">
       {clips.map((c, i) => {

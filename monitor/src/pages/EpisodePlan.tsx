@@ -4,6 +4,7 @@ import { api, type EpisodePlanDetail, type EpisodeScene, type EpisodeStill } fro
 import { FailNote } from '../components/FailNote'
 import { useStudioSession } from '../components/StudioSession'
 import { housePin } from '../lib/houseSound'
+import { readBoardScene, writeBoardScene } from '../lib/studio'
 
 export function EpisodePlan() {
   const { projectId } = useParams()
@@ -14,6 +15,7 @@ export function EpisodePlan() {
   const [sceneId, setSceneId] = useState('')
   const [viewByScene, setViewByScene] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
+  const [hungRel, setHungRel] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -32,7 +34,13 @@ export function EpisodePlan() {
           .join('|')
         return prev && nextFp === prevFp ? prev : d
       })
-      setSceneId((prev) => (d.scenes.some((s) => s.id === prev) ? prev : d.scenes[0]?.id || ''))
+      setSceneId((prev) => {
+        if (prev && d.scenes.some((s) => s.id === prev)) return prev
+        const remembered = projectId ? readBoardScene(projectId) : null
+        if (remembered && d.scenes.some((s) => s.id === remembered)) return remembered
+        const pinned = d.scenes.find((s) => s.pickRel)
+        return pinned?.id || d.scenes[0]?.id || ''
+      })
     } catch (e) {
       setErr(e)
     } finally {
@@ -41,10 +49,21 @@ export function EpisodePlan() {
   }, [projectId])
 
   useEffect(() => {
+    setSceneId('')
+    setViewByScene({})
+    setHungRel(null)
+  }, [projectId])
+
+  useEffect(() => {
     void load()
     const t = window.setInterval(() => void load(), 3000)
     return () => window.clearInterval(t)
   }, [load])
+
+  useEffect(() => {
+    if (!projectId || !sceneId || data?.id !== projectId) return
+    writeBoardScene(projectId, sceneId)
+  }, [projectId, sceneId, data?.id])
 
   const scene: EpisodeScene | null = useMemo(
     () => data?.scenes.find((s) => s.id === sceneId) || data?.scenes[0] || null,
@@ -61,8 +80,6 @@ export function EpisodePlan() {
       null
     )
   }, [scene, viewByScene])
-
-  const [hungRel, setHungRel] = useState<string | null>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

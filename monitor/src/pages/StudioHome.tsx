@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BrandMark } from '../components/BrandMark'
 import { FailNote } from '../components/FailNote'
@@ -6,15 +6,17 @@ import { CoverThumb, PosterCard } from '../components/PosterCard'
 import { VideoModeToggle, type VideoMode } from '../components/VideoModeToggle'
 import { useStudioSession } from '../components/StudioSession'
 import { api } from '../lib/api'
-import { houseWhoosh, toggleHouseMute } from '../lib/houseSound'
+import { houseLights, houseWhoosh, toggleHouseMute } from '../lib/houseSound'
 import {
   canonicalStage,
+  filmsJustCanned,
   projectPath,
   PROMPT_PLACEHOLDER,
   PROMPT_STARTERS,
   VIDEO_MODE_HINT,
   readTonightId,
   tonightFilm,
+  writeTonightId,
 } from '../lib/studio'
 
 export function StudioHome() {
@@ -26,7 +28,23 @@ export function StudioHome() {
   const [videoMode, setVideoMode] = useState<VideoMode>('stills')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<unknown>(null)
+  const [cannedId, setCannedId] = useState<string | null>(null)
+  const prevProjects = useRef(projects)
   const emptyHouse = recents.length === 0 && !tonight
+
+  useEffect(() => {
+    const prev = prevProjects.current
+    prevProjects.current = projects
+    if (!prev.length || !projects.length) return
+    const landed = filmsJustCanned(prev, projects)
+    if (!landed.length) return
+    const film = landed[0]
+    writeTonightId(film.id)
+    setCannedId(film.id)
+    houseLights()
+    const t = window.setTimeout(() => setCannedId(null), 2400)
+    return () => window.clearTimeout(t)
+  }, [projects])
 
   const makeMovie = async () => {
     const text = prompt.trim()
@@ -63,7 +81,7 @@ export function StudioHome() {
     navigate(projectPath(id, 'watch'), { viewTransition: true })
 
   return (
-    <div className={['lobby', emptyHouse ? 'is-empty' : '', tonight ? 'has-night' : ''].join(' ')}>
+    <div className={['lobby', emptyHouse ? 'is-empty' : '', tonight ? 'has-night' : '', cannedId ? 'is-canned' : ''].join(' ')}>
       {tonight?.coverUrl ? (
         <div className="lobby-night" aria-hidden>
           <CoverThumb url={tonight.coverUrl} kind={tonight.coverKind} />
@@ -122,12 +140,13 @@ export function StudioHome() {
       </div>
 
       {tonight ? (
-        <section className="tonight" aria-label="Tonight">
+        <section className={['tonight', cannedId === tonight.id ? 'is-canned' : ''].join(' ')} aria-label="Tonight">
           <h2 className="poster-wall-kicker">Tonight</h2>
           <div className="tonight-reel">
             <PosterCard
               overlay
               featured
+              canned={cannedId === tonight.id}
               title={tonight.title || tonight.id}
               coverUrl={tonight.coverUrl}
               coverKind={tonight.coverKind}

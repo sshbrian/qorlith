@@ -1,6 +1,7 @@
 export const LAST_PROJECT_KEY = 'qorlith.studio.lastProject'
 export const RAIL_COLLAPSED_KEY = 'qorlith.studio.railCollapsed'
 export const TONIGHT_KEY = 'qorlith.house.tonight'
+export const BOARD_SCENE_KEY = 'qorlith.board.scene'
 
 export const PROMPT_PLACEHOLDER = 'Example: 20 second rooftop fight, rain, no talking.'
 
@@ -87,6 +88,39 @@ export function writeTonightId(id: string) {
   } catch {
     /* ignore */
   }
+}
+
+export function boardSceneKey(projectId: string) {
+  return `${BOARD_SCENE_KEY}.${projectId}`
+}
+
+export function readBoardScene(projectId: string): string | null {
+  if (!projectId) return null
+  try {
+    const id = localStorage.getItem(boardSceneKey(projectId))
+    return id && id.trim() ? id.trim() : null
+  } catch {
+    return null
+  }
+}
+
+export function writeBoardScene(projectId: string, sceneId: string) {
+  if (!projectId || !sceneId) return
+  try {
+    localStorage.setItem(boardSceneKey(projectId), sceneId)
+  } catch {
+    /* ignore */
+  }
+}
+
+/** A live job that just reached Watch — in the can. */
+export function filmsJustCanned(
+  prev: Array<{ id: string; active?: boolean; stage?: string }> = [],
+  next: Array<{ id: string; active?: boolean; stage?: string }> = [],
+) {
+  return next.filter(
+    (p) => p && !p.active && p.stage === 'watch' && prev.some((q) => q.id === p.id && q.active),
+  )
 }
 
 /** S01 is an open take. Later clips either continue or hard-cut. */

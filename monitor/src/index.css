@@ -361,6 +361,24 @@ select {
   color: rgba(255, 214, 170, 0.88);
 }
 
+.table-clip.is-pinned {
+  position: relative;
+}
+
+.table-clip.is-pinned::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  z-index: 2;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff7ea, #e2b16a 58%, #7a4e24);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
 .script {
   display: flex;
   flex-direction: column;
@@ -826,6 +844,47 @@ select {
   display: grid;
   gap: 12px;
   justify-items: start;
+}
+
+.poster-card.is-canned {
+  animation: in-the-can 1.85s ease both;
+}
+
+.lobby.is-canned .lobby-night {
+  animation: night-arrive 2s ease both;
+}
+
+@keyframes in-the-can {
+  0% {
+    transform: scale(0.985);
+    filter: brightness(0.72);
+    box-shadow: 0 0 0 0 rgba(255, 214, 170, 0);
+  }
+  32% {
+    transform: scale(1.012);
+    filter: brightness(1.1);
+    box-shadow: 0 18px 48px rgba(255, 186, 120, 0.22);
+  }
+  100% {
+    transform: none;
+    filter: none;
+    box-shadow: none;
+  }
+}
+
+@keyframes night-arrive {
+  0% {
+    opacity: 0.35;
+    filter: saturate(0.7);
+  }
+  40% {
+    opacity: 1;
+    filter: saturate(1.15);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+  }
 }
 
 .poster-card.is-featured .poster-still {
@@ -2131,6 +2190,8 @@ video.theater-poster {
 .set .filmstrip {
   gap: 4px;
   padding: 4px 0 8px;
+  overflow-anchor: none;
+  scroll-behavior: auto;
 }
 
 .set .filmstrip > li {
@@ -2426,7 +2487,9 @@ video.theater-poster {
   .set .filmstrip > li.is-live .filmstrip-empty,
   .set .filmstrip > li.is-live::after,
   .set .filmstrip > li.is-landed,
-  .theater-credits {
+  .theater-credits,
+  .poster-card.is-canned,
+  .lobby.is-canned .lobby-night {
     animation: none;
   }
 

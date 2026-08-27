@@ -12,6 +12,7 @@ import {
   mediaStudioPath,
   timeAtReel,
   tonightFilm,
+  filmsJustCanned,
   watchFirstFrame,
   watchFrameHref,
 } from './studio.ts'
@@ -124,6 +125,24 @@ describe('tonightFilm', () => {
       )?.id,
       'new',
     )
+  })
+})
+
+describe('filmsJustCanned', () => {
+  it('only counts a live job that reached Watch', () => {
+    const prev = [
+      { id: 'live', stage: 'make', active: true },
+      { id: 'old', stage: 'watch', active: false },
+    ]
+    const next = [
+      { id: 'live', stage: 'watch', active: false },
+      { id: 'old', stage: 'watch', active: false },
+    ]
+    assert.deepEqual(
+      filmsJustCanned(prev, next).map((p) => p.id),
+      ['live'],
+    )
+    assert.equal(filmsJustCanned(next, next).length, 0)
   })
 })
 

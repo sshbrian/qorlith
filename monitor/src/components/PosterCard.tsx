@@ -22,6 +22,7 @@ export function PosterCard({
   live,
   overlay,
   featured,
+  canned,
   onClick,
 }: {
   title: string
@@ -31,6 +32,7 @@ export function PosterCard({
   live?: boolean
   overlay?: boolean
   featured?: boolean
+  canned?: boolean
   onClick: () => void
 }) {
   const letter = (title || '?').slice(0, 1).toUpperCase()
@@ -55,7 +57,7 @@ export function PosterCard({
       onClick={onClick}
       onMouseEnter={(e) => wake(e.currentTarget, true)}
       onMouseLeave={(e) => wake(e.currentTarget, false)}
-      className={['poster-card', overlay ? 'is-overlay' : '', featured ? 'is-featured' : ''].join(' ')}
+      className={['poster-card', overlay ? 'is-overlay' : '', featured ? 'is-featured' : '', canned ? 'is-canned' : ''].join(' ')}
     >
       <div className="poster-still">
         {coverUrl ? (
