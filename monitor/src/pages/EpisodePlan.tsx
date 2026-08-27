@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { api, type EpisodePlanDetail, type EpisodeScene, type EpisodeStill } from '../lib/api'
 import { FailNote } from '../components/FailNote'
 import { useStudioSession } from '../components/StudioSession'
+import { housePin } from '../lib/houseSound'
 
 export function EpisodePlan() {
   const { projectId } = useParams()
@@ -77,6 +78,7 @@ export function EpisodePlan() {
       }
     })
     setBusy(true)
+    housePin()
     try {
       await api.episodePick(data.id, scene.id, rel)
     } catch (e) {

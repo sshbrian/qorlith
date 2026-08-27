@@ -6,6 +6,7 @@ import { CoverThumb, PosterCard } from '../components/PosterCard'
 import { VideoModeToggle, type VideoMode } from '../components/VideoModeToggle'
 import { useStudioSession } from '../components/StudioSession'
 import { api } from '../lib/api'
+import { houseWhoosh } from '../lib/houseSound'
 import {
   canonicalStage,
   projectPath,
@@ -34,6 +35,7 @@ export function StudioHome() {
     try {
       const r = await api.studioFilm({ prompt: text, videoMode })
       await refreshProjects()
+      houseWhoosh()
       navigate(`/studio/${encodeURIComponent(r.projectId)}/make`, { viewTransition: true })
     } catch (e) {
       setErr(e)

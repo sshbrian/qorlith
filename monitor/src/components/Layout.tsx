@@ -24,6 +24,7 @@ import {
   writeRailCollapsed,
 } from '../lib/studio'
 import { usePinnedScroll } from '../lib/studioScroll'
+import { houseWhoosh } from '../lib/houseSound'
 import { BrandMark } from './BrandMark'
 import { CoverThumb } from './PosterCard'
 import { VideoModeToggle, type VideoMode } from './VideoModeToggle'
@@ -121,6 +122,7 @@ function LayoutBody({
   const stages = t2v ? STAGES.filter((s) => s.id !== 'board') : STAGES
 
   const walk = (to: string | { pathname: string; search?: string }, opts: { replace?: boolean } = {}) => {
+    if (!opts.replace) houseWhoosh()
     navigate(to, { viewTransition: true, ...opts })
   }
 
